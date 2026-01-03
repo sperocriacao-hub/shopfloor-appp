@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --radius: var(--radius);
+}
+
+:root {
+  /* Colors - Blue and White Theme */
+
+  /* Primary: Strong Royal Blue (Brunswick Style) */
+  --primary: 217 91% 60%;
+  /* #3b82f6 - Blue-500 equivalent, adjustable */
+  --primary-foreground: 0 0% 100%;
+
+  /* Secondary: Neutral White/Grey */
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+
+  /* Accent: Lighter Blue */
+  --accent: 217 91% 95%;
+  /* Very light blue */
+  --accent-foreground: 222 47% 11%;
+
+  /* Backgrounds */
+  --background: 0 0% 100%;
+  /* Pure White */
+  --foreground: 222 47% 11%;
+  /* Dark Blue/Grey Text */
+
+  --card: 0 0% 100%;
+  /* White Cards */
+  --card-foreground: 222 47% 11%;
+
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Dark Mode - Deep Blue Naval */
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+
+  --primary: 217 91% 60%;
+  --primary-foreground: 222 47% 11%;
+
+  --card: 217 33% 17%;
+  --card-foreground: 210 40% 98%;
+
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20.2% 65.1%;
+
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+}
+
+@layer base {
+
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    @apply antialiased;
+  }
+}
