@@ -20,6 +20,7 @@ export default function NewStaffPage() {
         workerNumber: "",
         name: "",
         contractType: "Determinado",
+        jobTitle: "",
         group: "Operações",
         area: "",
         workstation: "",
