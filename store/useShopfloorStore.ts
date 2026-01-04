@@ -223,7 +223,8 @@ const mapDbToAsset = (db: any): Asset => ({
 const mapDbToProduct = (db: any): ProductModel => ({
     id: db.id,
     name: db.name,
-    description: db.description
+    description: db.description,
+    operations: db.operations || []
 });
 
 const mapDbToOrder = (db: any): ProductionOrder => ({
@@ -330,6 +331,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 const toUpdate: any = {};
                 if (updates.name) toUpdate.name = updates.name;
                 if (updates.description) toUpdate.description = updates.description;
+                if (updates.operations) toUpdate.operations = updates.operations;
 
                 if (Object.keys(toUpdate).length > 0) {
                     const { error } = await supabase.from('products').update(toUpdate).eq('id', id);

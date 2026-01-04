@@ -17,6 +17,7 @@ export interface ProductModel {
     id: string;
     name: string; // ex: "Interceptor 40"
     description: string;
+    operations?: OperationDefinition[];
 }
 
 export interface OperationDefinition {

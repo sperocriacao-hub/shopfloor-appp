@@ -11,11 +11,13 @@ import { downloadProductsTemplate, parseProductsExcel } from "@/lib/excel-produc
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ProductModel } from "@/types";
+import { ProductModel, OperationDefinition } from "@/types";
+import { RoutingEditor } from "@/components/engineering/RoutingEditor";
+import { ProductOrdersList } from "@/components/engineering/ProductOrdersList";
 
 export default function ProductsPage() {
     const router = useRouter();
-    const { products, routings, addProduct, updateProduct, removeProduct } = useShopfloorStore();
+    const { products, orders, addProduct, updateProduct, removeProduct } = useShopfloorStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // State
@@ -27,8 +29,9 @@ export default function ProductsPage() {
     const [isOrdersOpen, setIsOrdersOpen] = useState(false);
 
     // Helpers
-    const getRoutingForProduct = (productId: string) => {
-        return routings.find(r => r.productModelId === productId);
+    const getRoutingForProduct = (product: ProductModel) => {
+        // Now operations are embedded in the product
+        return product.operations || [];
     };
 
     // Handlers
@@ -97,9 +100,20 @@ export default function ProductsPage() {
     };
 
     const handleOrdersClick = (product: ProductModel) => {
-        // In a real app, this would filter orders or show a list
-        alert(`Visualização de ordens para ${product.name} será implementada em breve.`);
-        // setIsOrdersOpen(true);
+        setSelectedProductForRouting(product); // Reusing this generic 'selected' state for context
+        setIsOrdersOpen(true);
+    };
+    
+    // Derived state for current dialogs
+    const selectedProductOrders = selectedProductForRouting 
+        ? orders.filter(o => o.productModelId === selectedProductForRouting.id)
+        : [];
+
+    const handleSaveRouting = async (operations: OperationDefinition[]) => {
+        if (selectedProductForRouting) {
+            await updateProduct(selectedProductForRouting.id, { operations });
+            setIsRoutingOpen(false);
+        }
     };
 
     return (
@@ -132,8 +146,9 @@ export default function ProductsPage() {
 
             <div className="grid gap-6 md:grid-cols-2">
                 {products.map((product) => {
-                    const routing = getRoutingForProduct(product.id);
-                    const totalTime = routing?.operations.reduce((acc, curr) => acc + curr.standardTimeMinutes, 0) || 0;
+
+                    const operations = getRoutingForProduct(product);
+                    const totalTime = operations.reduce((acc, curr) => acc + curr.standardTimeMinutes, 0) || 0;
 
                     return (
                         <Card key={product.id} className="hover:border-blue-300 transition-colors group relative">
@@ -162,11 +177,11 @@ export default function ProductsPage() {
                                 <div className="mb-4">
                                     <h4 className="text-sm font-semibold text-slate-900 mb-2 flex items-center">
                                         <FileText className="mr-2 h-4 w-4" />
-                                        Roteiro ({routing?.operations.length || 0} passos)
+                                        Roteiro ({operations.length} passos)
                                     </h4>
-                                    {routing ? (
+                                    {operations.length > 0 ? (
                                         <div className="space-y-2">
-                                            {routing.operations.slice(0, 3).map((op) => (
+                                            {operations.slice(0, 3).map((op) => (
                                                 <div key={op.id} className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded border border-slate-100">
                                                     <div className="flex items-center">
                                                         <span className="font-mono text-slate-400 mr-3 text-xs w-6">{op.sequence}</span>
@@ -178,9 +193,9 @@ export default function ProductsPage() {
                                                     </div>
                                                 </div>
                                             ))}
-                                            {routing.operations.length > 3 && (
+                                            {operations.length > 3 && (
                                                 <div className="text-xs text-center text-slate-400 italic">
-                                                    + {routing.operations.length - 3} operações...
+                                                    + {operations.length - 3} operações...
                                                 </div>
                                             )}
                                             <div className="mt-2 pt-2 border-t border-slate-100 flex justify-end text-sm font-medium text-blue-700">
@@ -246,21 +261,38 @@ export default function ProductsPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Routing Dialog Stuff would go here */}
+            {/* Routing Dialog */}
             <Dialog open={isRoutingOpen} onOpenChange={setIsRoutingOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                      <DialogHeader>
-                        <DialogTitle>Gerenciar Roteiro - {selectedProductForRouting?.name}</DialogTitle>
+                        <DialogTitle>Editor de Roteiro - {selectedProductForRouting?.name}</DialogTitle>
                         <DialogDescription>
-                            Funcionalidade de edição detalhada de roteiros (sequência de operações) será implementada na próxima versão.
+                            Defina a sequência de operações para a fabricação deste modelo.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-8 text-center text-slate-500">
-                        <Settings className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                        <p>Editor de Tabela de Operações em desenvolvimento.</p>
-                    </div>
+                    
+                    <RoutingEditor 
+                        initialOperations={selectedProductForRouting?.operations || []} 
+                        onSave={handleSaveRouting}
+                    />
+
+                </DialogContent>
+            </Dialog>
+
+            {/* Orders Dialog */}
+            <Dialog open={isOrdersOpen} onOpenChange={setIsOrdersOpen}>
+                <DialogContent className="max-w-3xl">
+                     <DialogHeader>
+                        <DialogTitle>Ordens de Produção - {selectedProductForRouting?.name}</DialogTitle>
+                        <DialogDescription>
+                            Histórico de ordens vinculadas a este modelo.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <ProductOrdersList orders={selectedProductOrders} />
+                    
                     <DialogFooter>
-                         <Button onClick={() => setIsRoutingOpen(false)}>Fechar</Button>
+                         <Button variant="outline" onClick={() => setIsOrdersOpen(false)}>Fechar</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
