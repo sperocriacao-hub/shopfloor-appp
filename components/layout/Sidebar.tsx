@@ -1,45 +1,114 @@
+"use client";
 
 import Link from 'next/link';
-import { Home, Settings, Ship, Boxes, Activity, Users } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export function Sidebar() {
+    const pathname = usePathname();
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Auto-collapse on mobile/tablet on mount and resize
+    useEffect(() => {
+        const checkSize = () => {
+            const mobile = window.innerWidth < 1024; // lg breakpoint
+            setIsMobile(mobile);
+            if (mobile) {
+                setIsCollapsed(true);
+            }
+        };
+        
+        checkSize();
+        window.addEventListener('resize', checkSize);
+        return () => window.removeEventListener('resize', checkSize);
+    }, []);
+
     const navItems = [
         { name: 'Dashboard', href: '/', icon: Home },
-        { name: 'Ordens de Produção', href: '/orders', icon: Activity }, // Execution
-        { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes }, // Resources
-        { name: 'Engenharia', href: '/products', icon: Settings }, // Engineering
+        { name: 'Ordens de Produção', href: '/orders', icon: Activity },
+        { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes },
+        { name: 'Engenharia', href: '/products', icon: Settings },
         { name: 'Recursos Humanos', href: '/staff', icon: Users },
-        { name: 'Modo Operador (Tablet)', href: '/shopfloor', icon: Ship }, // Shopfloor Link
+        { name: 'Modo Operador', href: '/shopfloor', icon: Ship },
     ];
 
     return (
-        <div className="flex h-full w-64 flex-col bg-blue-900 text-white">
-            <div className="flex h-16 items-center justify-center border-b border-blue-800 p-4">
-                {/* Increased size to h-12 (approx 50% larger than h-8) */}
-                <img src="/logo.png" alt="NavalShop Logo" className="h-12 w-auto object-contain invert mix-blend-screen" />
+        <div 
+            className={cn(
+                "flex flex-col bg-blue-900 text-white transition-all duration-300 ease-in-out h-full shadow-xl relative z-20",
+                isCollapsed ? "w-20" : "w-64"
+            )}
+        >
+            {/* Header / Logo */}
+            <div className="flex h-16 items-center justify-center border-b border-blue-800 p-4 relative">
+                 <Link href="/" className="flex items-center justify-center w-full">
+                    {isCollapsed ? (
+                         <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain invert mix-blend-screen" />
+                    ) : (
+                        <div className="flex items-center gap-2">
+                             <img src="/logo.png" alt="NavalShop Logo" className="h-10 w-auto object-contain invert mix-blend-screen" />
+                             {!isMobile && <span className="font-bold text-lg tracking-tight">NavalShop</span>}
+                        </div>
+                    )}
+                 </Link>
             </div>
-            <nav className="flex-1 space-y-1 px-2 py-4">
-                {navItems.map((item) => (
-                    <Link
-                        key={item.name}
-                        href={item.href}
-                        className="group flex items-center rounded-md px-2 py-2 text-sm font-medium text-blue-100 hover:bg-blue-800 hover:text-white"
-                    >
-                        <item.icon
-                            className="mr-3 h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white"
-                            aria-hidden="true"
-                        />
-                        {item.name}
-                    </Link>
-                ))}
+
+            {/* Toggle Button (Desktop Only or always visible to expand) */}
+            <button 
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="absolute -right-3 top-20 bg-blue-700 rounded-full p-1 shadow-md border border-blue-600 hover:bg-blue-600 focus:outline-none z-50 transition-transform active:scale-95"
+                title={isCollapsed ? "Expandir Menu" : "Recolher Menu"}
+            >
+                {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+
+            {/* Navigation */}
+            <nav className="flex-1 space-y-1 px-2 py-4 overflow-x-hidden">
+                {navItems.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                        <Link
+                            key={item.name}
+                            href={item.href}
+                            className={cn(
+                                "group flex items-center rounded-md px-2 py-3 text-sm font-medium transition-colors mb-1",
+                                isActive ? "bg-blue-800 text-white shadow-sm" : "text-blue-100 hover:bg-blue-800/50 hover:text-white",
+                                isCollapsed ? "justify-center" : "justify-start"
+                            )}
+                            title={isCollapsed ? item.name : undefined}
+                        >
+                            <item.icon
+                                className={cn(
+                                    "flex-shrink-0 transition-colors",
+                                    isCollapsed ? "h-6 w-6" : "mr-3 h-5 w-5",
+                                    isActive ? "text-white" : "text-blue-300 group-hover:text-white"
+                                )}
+                                aria-hidden="true"
+                            />
+                            {!isCollapsed && (
+                                <span className="truncate">{item.name}</span>
+                            )}
+                        </Link>
+                    );
+                })}
             </nav>
-            <div className="border-t border-blue-800 p-4">
-                <div className="flex items-center">
-                    <div className="h-8 w-8 rounded-full bg-blue-700" />
-                    <div className="ml-3">
-                        <p className="text-sm font-medium text-white">Admin</p>
-                        <p className="text-xs text-blue-200">Gestor de Produção</p>
+
+            {/* Footer / User Profile */}
+            <div className="border-t border-blue-800 p-4 overflow-hidden">
+                <div className={cn("flex items-center transition-all", isCollapsed ? "justify-center" : "")}>
+                    <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold border-2 border-blue-400">
+                        P
                     </div>
+                    {!isCollapsed && (
+                        <div className="ml-3 truncate">
+                            <p className="text-sm font-medium text-white truncate">Produção</p>
+                            <p className="text-xs text-blue-200 truncate">Admin</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
