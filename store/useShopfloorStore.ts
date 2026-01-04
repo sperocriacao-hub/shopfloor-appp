@@ -157,6 +157,8 @@ interface ShopfloorState {
     removeAsset: (id: string) => Promise<void>;
     updateAssetStatus: (id: string, status: Asset['status']) => void;
     addProduct: (product: ProductModel) => void;
+    updateProduct: (id: string, updates: Partial<ProductModel>) => Promise<void>;
+    removeProduct: (id: string) => Promise<void>;
     createOrder: (order: ProductionOrder) => void;
     updateOrderStatus: (id: string, status: ProductionOrder['status']) => void;
 
@@ -318,6 +320,27 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     description: product.description
                 });
                 if (error) console.error("Error adding product DB:", error);
+            },
+
+            updateProduct: async (id, updates) => {
+                set((state) => ({
+                    products: state.products.map(p => p.id === id ? { ...p, ...updates } : p)
+                }));
+                const toUpdate: any = {};
+                if (updates.name) toUpdate.name = updates.name;
+                if (updates.description) toUpdate.description = updates.description;
+
+                if (Object.keys(toUpdate).length > 0) {
+                    const { error } = await supabase.from('products').update(toUpdate).eq('id', id);
+                    if (error) console.error("Error updating product DB:", error);
+                }
+            },
+
+            removeProduct: async (id) => {
+                set((state) => ({
+                    products: state.products.filter(p => p.id !== id)
+                }));
+                await supabase.from('products').delete().eq('id', id);
             },
 
             createOrder: async (order) => {
