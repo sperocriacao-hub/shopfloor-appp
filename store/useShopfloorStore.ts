@@ -14,8 +14,10 @@ const createAsset = (idSuffix: string, name: string, area: string, subarea: stri
     type: name.includes('CNC') ? 'Machine' : 'Workstation',
     area,
     subarea,
+    subarea,
     status: 'available',
-    capabilities: [name]
+    capabilities: [name],
+    defaultCycleTime: 60
 });
 
 const initialAssets: Asset[] = [
@@ -156,7 +158,13 @@ interface ShopfloorState {
     addProduct: (product: ProductModel) => void;
     createOrder: (order: ProductionOrder) => void;
     updateOrderStatus: (id: string, status: ProductionOrder['status']) => void;
+    updateOrderStatus: (id: string, status: ProductionOrder['status']) => void;
+
+    // Shopfloor Actions
     logEvent: (event: ProductionEvent) => void;
+    startOperation: (orderId: string, assetId: string) => Promise<void>;
+    stopOperation: (orderId: string, assetId: string, reason?: string) => Promise<void>;
+
     addEmployee: (employee: Employee) => Promise<void>;
     updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
     removeEmployee: (id: string) => Promise<void>;
@@ -204,8 +212,12 @@ const mapDbToAsset = (db: any): Asset => ({
     type: db.type,
     area: db.area,
     subarea: db.subarea,
+    type: db.type,
+    area: db.area,
+    subarea: db.subarea,
     status: db.status as any,
-    capabilities: db.capabilities || []
+    capabilities: db.capabilities || [],
+    defaultCycleTime: db.default_cycle_time
 });
 
 const mapDbToProduct = (db: any): ProductModel => ({
@@ -321,6 +333,45 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     reason: event.reason
                 });
                 if (error) console.error("Error logging event DB:", error);
+            },
+
+            startOperation: async (orderId, assetId) => {
+                const event: ProductionEvent = {
+                    id: `evt-${Date.now()}`,
+                    orderId,
+                    assetId,
+                    type: 'START',
+                    timestamp: new Date().toISOString()
+                };
+
+                // 1. Log Start Event
+                get().logEvent(event);
+
+                // 2. Update Asset Status to in_use and Order Status to in_progress
+                get().updateAssetStatus(assetId, 'in_use');
+                const order = get().orders.find(o => o.id === orderId);
+                if (order && order.status === 'planned') {
+                    get().updateOrderStatus(orderId, 'in_progress');
+                }
+            },
+
+            stopOperation: async (orderId, assetId, reason) => {
+                const event: ProductionEvent = {
+                    id: `evt-${Date.now()}`,
+                    orderId,
+                    assetId,
+                    type: 'STOP',
+                    timestamp: new Date().toISOString(),
+                    reason
+                };
+
+                // 1. Log Stop Event
+                get().logEvent(event);
+
+                // 2. Update Asset Status to available
+                get().updateAssetStatus(assetId, 'available');
+
+                // 3. Logic to possibly close order could go here, or manual close
             },
 
             addEmployee: async (employee) => {

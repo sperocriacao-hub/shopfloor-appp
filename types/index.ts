@@ -9,6 +9,7 @@ export interface Asset {
     subarea?: string; // ex: "Laminação - Madeiras"
     status: AssetStatus;
     capabilities: string[]; // ex: ["Cutting", "Drilling"]
+    defaultCycleTime?: number; // Minutes
 }
 
 // --- Product Engineering (Como fazer) ---

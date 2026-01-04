@@ -49,7 +49,8 @@ create table if not exists assets (
   area text not null,
   subarea text,
   status text not null,
-  capabilities text[]
+  capabilities text[],
+  default_cycle_time int default 60
 );
 
 -- Products
