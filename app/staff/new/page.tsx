@@ -26,6 +26,7 @@ export default function NewStaffPage() {
         shift: "Turno A",
         supervisor: "",
         leader: "",
+        manager: "",
         admissionDate: "",
         contractStartDate: "",
         terminationDate: "",
@@ -193,6 +194,16 @@ export default function NewStaffPage() {
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700">Líder</label>
                             <input name="leader" value={formData.leader} onChange={handleChange} className="input-field" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Gestor</label>
+                            <input
+                                name="manager"
+                                value={formData.manager}
+                                onChange={handleChange}
+                                className="input-field"
+                                placeholder="Gerente de área..."
+                            />
                         </div>
                     </CardContent>
                 </Card>

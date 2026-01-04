@@ -35,7 +35,7 @@ export default function StaffPage() {
                         ...emp as any // Type assertion for simplified import
                     });
                 });
-                alert(`${newStaff.length} funcionários importados com sucesso!`);
+                alert(`${newStaff.length} funcionários importados com sucesso para o Supabase! 🚀`);
             } catch (error) {
                 alert("Erro ao importar arquivo via Excel.");
                 console.error(error);
@@ -85,6 +85,9 @@ export default function StaffPage() {
                         className="hidden"
                         accept=".xlsx,.xls"
                     />
+                    <Button variant="outline" onClick={() => router.push('/staff/org-chart')} className="border-slate-200 text-slate-700 hover:bg-slate-50">
+                        <Users className="mr-2 h-4 w-4" /> Organograma
+                    </Button>
                     <Button variant="outline" onClick={() => router.push('/staff/absenteeism')} className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
                         <UserX className="mr-2 h-4 w-4" /> Absenteísmo
                     </Button>

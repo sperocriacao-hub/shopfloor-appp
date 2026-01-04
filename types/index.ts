@@ -73,6 +73,7 @@ export interface Employee {
     shift: string; // Turno
     supervisor: string;
     leader: string;
+    manager: string;
 
     // Dates
     admissionDate: string; // ISO Date

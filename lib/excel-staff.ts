@@ -3,7 +3,7 @@ import { Employee } from '@/types';
 
 export const downloadStaffTemplate = () => {
     const headers = [
-        ["Numero Operario", "Nome Completo", "Area", "Posto de Trabalho", "Turno", "Tipo Contrato", "Data Admissao (YYYY-MM-DD)", "Data Nascimento (YYYY-MM-DD)", "Supervisor", "Lider", "Nivel ILUO (I,L,U,O)", "Status RH (Ativo/Ferias/Baixa)"]
+        ["Numero Operario", "Nome Completo", "Area", "Posto de Trabalho", "Turno", "Tipo Contrato", "Data Admissao", "Data Nascimento", "Supervisor", "Lider", "Gestor", "Nivel ILUO", "Status RH"]
     ];
 
     const wb = XLSX.utils.book_new();
@@ -26,21 +26,37 @@ export const parseStaffExcel = async (file: File): Promise<Partial<Employee>[]> 
                 // Skip header row
                 const rows = jsonData.slice(1) as any[];
 
-                const employees: Partial<Employee>[] = rows.map((row) => ({
-                    workerNumber: row[0]?.toString() || "",
-                    name: row[1]?.toString() || "",
-                    area: row[2]?.toString() || "Produção",
-                    workstation: row[3]?.toString() || "",
-                    shift: row[4]?.toString() || "Turno A",
-                    contractType: row[5]?.toString() || "Determinado",
-                    admissionDate: row[6]?.toString(), // Expecting YYYY-MM-DD or excel date handling might be needed if typed as date
-                    birthday: row[7]?.toString(),
-                    supervisor: row[8]?.toString() || "",
-                    leader: row[9]?.toString() || "",
-                    iluo: (row[10]?.toString() as any) || "I",
-                    hrStatus: (row[11]?.toString().toLowerCase() === 'ativo' ? 'active' : 'active') as any, // Simplified validation
-                    group: "Operações" // Default
-                })).filter(e => e.workerNumber && e.name); // Basic validation
+                const employees: Partial<Employee>[] = rows.map((row) => {
+                    const admissionRaw = row[6];
+                    const birthdayRaw = row[7];
+
+                    // Simple Excel date converter (if number)
+                    const parseDate = (val: any) => {
+                        if (!val) return "";
+                        if (typeof val === 'number') {
+                            const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                            return date.toISOString().split('T')[0];
+                        }
+                        return val.toString();
+                    };
+
+                    return {
+                        workerNumber: row[0]?.toString() || "",
+                        name: row[1]?.toString() || "",
+                        area: row[2]?.toString() || "Produção",
+                        workstation: row[3]?.toString() || "",
+                        shift: row[4]?.toString() || "Turno A",
+                        contractType: row[5]?.toString() || "Determinado",
+                        admissionDate: parseDate(admissionRaw),
+                        birthday: parseDate(birthdayRaw),
+                        supervisor: row[8]?.toString() || "",
+                        leader: row[9]?.toString() || "",
+                        manager: row[10]?.toString() || "", // NEW FIELD
+                        iluo: (row[11]?.toString() as any) || "I",
+                        hrStatus: (row[12]?.toString().toLowerCase() === 'ativo' ? 'active' : 'active') as any, // Shifted columns
+                        group: "Operações"
+                    };
+                }).filter(e => e.workerNumber && e.name);
 
                 resolve(employees);
             } catch (error) {

@@ -27,6 +27,7 @@ export default function EditStaffPage() {
         shift: "",
         supervisor: "",
         leader: "",
+        manager: "",
         admissionDate: "",
         contractStartDate: "",
         terminationDate: "",
@@ -65,6 +66,7 @@ export default function EditStaffPage() {
                     shift: emp.shift,
                     supervisor: emp.supervisor,
                     leader: emp.leader,
+                    manager: emp.manager,
                     admissionDate: emp.admissionDate,
                     contractStartDate: emp.contractStartDate,
                     terminationDate: emp.terminationDate || "",
@@ -102,6 +104,7 @@ export default function EditStaffPage() {
         setTimeout(() => {
             updateEmployee(params.id as string, {
                 ...formData,
+                manager: formData.manager, // Explicitly include new field if needed, though ...formData covers it if it matches type
                 iluo: formData.iluo as any,
                 hrStatus: formData.hrStatus as any,
                 hasSystemAccess: formData.hasSystemAccess,
@@ -227,6 +230,16 @@ export default function EditStaffPage() {
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700">Líder</label>
                             <input name="leader" value={formData.leader} onChange={handleChange} className="input-field" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Gestor</label>
+                            <input
+                                name="manager"
+                                value={formData.manager || ''}
+                                onChange={handleChange}
+                                className="input-field"
+                                placeholder="Gerente de área..."
+                            />
                         </div>
                     </CardContent>
                 </Card>
