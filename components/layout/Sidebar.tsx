@@ -47,10 +47,11 @@ export function Sidebar() {
             <div className="flex h-16 items-center justify-center border-b border-blue-800 p-4 relative">
                 <Link href="/" className="flex items-center justify-center w-full">
                     {isCollapsed ? (
-                        <img src="/logo.svg" alt="Logo" className="h-10 w-10 object-contain" />
+                        <img src="/favicon.png" alt="Logo" className="h-10 w-10 object-contain brightness-0 invert" />
                     ) : (
-                        <div className="flex items-center justify-center w-full">
-                            <img src="/logo.svg" alt="NavalShop Logo" className="h-12 w-auto object-contain" />
+                        <div className="flex items-center justify-center w-full px-2">
+                            {/* Inverting colors to ensure visibility on dark background */}
+                            <img src="/logo-full.png" alt="NavalShop Logo" className="h-8 w-auto object-contain brightness-0 invert opacity-90" />
                         </div>
                     )}
                 </Link>
