@@ -10,9 +10,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Naval Shopfloor Management',
   description: 'Sistema de gestão de fabricação naval',
-  icons: {
-    icon: '/logo.png',
-  },
+  icons: [
+    { rel: 'icon', url: '/brand-logo.svg', type: 'image/svg+xml' },
+  ],
 };
 
 export default function RootLayout({

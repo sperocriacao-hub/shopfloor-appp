@@ -180,7 +180,7 @@ const mapDbToEmployee = (dbEmp: any): Employee => ({
     workerNumber: dbEmp.worker_number,
     name: dbEmp.name,
     contractType: dbEmp.contract_type,
-    jobTitle: dbEmp.job_title || '', // Mapped
+    jobTitle: dbEmp.job_title || '',
     group: dbEmp["group"],
     area: dbEmp.area,
     workstation: dbEmp.workstation,
@@ -189,14 +189,15 @@ const mapDbToEmployee = (dbEmp: any): Employee => ({
     leader: dbEmp.leader,
     manager: dbEmp.manager,
     admissionDate: dbEmp.admission_date,
-    contractStartDate: '',
+    contractStartDate: dbEmp.contract_start_date || '',
     terminationDate: '',
     birthday: dbEmp.birthday,
-    talentMatrix: '',
+    talentMatrix: dbEmp.talent_matrix || '',
     iluo: 'I',
     hrStatus: dbEmp.status || 'active',
     hrNotes: '',
-    hasSystemAccess: false
+    hasSystemAccess: !!dbEmp.system_access,
+    systemAccess: dbEmp.system_access || undefined
 });
 
 const mapDbToAbsenteeism = (dbAbs: any): AbsenteeismRecord => ({
@@ -441,7 +442,10 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     manager: employee.manager,
                     admission_date: employee.admissionDate || null,
                     birthday: employee.birthday || null,
-                    status: employee.hrStatus
+                    status: employee.hrStatus,
+                    contract_start_date: employee.contractStartDate || null,
+                    talent_matrix: employee.talentMatrix,
+                    system_access: employee.systemAccess
                 });
                 if (error) console.error("Error adding employee to DB:", error);
             },
@@ -459,6 +463,9 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.jobTitle) toUpdate.job_title = updates.jobTitle;
                 if (updates.shift) toUpdate.shift = updates.shift;
                 if (updates.hrStatus) toUpdate.status = updates.hrStatus;
+                if (updates.contractStartDate) toUpdate.contract_start_date = updates.contractStartDate;
+                if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
+                if (updates.systemAccess) toUpdate.system_access = updates.systemAccess;
 
                 if (Object.keys(toUpdate).length > 0) {
                     const { error } = await supabase.from('employees').update(toUpdate).eq('id', id);
@@ -508,8 +515,24 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (assets && assets.length > 0) set({ assets: assets.map(mapDbToAsset) });
 
                 // Products
+                // Products & Routings (Derived from Products)
                 const { data: products } = await supabase.from('products').select('*');
-                if (products && products.length > 0) set({ products: products.map(mapDbToProduct) });
+                if (products && products.length > 0) {
+                     set({ products: products.map(mapDbToProduct) });
+                     
+                     // Generate routings from product operations
+                     const derivedRoutings: Routing[] = products
+                        .filter(p => p.operations && Array.isArray(p.operations))
+                        .map(p => ({
+                            id: `rt-${p.id}`,
+                            productModelId: p.id,
+                            operations: p.operations
+                        }));
+                     
+                     if (derivedRoutings.length > 0) {
+                         set({ routings: derivedRoutings });
+                     }
+                }
 
                 // Orders
                 const { data: orders } = await supabase.from('orders').select('*');

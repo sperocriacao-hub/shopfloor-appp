@@ -21,7 +21,7 @@ export function Sidebar() {
                 setIsCollapsed(true);
             }
         };
-        
+
         checkSize();
         window.addEventListener('resize', checkSize);
         return () => window.removeEventListener('resize', checkSize);
@@ -37,7 +37,7 @@ export function Sidebar() {
     ];
 
     return (
-        <div 
+        <div
             className={cn(
                 "flex flex-col bg-blue-900 text-white transition-all duration-300 ease-in-out h-full shadow-xl relative z-20",
                 isCollapsed ? "w-20" : "w-64"
@@ -45,19 +45,19 @@ export function Sidebar() {
         >
             {/* Header / Logo */}
             <div className="flex h-16 items-center justify-center border-b border-blue-800 p-4 relative">
-                 <Link href="/" className="flex items-center justify-center w-full">
+                <Link href="/" className="flex items-center justify-center w-full">
                     {isCollapsed ? (
-                         <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain" />
+                        <img src="/logo.svg" alt="Logo" className="h-10 w-10 object-contain" />
                     ) : (
                         <div className="flex items-center justify-center w-full">
-                             <img src="/logo.png" alt="NavalShop Logo" className="h-12 w-auto object-contain" />
+                            <img src="/logo.svg" alt="NavalShop Logo" className="h-12 w-auto object-contain" />
                         </div>
                     )}
-                 </Link>
+                </Link>
             </div>
 
             {/* Toggle Button (Desktop Only or always visible to expand) */}
-            <button 
+            <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className="absolute -right-3 top-20 bg-blue-700 rounded-full p-1 shadow-md border border-blue-600 hover:bg-blue-600 focus:outline-none z-50 transition-transform active:scale-95"
                 title={isCollapsed ? "Expandir Menu" : "Recolher Menu"}
