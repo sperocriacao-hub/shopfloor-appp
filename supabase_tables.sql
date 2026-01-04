@@ -30,14 +30,6 @@ create table if not exists absenteeism_records (
   created_at timestamptz default now()
 );
 
--- Habilitar Realtime
-alter publication supabase_realtime add table employees;
-alter publication supabase_realtime add table absenteeism_records;
-alter publication supabase_realtime add table assets;
-alter publication supabase_realtime add table products;
-alter publication supabase_realtime add table orders;
-alter publication supabase_realtime add table events;
-
 -- Updates (Novos Campos)
 alter table employees add column if not exists job_title text;
 
@@ -84,3 +76,10 @@ create table if not exists events (
   timestamp timestamptz default now(),
   reason text
 );
+
+-- Habilitar Realtime (Apenas novas tabelas)
+-- (Employees e Absenteeism ja devem estar habilitados)
+alter publication supabase_realtime add table assets;
+alter publication supabase_realtime add table products;
+alter publication supabase_realtime add table orders;
+alter publication supabase_realtime add table events;

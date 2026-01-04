@@ -9,6 +9,7 @@ export function Sidebar() {
         { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes }, // Resources
         { name: 'Engenharia', href: '/products', icon: Settings }, // Engineering
         { name: 'Recursos Humanos', href: '/staff', icon: Users },
+        { name: 'Modo Operador (Tablet)', href: '/shopfloor', icon: Ship }, // Shopfloor Link
     ];
 
     return (

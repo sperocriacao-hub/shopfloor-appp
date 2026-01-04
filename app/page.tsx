@@ -1,13 +1,47 @@
+"use client";
+
+import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Boxes, Users, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Boxes, Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { Asset, ProductionEvent } from "@/types";
 
 export default function Home() {
-  const stats = [
-    { name: 'Áreas Ativas', value: '4', icon: Boxes, color: 'text-blue-500' },
-    { name: 'Operadores', value: '12', icon: Users, color: 'text-slate-500' },
-    { name: 'Alertas OEE', value: '2', icon: AlertTriangle, color: 'text-orange-500' },
-    { name: 'Eficiência Global', value: '87%', icon: CheckCircle, color: 'text-green-500' },
-  ];
+  const { assets, employees, orders, events } = useShopfloorStore();
+  const [stats, setStats] = useState({
+    activeAreas: 0,
+    operators: 0,
+    inProgressOrders: 0,
+    efficiency: 'Calculating...'
+  });
+
+  useEffect(() => {
+    // Calculate dynamic stats
+    const activeAreasCount = new Set(assets.map(a => a.area)).size;
+    const activeOperatorsCount = employees.filter(e => e.hrStatus === 'active').length;
+    const inProgressCount = orders.filter(o => o.status === 'in_progress').length;
+
+    // Efficiency Placeholder (Logic can be complex)
+    setStats({
+      activeAreas: activeAreasCount,
+      operators: activeOperatorsCount,
+      inProgressOrders: inProgressCount,
+      efficiency: '92%' // Mock for now, would need shift data
+    });
+  }, [assets, employees, orders, events]);
+
+  // Derived Data for KPIs
+  const activeStations = assets
+    .filter(a => a.status === 'in_use')
+    .map(a => {
+      // Find active event
+      const evt = events.find(e => e.assetId === a.id && e.type === 'START');
+      return {
+        name: a.name,
+        startTime: evt ? new Date(evt.timestamp) : new Date(),
+        subarea: a.subarea
+      };
+    });
 
   return (
     <div className="space-y-6">
@@ -17,46 +51,85 @@ export default function Home() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.name}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.name}
-              </CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
-        ))}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Áreas Ativas</CardTitle>
+            <Boxes className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeAreas}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Operadores</CardTitle>
+            <Users className="h-4 w-4 text-slate-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.operators}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ordens em Progresso</CardTitle>
+            <Clock className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.inProgressOrders}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Eficiência Global</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.efficiency}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Visão Geral da Produção</CardTitle>
+            <CardTitle>Histórico Recente de Eventos</CardTitle>
           </CardHeader>
-          <CardContent className="pl-2">
-            <div className="h-[200px] flex items-center justify-center text-slate-400 border border-dashed rounded-md">
-              Gráfico de Produção (Placeholder)
-            </div>
+          <CardContent>
+            <ul className="space-y-4">
+              {events.slice().reverse().slice(0, 5).map(evt => {
+                const assetName = assets.find(a => a.id === evt.assetId)?.name || 'Desconhecido';
+                const typeMap = { 'START': 'Iniciou', 'STOP': 'Parou', 'PAUSE': 'Pausou', 'RESUME': 'Retomou', 'COMPLETE': 'Concluiu' };
+                return (
+                  <li key={evt.id} className="flex justify-between items-center border-b pb-2 last:border-0">
+                    <div>
+                      <p className="font-medium text-slate-800">
+                        {assetName} - <span className={evt.type === 'START' ? 'text-green-600' : 'text-red-600'}>{typeMap[evt.type] || evt.type}</span>
+                      </p>
+                      <p className="text-xs text-slate-500">{new Date(evt.timestamp).toLocaleString()}</p>
+                    </div>
+                    {evt.reason && <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">{evt.reason}</span>}
+                  </li>
+                );
+              })}
+              {events.length === 0 && <p className="text-slate-400 text-sm py-4">Nenhum evento registrado ainda.</p>}
+            </ul>
           </CardContent>
         </Card>
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Estações Recentes</CardTitle>
+            <CardTitle>Estações em Operação ({activeStations.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {['CNC - Fanuc', 'Lixagem A', 'Resina Final'].map((station) => (
-                <div key={station} className="flex items-center">
-                  <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center">
+              {activeStations.length === 0 && <p className="text-slate-400">Nenhuma estação ativa no momento.</p>}
+              {activeStations.map((station, i) => (
+                <div key={i} className="flex items-center">
+                  <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center text-green-600 animate-pulse">
                     <ActivityIcon />
                   </div>
                   <div className="ml-4 space-y-1">
-                    <p className="text-sm font-medium leading-none">{station}</p>
-                    <p className="text-xs text-muted-foreground">Em operação</p>
+                    <p className="text-sm font-medium leading-none">{station.name}</p>
+                    <p className="text-xs text-muted-foreground">{station.subarea}</p>
                   </div>
                   <div className="ml-auto font-medium text-green-600">On</div>
                 </div>
@@ -72,7 +145,7 @@ export default function Home() {
 function ActivityIcon() {
   return (
     <svg
-      className=" h-4 w-4 text-slate-500"
+      className=" h-4 w-4"
       fill="none"
       height="24"
       stroke="currentColor"
