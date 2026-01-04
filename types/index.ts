@@ -136,7 +136,7 @@ export interface ProductionOrder {
 export interface ProductionEvent {
     id: string;
     orderId: string;
-    operationId: string;
+    operationId?: string;
     assetId: string;
     timestamp: string; // ISO Date
     type: 'START' | 'STOP' | 'PAUSE' | 'RESUME' | 'COMPLETE';
