@@ -47,11 +47,10 @@ export function Sidebar() {
             <div className="flex h-16 items-center justify-center border-b border-blue-800 p-4 relative">
                  <Link href="/" className="flex items-center justify-center w-full">
                     {isCollapsed ? (
-                         <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain invert mix-blend-screen" />
+                         <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain" />
                     ) : (
-                        <div className="flex items-center gap-2">
-                             <img src="/logo.png" alt="NavalShop Logo" className="h-10 w-auto object-contain invert mix-blend-screen" />
-                             {!isMobile && <span className="font-bold text-lg tracking-tight">NavalShop</span>}
+                        <div className="flex items-center justify-center w-full">
+                             <img src="/logo.png" alt="NavalShop Logo" className="h-12 w-auto object-contain" />
                         </div>
                     )}
                  </Link>
