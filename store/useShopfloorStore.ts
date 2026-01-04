@@ -163,7 +163,6 @@ interface ShopfloorState {
     // Shopfloor Actions
     logEvent: (event: ProductionEvent) => void;
     startOperation: (orderId: string, assetId: string) => Promise<void>;
-    startOperation: (orderId: string, assetId: string) => Promise<void>;
     stopOperation: (orderId: string, assetId: string, reason?: string, shouldCompleteOrder?: boolean) => Promise<void>;
 
     addEmployee: (employee: Employee) => Promise<void>;
