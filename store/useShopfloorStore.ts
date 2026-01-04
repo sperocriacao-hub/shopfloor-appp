@@ -14,7 +14,6 @@ const createAsset = (idSuffix: string, name: string, area: string, subarea: stri
     type: name.includes('CNC') ? 'Machine' : 'Workstation',
     area,
     subarea,
-    subarea,
     status: 'available',
     capabilities: [name],
     defaultCycleTime: 60
@@ -158,7 +157,6 @@ interface ShopfloorState {
     addProduct: (product: ProductModel) => void;
     createOrder: (order: ProductionOrder) => void;
     updateOrderStatus: (id: string, status: ProductionOrder['status']) => void;
-    updateOrderStatus: (id: string, status: ProductionOrder['status']) => void;
 
     // Shopfloor Actions
     logEvent: (event: ProductionEvent) => void;
@@ -209,9 +207,6 @@ const mapDbToAbsenteeism = (dbAbs: any): AbsenteeismRecord => ({
 const mapDbToAsset = (db: any): Asset => ({
     id: db.id,
     name: db.name,
-    type: db.type,
-    area: db.area,
-    subarea: db.subarea,
     type: db.type,
     area: db.area,
     subarea: db.subarea,
