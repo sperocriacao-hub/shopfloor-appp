@@ -33,3 +33,6 @@ create table if not exists absenteeism_records (
 -- Habilitar Realtime
 alter publication supabase_realtime add table employees;
 alter publication supabase_realtime add table absenteeism_records;
+
+-- Updates (Novos Campos)
+alter table employees add column if not exists job_title text;

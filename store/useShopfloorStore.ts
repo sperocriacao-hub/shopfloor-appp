@@ -170,6 +170,7 @@ const mapDbToEmployee = (dbEmp: any): Employee => ({
     workerNumber: dbEmp.worker_number,
     name: dbEmp.name,
     contractType: dbEmp.contract_type,
+    jobTitle: dbEmp.job_title || '', // Mapped
     group: dbEmp["group"],
     area: dbEmp.area,
     workstation: dbEmp.workstation,
@@ -239,6 +240,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     worker_number: employee.workerNumber,
                     name: employee.name,
                     contract_type: employee.contractType,
+                    job_title: employee.jobTitle,
                     "group": employee.group,
                     area: employee.area,
                     workstation: employee.workstation,
@@ -263,6 +265,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.manager) toUpdate.manager = updates.manager;
                 if (updates.leader) toUpdate.leader = updates.leader;
                 if (updates.supervisor) toUpdate.supervisor = updates.supervisor;
+                if (updates.jobTitle) toUpdate.job_title = updates.jobTitle;
                 if (updates.shift) toUpdate.shift = updates.shift;
                 if (updates.hrStatus) toUpdate.status = updates.hrStatus;
 

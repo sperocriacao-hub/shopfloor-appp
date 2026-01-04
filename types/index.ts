@@ -67,6 +67,7 @@ export interface Employee {
 
     // Job & Contract
     contractType: string;
+    jobTitle: string; // Função
     group: string;
     area: string; // Link to Area name
     workstation: string;

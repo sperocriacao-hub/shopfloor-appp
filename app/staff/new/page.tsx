@@ -140,6 +140,16 @@ export default function NewStaffPage() {
                     <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">2. Estrutura & Alocação</h3></CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Função (Job Title)</label>
+                            <input
+                                name="jobTitle"
+                                value={(formData as any).jobTitle || ""}
+                                onChange={handleChange}
+                                className="input-field"
+                                placeholder="Ex: Operador CNC, Soldador..."
+                            />
+                        </div>
+                        <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700">Área *</label>
                             <select
                                 name="area"
