@@ -33,6 +33,53 @@ create table if not exists absenteeism_records (
 -- Habilitar Realtime
 alter publication supabase_realtime add table employees;
 alter publication supabase_realtime add table absenteeism_records;
+alter publication supabase_realtime add table assets;
+alter publication supabase_realtime add table products;
+alter publication supabase_realtime add table orders;
+alter publication supabase_realtime add table events;
 
 -- Updates (Novos Campos)
 alter table employees add column if not exists job_title text;
+
+-- Assets
+create table if not exists assets (
+  id text primary key,
+  name text not null,
+  type text not null,
+  area text not null,
+  subarea text,
+  status text not null,
+  capabilities text[]
+);
+
+-- Products
+create table if not exists products (
+  id text primary key,
+  name text not null,
+  description text
+);
+
+-- Orders
+create table if not exists orders (
+  id text primary key,
+  product_model_id text references products(id),
+  quantity int not null,
+  status text not null,
+  po text,
+  customer text,
+  area text,
+  start_date timestamptz,
+  finish_date timestamptz,
+  active_operations jsonb -- Stores array of OperationDefinition
+);
+
+-- Events
+create table if not exists events (
+  id text primary key,
+  order_id text references orders(id),
+  operation_id text,
+  asset_id text references assets(id),
+  type text not null,
+  timestamp timestamptz default now(),
+  reason text
+);

@@ -198,6 +198,45 @@ const mapDbToAbsenteeism = (dbAbs: any): AbsenteeismRecord => ({
     timestamp: dbAbs.created_at || new Date().toISOString() // Fallback to now if missing
 });
 
+const mapDbToAsset = (db: any): Asset => ({
+    id: db.id,
+    name: db.name,
+    type: db.type,
+    area: db.area,
+    subarea: db.subarea,
+    status: db.status as any,
+    capabilities: db.capabilities || []
+});
+
+const mapDbToProduct = (db: any): ProductModel => ({
+    id: db.id,
+    name: db.name,
+    description: db.description
+});
+
+const mapDbToOrder = (db: any): ProductionOrder => ({
+    id: db.id,
+    productModelId: db.product_model_id,
+    quantity: db.quantity,
+    status: db.status as any,
+    po: db.po,
+    customer: db.customer,
+    area: db.area,
+    startDate: db.start_date ? new Date(db.start_date) : undefined,
+    finishDate: db.finish_date ? new Date(db.finish_date) : undefined,
+    activeOperations: db.active_operations as any
+});
+
+const mapDbToEvent = (db: any): ProductionEvent => ({
+    id: db.id,
+    orderId: db.order_id,
+    operationId: db.operation_id,
+    assetId: db.asset_id,
+    type: db.type as any,
+    timestamp: db.timestamp,
+    reason: db.reason
+});
+
 export const useShopfloorStore = create<ShopfloorState>()(
     persist(
         (set, get) => ({
@@ -213,25 +252,76 @@ export const useShopfloorStore = create<ShopfloorState>()(
             absenteeismRecords: [],
 
             // Actions
-            addAsset: (asset) => set((state) => ({ assets: [...state.assets, asset] })),
+            addAsset: async (asset) => {
+                set((state) => ({ assets: [...state.assets, asset] }));
+                const { error } = await supabase.from('assets').insert({
+                    id: asset.id,
+                    name: asset.name,
+                    type: asset.type,
+                    area: asset.area,
+                    subarea: asset.subarea,
+                    status: asset.status,
+                    capabilities: asset.capabilities
+                });
+                if (error) console.error("Error adding asset DB:", error);
+            },
 
-            updateAssetStatus: (id, status) => set((state) => ({
-                assets: state.assets.map(a => a.id === id ? { ...a, status } : a)
-            })),
+            updateAssetStatus: async (id, status) => {
+                set((state) => ({
+                    assets: state.assets.map(a => a.id === id ? { ...a, status } : a)
+                }));
+                const { error } = await supabase.from('assets').update({ status }).eq('id', id);
+                if (error) console.error("Error updating asset status DB:", error);
+            },
 
-            addProduct: (product) => set((state) => ({ products: [...state.products, product] })),
+            addProduct: async (product) => {
+                set((state) => ({ products: [...state.products, product] }));
+                const { error } = await supabase.from('products').insert({
+                    id: product.id,
+                    name: product.name,
+                    description: product.description
+                });
+                if (error) console.error("Error adding product DB:", error);
+            },
 
-            createOrder: (order) => set((state) => ({
-                orders: [...state.orders, order]
-            })),
+            createOrder: async (order) => {
+                set((state) => ({ orders: [...state.orders, order] }));
+                const { error } = await supabase.from('orders').insert({
+                    id: order.id,
+                    product_model_id: order.productModelId,
+                    quantity: order.quantity,
+                    status: order.status,
+                    po: order.po,
+                    customer: order.customer,
+                    area: order.area,
+                    start_date: order.startDate || null,
+                    finish_date: order.finishDate || null,
+                    active_operations: order.activeOperations || []
+                });
+                if (error) console.error("Error creating order DB:", error);
+            },
 
-            updateOrderStatus: (id, status) => set((state) => ({
-                orders: state.orders.map(o => o.id === id ? { ...o, status } : o)
-            })),
+            updateOrderStatus: async (id, status) => {
+                set((state) => ({
+                    orders: state.orders.map(o => o.id === id ? { ...o, status } : o)
+                }));
+                const { error } = await supabase.from('orders').update({ status }).eq('id', id);
+                if (error) console.error("Error updating order status DB:", error);
+            },
 
-            logEvent: (event) => set((state) => ({
-                events: [...state.events, event]
-            })),
+            logEvent: async (event) => {
+                set((state) => ({ events: [...state.events, event] }));
+                const { error } = await supabase.from('events').insert({
+                    id: event.id,
+                    order_id: event.orderId,
+                    operation_id: event.operationId,
+                    asset_id: event.assetId,
+                    type: event.type,
+                    timestamp: event.timestamp,
+                    reason: event.reason
+                });
+                if (error) console.error("Error logging event DB:", error);
+            },
 
             addEmployee: async (employee) => {
                 set((state) => ({ employees: [...state.employees, employee] }));
@@ -304,16 +394,31 @@ export const useShopfloorStore = create<ShopfloorState>()(
             },
 
             syncData: async () => {
+                // Employees
                 const { data: emps } = await supabase.from('employees').select('*');
-                if (emps) {
-                    const loadedEmployees = emps.map(mapDbToEmployee);
-                    set({ employees: loadedEmployees });
-                }
+                if (emps) set({ employees: emps.map(mapDbToEmployee) });
+
+                // Absenteeism
                 const { data: recs } = await supabase.from('absenteeism_records').select('*');
-                if (recs) {
-                    console.log("Abs Records found:", recs.length);
-                    set({ absenteeismRecords: recs.map(mapDbToAbsenteeism) });
-                }
+                if (recs) set({ absenteeismRecords: recs.map(mapDbToAbsenteeism) });
+
+                // Assets
+                const { data: assets } = await supabase.from('assets').select('*');
+                if (assets && assets.length > 0) set({ assets: assets.map(mapDbToAsset) });
+
+                // Products
+                const { data: products } = await supabase.from('products').select('*');
+                if (products && products.length > 0) set({ products: products.map(mapDbToProduct) });
+
+                // Orders
+                const { data: orders } = await supabase.from('orders').select('*');
+                if (orders && orders.length > 0) set({ orders: orders.map(mapDbToOrder) });
+
+                // Events
+                const { data: events } = await supabase.from('events').select('*');
+                if (events && events.length > 0) set({ events: events.map(mapDbToEvent) });
+
+                console.log("Sync complete.");
             }
         }),
         {
