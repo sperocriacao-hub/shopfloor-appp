@@ -153,6 +153,8 @@ interface ShopfloorState {
     absenteeismRecords: AbsenteeismRecord[];
 
     addAsset: (asset: Asset) => void;
+    updateAsset: (id: string, updates: Partial<Asset>) => Promise<void>;
+    removeAsset: (id: string) => Promise<void>;
     updateAssetStatus: (id: string, status: Asset['status']) => void;
     addProduct: (product: ProductModel) => void;
     createOrder: (order: ProductionOrder) => void;
@@ -268,9 +270,36 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     area: asset.area,
                     subarea: asset.subarea,
                     status: asset.status,
-                    capabilities: asset.capabilities
+                    capabilities: asset.capabilities,
+                    default_cycle_time: asset.defaultCycleTime
                 });
                 if (error) console.error("Error adding asset DB:", error);
+            },
+
+            updateAsset: async (id, updates) => {
+                set((state) => ({
+                    assets: state.assets.map(a => a.id === id ? { ...a, ...updates } : a)
+                }));
+                const toUpdate: any = {};
+                if (updates.name) toUpdate.name = updates.name;
+                if (updates.type) toUpdate.type = updates.type;
+                if (updates.area) toUpdate.area = updates.area;
+                if (updates.subarea) toUpdate.subarea = updates.subarea;
+                if (updates.status) toUpdate.status = updates.status;
+                if (updates.defaultCycleTime !== undefined) toUpdate.default_cycle_time = updates.defaultCycleTime;
+
+                if (Object.keys(toUpdate).length > 0) {
+                    const { error } = await supabase.from('assets').update(toUpdate).eq('id', id);
+                    if (error) console.error("Error updating asset DB:", error);
+                }
+            },
+
+            removeAsset: async (id) => {
+                set((state) => ({
+                    assets: state.assets.filter(a => a.id !== id)
+                }));
+                const { error } = await supabase.from('assets').delete().eq('id', id);
+                if (error) console.error("Error removing asset DB:", error);
             },
 
             updateAssetStatus: async (id, status) => {

@@ -5,9 +5,14 @@ import { useState, useRef } from "react";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Wrench, PlayCircle, StopCircle, Search, Download, Upload } from "lucide-react";
+import { Plus, Wrench, PlayCircle, StopCircle, Search, Download, Upload, Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadAssetsTemplate, parseAssetsExcel } from "@/lib/excel-assets";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Asset } from "@/types";
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -31,8 +36,13 @@ const getStatusLabel = (status: string) => {
 
 export default function AssetsPage() {
     const router = useRouter();
-    const { assets, updateAssetStatus, addAsset } = useShopfloorStore();
+    const { assets, updateAssetStatus, addAsset, removeAsset, updateAsset } = useShopfloorStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Edit State
+    const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [editForm, setEditForm] = useState<Partial<Asset>>({});
 
     const handleExport = () => {
         downloadAssetsTemplate();
@@ -58,6 +68,30 @@ export default function AssetsPage() {
                 console.error(error);
             }
             if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (confirm("Tem certeza que deseja excluir este ativo?")) {
+            await removeAsset(id);
+        }
+    };
+
+    const handleEditClick = (asset: Asset) => {
+        setEditingAsset(asset);
+        setEditForm({
+            name: asset.name,
+            type: asset.type,
+            defaultCycleTime: asset.defaultCycleTime || 60
+        });
+        setIsEditOpen(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (editingAsset && editForm) {
+            await updateAsset(editingAsset.id, editForm);
+            setIsEditOpen(false);
+            setEditingAsset(null);
         }
     };
 
@@ -119,22 +153,31 @@ export default function AssetsPage() {
                     </h2>
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {areaAssets.map((asset) => (
-                            <Card key={asset.id} className="hover:shadow-md transition-shadow group border-slate-200">
+                            <Card key={asset.id} className="hover:shadow-md transition-shadow group border-slate-200 relative">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <div className="space-y-1">
-                                        <CardTitle className="text-lg text-slate-900">{asset.name}</CardTitle>
+                                    <div className="space-y-1 pr-6">
+                                        <CardTitle className="text-lg text-slate-900 truncate" title={asset.name}>{asset.name}</CardTitle>
                                         <p className="text-sm font-medium text-slate-500">{asset.subarea || asset.area}</p>
                                     </div>
-                                    <div className={cn("px-2.5 py-0.5 rounded-full text-xs font-bold border", getStatusColor(asset.status))}>
+                                    <div className={cn("px-2.5 py-0.5 rounded-full text-xs font-bold border shrink-0", getStatusColor(asset.status))}>
                                         {getStatusLabel(asset.status)}
+                                    </div>
+                                    {/* Action Buttons (Top Right) */}
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-md shadow-sm">
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => handleEditClick(asset)}>
+                                            <Pencil className="h-3 w-3" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-red-600" onClick={() => handleDelete(asset.id)}>
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="py-2">
-                                        {/* Optional: Show capabilities or other metadata */}
+                                    <div className="py-2 text-xs text-slate-400">
+                                        {asset.type} • TP: {asset.defaultCycleTime || 60} min
                                     </div>
 
-                                    <div className="mt-4 flex space-x-2 border-t pt-4 opacity-75 group-hover:opacity-100 transition-opacity">
+                                    <div className="mt-4 flex space-x-2 border-t pt-4">
                                         {asset.status === 'available' && (
                                             <Button
                                                 size="sm"
@@ -171,6 +214,70 @@ export default function AssetsPage() {
                     </div>
                 </div>
             ))}
+
+            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar Ativo</DialogTitle>
+                        <DialogDescription>
+                            Atualize as informações do ativo.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">
+                                Nome
+                            </Label>
+                            <Input
+                                id="name"
+                                value={editForm.name || ''}
+                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="type" className="text-right">
+                                Tipo
+                            </Label>
+                            <Select
+                                value={editForm.type}
+                                onValueChange={(val: string) => setEditForm({ ...editForm, type: val })}
+                            >
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Selecione o tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Workstation">Estação de Trabalho (Workstation)</SelectItem>
+                                    <SelectItem value="Machine">Máquina (Machine)</SelectItem>
+                                    <SelectItem value="Mold">Molde</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {(editForm.type === 'Workstation' || editForm.type === 'Machine') && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="cycleTime" className="text-right">
+                                    Tempo Padrão (min)
+                                </Label>
+                                <Input
+                                    id="cycleTime"
+                                    type="number"
+                                    value={editForm.defaultCycleTime || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, defaultCycleTime: parseInt(e.target.value) })}
+                                    className="col-span-3"
+                                />
+                                <div className="col-start-2 col-span-3 text-xs text-slate-400">
+                                    Utilizado para cálculo de OEE e Eficiência.
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveEdit}>Salvar Alterações</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
