@@ -21,6 +21,7 @@ export default function EditStaffPage() {
         workerNumber: "",
         name: "",
         contractType: "",
+        jobTitle: "", // Função
         group: "",
         area: "",
         workstation: "",
