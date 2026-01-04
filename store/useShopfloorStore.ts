@@ -193,7 +193,8 @@ const mapDbToAbsenteeism = (dbAbs: any): AbsenteeismRecord => ({
     employeeId: dbAbs.employee_id,
     date: dbAbs.date,
     type: dbAbs.type as any,
-    durationMinutes: dbAbs.duration_minutes
+    durationMinutes: dbAbs.duration_minutes,
+    timestamp: dbAbs.created_at || new Date().toISOString() // Fallback to now if missing
 });
 
 export const useShopfloorStore = create<ShopfloorState>()(
