@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, UserX, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Calendar, UserX, Clock, CheckCircle2, AlertCircle, Users } from "lucide-react";
 import { Employee, AbsenteeismRecord } from "@/types";
 
 export default function AbsenteeismPage() {
