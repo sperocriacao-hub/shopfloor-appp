@@ -11,7 +11,7 @@ import { downloadStaffTemplate, parseStaffExcel } from "@/lib/excel-staff";
 
 export default function StaffPage() {
     const router = useRouter();
-    const { employees, removeEmployee, addEmployee } = useShopfloorStore();
+    const { employees, removeEmployee, addEmployee, absenteeismRecords } = useShopfloorStore();
     const [searchTerm, setSearchTerm] = useState("");
     const [showInactive, setShowInactive] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,7 +119,21 @@ export default function StaffPage() {
                         <Briefcase className="h-4 w-4 text-green-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-700">{employees.filter(e => e.hrStatus === 'active').length}</div>
+                        <div className="text-2xl font-bold text-green-700">
+                            {employees.filter(e => {
+                                // Must be active
+                                if (e.hrStatus !== 'active') return false;
+                                // Must NOT have a full day absence/sick leave TODAY
+                                const today = new Date().toISOString().split('T')[0];
+                                const hasAbsence = absenteeismRecords.some(r =>
+                                    r.employeeId === e.id &&
+                                    r.date === today &&
+                                    (r.type === 'Full Day' || r.type === 'Sick Leave' || r.type === 'Vacation')
+                                );
+                                return !hasAbsence;
+                            }).length}
+                        </div>
+                        <p className="text-xs text-green-600 pt-1">Calculado com base nos registros de hoje</p>
                     </CardContent>
                 </Card>
                 <Card className="bg-purple-50 border-purple-100">

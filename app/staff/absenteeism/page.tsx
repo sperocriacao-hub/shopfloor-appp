@@ -241,6 +241,12 @@ export default function AbsenteeismPage() {
                                                             } else if (record.type === 'Sick Leave') {
                                                                 statusColor = "border-l-4 border-l-purple-500 bg-purple-50";
                                                                 statusText = "Baixa";
+                                                            } else if (record.type === 'Vacation') {
+                                                                statusColor = "border-l-4 border-l-blue-500 bg-blue-50";
+                                                                statusText = "Férias";
+                                                            } else if (record.type === 'Warning') {
+                                                                statusColor = "border-l-4 border-l-slate-500 bg-slate-50";
+                                                                statusText = "Aviso";
                                                             }
                                                         }
 
@@ -368,6 +374,25 @@ export default function AbsenteeismPage() {
                                     <AlertCircle className="mr-3 h-6 w-6" />
                                     Baixa Médica
                                 </Button>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button
+                                        className="w-full justify-start text-sm h-12 bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200"
+                                        variant="outline"
+                                        onClick={() => handleAddRecord('Vacation')}
+                                    >
+                                        <Calendar className="mr-2 h-4 w-4" />
+                                        Férias
+                                    </Button>
+                                    <Button
+                                        className="w-full justify-start text-sm h-12 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
+                                        variant="outline"
+                                        onClick={() => handleAddRecord('Warning')}
+                                    >
+                                        <AlertCircle className="mr-2 h-4 w-4" />
+                                        Aviso / Advertência
+                                    </Button>
+                                </div>
 
                                 {/* Option to clear if already exists */}
                                 {getStatusForEmployee(selectedEmployee.id) && (

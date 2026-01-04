@@ -47,7 +47,7 @@ export interface SystemAccess {
     lastLogin?: string;
 }
 
-export type AbsenteeismType = 'Full Day' | 'Late' | 'Early Departure' | 'Sick Leave' | 'Vacation';
+export type AbsenteeismType = 'Full Day' | 'Late' | 'Early Departure' | 'Sick Leave' | 'Vacation' | 'Warning';
 
 export interface AbsenteeismRecord {
     id: string;
