@@ -46,8 +46,9 @@ export default function ShopfloorPage() {
 
     // Available Orders to Start (Planned for this Area)
     const availableOrders = orders.filter(o =>
-        o.status === 'planned' || (o.status === 'in_progress' && !isRunning)
-    ); // Simplification: show all planned orders. Ideally filter by area/routing.
+        (o.status === 'planned' || (o.status === 'in_progress' && !isRunning)) &&
+        (!o.area || !currentStation?.area || o.area === currentStation.area)
+    );
 
     const handleStart = async (orderId: string) => {
         if (!selectedStationId) return;
@@ -56,7 +57,8 @@ export default function ShopfloorPage() {
 
     const handleStop = async () => {
         if (!selectedStationId || !activeOrder) return;
-        await stopOperation(activeOrder.id, selectedStationId, stopReason);
+        const isCompletion = stopReason === 'Conclusão Ordem' || stopReason === 'Conclusão Turno/Ordem';
+        await stopOperation(activeOrder.id, selectedStationId, stopReason, isCompletion);
         setShowStopModal(false);
         setStopReason("");
     };

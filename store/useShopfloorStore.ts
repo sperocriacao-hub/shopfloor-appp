@@ -163,7 +163,8 @@ interface ShopfloorState {
     // Shopfloor Actions
     logEvent: (event: ProductionEvent) => void;
     startOperation: (orderId: string, assetId: string) => Promise<void>;
-    stopOperation: (orderId: string, assetId: string, reason?: string) => Promise<void>;
+    startOperation: (orderId: string, assetId: string) => Promise<void>;
+    stopOperation: (orderId: string, assetId: string, reason?: string, shouldCompleteOrder?: boolean) => Promise<void>;
 
     addEmployee: (employee: Employee) => Promise<void>;
     updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
@@ -379,12 +380,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 }
             },
 
-            stopOperation: async (orderId, assetId, reason) => {
+            stopOperation: async (orderId, assetId, reason, shouldCompleteOrder = false) => {
                 const event: ProductionEvent = {
                     id: `evt-${Date.now()}`,
                     orderId,
                     assetId,
-                    type: 'STOP',
+                    type: shouldCompleteOrder ? 'COMPLETE' : 'STOP',
                     timestamp: new Date().toISOString(),
                     reason
                 };
@@ -395,7 +396,10 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // 2. Update Asset Status to available
                 get().updateAssetStatus(assetId, 'available');
 
-                // 3. Logic to possibly close order could go here, or manual close
+                // 3. Complete Order if requested
+                if (shouldCompleteOrder) {
+                    get().updateOrderStatus(orderId, 'completed');
+                }
             },
 
             addEmployee: async (employee) => {
