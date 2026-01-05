@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Boxes, Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { useEffect, useState } from "react";
 import { Asset, ProductionEvent } from "@/types";
+import { PerformanceMetrics } from "@/components/dashboard/PerformanceMetrics";
 
 export default function Home() {
   const { assets, employees, orders, events } = useShopfloorStore();
@@ -24,9 +25,9 @@ export default function Home() {
     // Efficiency Placeholder (Logic can be complex)
     setStats({
       activeAreas: activeAreasCount,
-      operators: activeOperatorsCount,
+      activeOperators: activeOperatorsCount,
       inProgressOrders: inProgressCount,
-      efficiency: '92%' // Mock for now, would need shift data
+      // Efficiency is now calculated in the sub-component
     });
   }, [assets, employees, orders, events]);
 
@@ -66,7 +67,7 @@ export default function Home() {
             <Users className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.operators}</div>
+            <div className="text-2xl font-bold">{stats.activeOperators}</div>
           </CardContent>
         </Card>
         <Card>
@@ -78,19 +79,14 @@ export default function Home() {
             <div className="text-2xl font-bold">{stats.inProgressOrders}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Eficiência Global</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.efficiency}</div>
-          </CardContent>
-        </Card>
+
+        {/* Efficiency Card removed, moved to detailed chart */}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+        <PerformanceMetrics events={events} assets={assets} orders={orders} />
+
+        <Card className="col-span-4 lg:col-span-4">
           <CardHeader>
             <CardTitle>Histórico Recente de Eventos</CardTitle>
           </CardHeader>
