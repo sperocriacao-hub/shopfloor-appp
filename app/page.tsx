@@ -11,7 +11,7 @@ export default function Home() {
   const { assets, employees, orders, events } = useShopfloorStore();
   const [stats, setStats] = useState({
     activeAreas: 0,
-    operators: 0,
+    activeOperators: 0,
     inProgressOrders: 0,
     efficiency: 'Calculating...'
   });
