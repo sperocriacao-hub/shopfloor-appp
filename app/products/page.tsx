@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ProductModel, OperationDefinition } from "@/types";
 import { RoutingEditor } from "@/components/engineering/RoutingEditor";
-import { RoutingEditor } from "@/components/engineering/RoutingEditor";
+
 import { ProductOrdersList } from "@/components/engineering/ProductOrdersList";
 import { OptionsManager } from "@/components/engineering/OptionsManager";
 import { Layers } from "lucide-react";
@@ -29,7 +29,7 @@ export default function ProductsPage() {
     const [editForm, setEditForm] = useState<Partial<ProductModel>>({});
     const [selectedProductForRouting, setSelectedProductForRouting] = useState<ProductModel | null>(null);
     const [isRoutingOpen, setIsRoutingOpen] = useState(false);
-    const [isRoutingOpen, setIsRoutingOpen] = useState(false);
+
     const [isOrdersOpen, setIsOrdersOpen] = useState(false);
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
 
