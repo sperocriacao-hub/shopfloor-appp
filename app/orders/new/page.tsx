@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save } from "lucide-react";
-import { generateCarpentryOperations, generateUpholsteryOperations, generateProductionOperations } from "@/lib/workflows";
+import { ArrowLeft, Save, MapPin, CheckSquare, Anchor } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function NewOrderPage() {
     const router = useRouter();
-    const { products, createOrder } = useShopfloorStore();
+    const { products, assets, productOptions, createOrder } = useShopfloorStore();
 
     const [formData, setFormData] = useState({
         productModelId: "",
@@ -24,21 +24,10 @@ export default function NewOrderPage() {
         br: "",
         country: "",
         customer: "",
-        area: ""
+        assetId: "" // Target Station (Shopfloor 3.0)
     });
 
-    // Workflow Options
-    const [hasFoam, setHasFoam] = useState(false); // Carpentry
-    const [hasTapizados, setHasTapizados] = useState(false); // Upholstery
-    const [hasCanvas, setHasCanvas] = useState(false); // Upholstery
-
-    // Production Options
-    const preAssemblyOptionsList = [
-        "Madeiras", "Tampas / Plásticos", "Módulos / Móveis", "Consolas", "Tanques", "Acrílicos", "Tekas"
-    ];
-    const [preAssemblySelection, setPreAssemblySelection] = useState<string[]>([]);
-    const [hasBottomPaint, setHasBottomPaint] = useState(false); // Corte Option
-
+    const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -46,14 +35,14 @@ export default function NewOrderPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleProductSelect = (id: string) => {
-        setFormData(prev => ({ ...prev, productModelId: id }));
+    const toggleOption = (optId: string) => {
+        setSelectedOptions(prev =>
+            prev.includes(optId) ? prev.filter(id => id !== optId) : [...prev, optId]
+        );
     };
 
-    const togglePreAssembly = (option: string) => {
-        setPreAssemblySelection(prev =>
-            prev.includes(option) ? prev.filter(p => p !== option) : [...prev, option]
-        );
+    const handleProductSelect = (id: string) => {
+        setFormData(prev => ({ ...prev, productModelId: id }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -62,47 +51,51 @@ export default function NewOrderPage() {
 
         setIsLoading(true);
 
-        setTimeout(() => {
-            // Generate Dynamic Operations
-            let activeOps = undefined;
-            if (formData.area === 'Carpintaria') {
-                activeOps = generateCarpentryOperations(hasFoam);
-            } else if (formData.area === 'Estofos') {
-                activeOps = generateUpholsteryOperations(hasTapizados, hasCanvas);
-            } else if (formData.area === 'Produção') {
-                activeOps = generateProductionOperations(preAssemblySelection, hasBottomPaint);
-            }
+        setTimeout(async () => {
+            // Logic:
+            // 1. If product has defined operations (from Engineering), utilize them to set 'activeOperations'.
+            // 2. We don't use 'generate*Operations' legacy functions anymore if we are fully Shopfloor 3.0.
+            //    However, to maintain backward compat while migrating, we will just use the new flow.
+
+            const selectedProduct = products.find(p => p.id === formData.productModelId);
+            const activeOps = selectedProduct?.operations || [];
+
+            // Auto-start operation? No, we just plan it.
+            // Initial operation: The first one in the sequence.
+            const firstOpId = activeOps.length > 0 ? activeOps[0].id : undefined;
 
             const newOrder = {
                 id: `ord-${Date.now().toString().slice(-6)}`,
                 status: 'planned' as const,
-                currentOperationId: activeOps ? activeOps[0].id : undefined,
+                currentOperationId: firstOpId,
                 quantity: Number(formData.quantity),
                 productModelId: formData.productModelId,
                 po: formData.po,
                 pp: formData.pp,
                 hin: formData.hin,
                 partn: formData.partn,
+                activeOperations: activeOps, // Store copy of operations for this instance
+
+                // Location & Timing
+                assetId: formData.assetId, // Target Station
                 startDate: formData.startDate ? new Date(formData.startDate) : undefined,
                 finishDate: formData.finishDate ? new Date(formData.finishDate) : undefined,
                 br: formData.br,
                 country: formData.country,
                 customer: formData.customer,
-                area: formData.area,
 
-                // Saved Options
-                hasFoam: hasFoam,
-                hasTapizados: hasTapizados,
-                hasCanvas: hasCanvas,
-                preAssemblySelection: preAssemblySelection,
-                hasBottomPaint: hasBottomPaint,
-                activeOperations: activeOps
+                // Shopfloor 3.0
+                selectedOptions: selectedOptions
             };
 
-            createOrder(newOrder);
+            await createOrder(newOrder);
             router.push("/orders");
         }, 500);
     };
+
+    // Filter available assets (Only Machines and Workstations should be targets for orders ideally, or maybe specific areas)
+    // For now, list all active assets.
+    const availableAssets = assets.filter(a => a.status !== 'breakdown');
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -112,16 +105,16 @@ export default function NewOrderPage() {
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-blue-900">Nova Ordem de Produção</h1>
-                    <p className="text-slate-500">Cadastro completo de ordem de fabricação.</p>
+                    <p className="text-slate-500">Shopfloor 3.0: Seleção de Modelo, Estação e Opcionais.</p>
                 </div>
             </div>
 
             <form onSubmit={handleSubmit}>
                 <div className="grid gap-6 md:grid-cols-2">
-                    {/* Left Column: Product & Basic Info */}
+                    {/* Left Column: Product & Location */}
                     <div className="space-y-6">
                         <Card>
-                            <CardHeader><h3 className="font-semibold text-slate-900">1. Seleção de Produto</h3></CardHeader>
+                            <CardHeader><h3 className="font-semibold text-slate-900 flex items-center gap-2"><Anchor className="h-4 w-4" /> 1. O que vamos produzir?</h3></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-700">Modelo do Barco *</label>
@@ -135,6 +128,7 @@ export default function NewOrderPage() {
                                                 handleProductSelect(e.target.value);
                                             }
                                         }}
+                                        required
                                     >
                                         <option value="" disabled>Selecione um modelo...</option>
                                         {products.map((product) => (
@@ -161,124 +155,64 @@ export default function NewOrderPage() {
                         </Card>
 
                         <Card>
-                            <CardHeader><h3 className="font-semibold text-slate-900">2. Identificação & Localização</h3></CardHeader>
+                            <CardHeader><h3 className="font-semibold text-slate-900 flex items-center gap-2"><MapPin className="h-4 w-4" /> 2. Onde será produzido? (Estação)</h3></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Área de Produção *</label>
+                                    <label className="text-sm font-medium text-slate-700">Estação / Ativo de Destino *</label>
                                     <select
-                                        name="area"
-                                        value={formData.area}
+                                        name="assetId"
+                                        value={formData.assetId}
                                         onChange={handleChange}
                                         className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                                         required
                                     >
-                                        <option value="" disabled>Selecione a área...</option>
-                                        <option value="Carpintaria">Carpintaria</option>
-                                        <option value="Estofos">Estofos</option>
-                                        <option value="Produção">Produção</option>
+                                        <option value="" disabled>Selecione a estação...</option>
+                                        {availableAssets.map(asset => (
+                                            <option key={asset.id} value={asset.id}>
+                                                {asset.area} - {asset.subarea ? `${asset.subarea} - ` : ''} {asset.name}
+                                            </option>
+                                        ))}
                                     </select>
+                                    <p className="text-xs text-slate-500">Esta ordem aparecerá no Tablet desta estação.</p>
                                 </div>
+                            </CardContent>
+                        </Card>
 
-                                {/* WORKFLOW OPTIONS: CARPINTARIA */}
-                                {formData.area === 'Carpintaria' && (
-                                    <div className="p-4 bg-blue-50 rounded-md border border-blue-100 animate-in fade-in slide-in-from-top-2">
-                                        <label className="flex items-start space-x-3 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={hasFoam}
-                                                onChange={(e) => setHasFoam(e.target.checked)}
-                                                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <div>
-                                                <span className="text-sm font-bold text-blue-900 block">Incluir Subárea Espumas</span>
-                                                <p className="text-xs text-blue-700">Adiciona fluxo: Preparação &rarr; Injeção &rarr; Pick.</p>
+                        <Card>
+                            <CardHeader>
+                                <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                                    <CheckSquare className="h-4 w-4" /> 3. Configuração (Opcionais & Kits)
+                                </h3>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {productOptions.length > 0 ? (
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {productOptions.map(opt => (
+                                            <div
+                                                key={opt.id}
+                                                className={cn(
+                                                    "flex items-start space-x-3 p-3 rounded-md border transition-all cursor-pointer",
+                                                    selectedOptions.includes(opt.id)
+                                                        ? "bg-blue-50 border-blue-200"
+                                                        : "bg-white border-slate-200 hover:bg-slate-50"
+                                                )}
+                                                onClick={() => toggleOption(opt.id)}
+                                            >
+                                                <div className={`mt-0.5 h-5 w-5 rounded border flex items-center justify-center ${selectedOptions.includes(opt.id) ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                                    {selectedOptions.includes(opt.id) && <CheckSquare className="h-3.5 w-3.5 text-white" />}
+                                                </div>
+                                                <div>
+                                                    <span className="text-sm font-medium text-slate-900 block">{opt.name}</span>
+                                                    {opt.description && <p className="text-xs text-slate-500">{opt.description}</p>}
+                                                </div>
                                             </div>
-                                        </label>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-slate-400 italic text-center py-4 border border-dashed rounded bg-slate-50">
+                                        Nenhum opcional cadastrado na Engenharia.
                                     </div>
                                 )}
-
-                                {/* WORKFLOW OPTIONS: ESTOFOS */}
-                                {formData.area === 'Estofos' && (
-                                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                                        <div className="p-4 bg-blue-50 rounded-md border border-blue-100">
-                                            <label className="flex items-start space-x-3 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={hasTapizados}
-                                                    onChange={(e) => setHasTapizados(e.target.checked)}
-                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <div>
-                                                    <span className="text-sm font-bold text-blue-900 block">Incluir Tapizados</span>
-                                                    <p className="text-xs text-blue-700">Adiciona: CNC &rarr; Kanban &rarr; Montagem &rarr; Pick</p>
-                                                </div>
-                                            </label>
-                                        </div>
-                                        <div className="p-4 bg-blue-50 rounded-md border border-blue-100">
-                                            <label className="flex items-start space-x-3 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={hasCanvas}
-                                                    onChange={(e) => setHasCanvas(e.target.checked)}
-                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <div>
-                                                    <span className="text-sm font-bold text-blue-900 block">Incluir Lonas</span>
-                                                    <p className="text-xs text-blue-700">Adiciona: CNC &rarr; Montagem &rarr; Pick</p>
-                                                </div>
-                                            </label>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* WORKFLOW OPTIONS: PRODUÇÃO */}
-                                {formData.area === 'Produção' && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                        {/* Corte Option */}
-                                        <div className="p-4 bg-blue-50 rounded-md border border-blue-100">
-                                            <label className="flex items-start space-x-3 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={hasBottomPaint}
-                                                    onChange={(e) => setHasBottomPaint(e.target.checked)}
-                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <div>
-                                                    <span className="text-sm font-bold text-blue-900 block">Incluir Bottom Paint (Corte)</span>
-                                                    <p className="text-xs text-blue-700">Adiciona etapa extra na subárea Corte Casco.</p>
-                                                </div>
-                                            </label>
-                                        </div>
-
-                                        {/* Pre-Assembly Options */}
-                                        <div className="p-4 bg-blue-50 rounded-md border border-blue-100">
-                                            <span className="text-sm font-bold text-blue-900 block mb-2">Pré-Montagem (Selecione Aplicáveis):</span>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {preAssemblyOptionsList.map(opt => (
-                                                    <label key={opt} className="flex items-center space-x-2 cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={preAssemblySelection.includes(opt)}
-                                                            onChange={() => togglePreAssembly(opt)}
-                                                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                        />
-                                                        <span className="text-xs text-slate-700">{opt}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                            <p className="text-xs text-blue-500 mt-2">Dica: Áreas Laminação, Corte, Reparação e Montagem já estão inclusas no fluxo.</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">HIN (Hull ID Number)</label>
-                                    <input type="text" name="hin" value={formData.hin} onChange={handleChange} className="w-full h-10 rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Ex: PT-ABC12345..." />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">PARTN (Part Number)</label>
-                                    <input type="text" name="partn" value={formData.partn} onChange={handleChange} className="w-full h-10 rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none" placeholder="Ex: PN-998877" />
-                                </div>
                             </CardContent>
                         </Card>
                     </div>
@@ -286,7 +220,7 @@ export default function NewOrderPage() {
                     {/* Right Column: Order Details */}
                     <div className="space-y-6">
                         <Card>
-                            <CardHeader><h3 className="font-semibold text-slate-900">3. Dados do Pedido (Sales)</h3></CardHeader>
+                            <CardHeader><h3 className="font-semibold text-slate-900">4. Dados Administrativos</h3></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -300,17 +234,22 @@ export default function NewOrderPage() {
                                 </div>
 
                                 <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">HIN (Hull ID)</label>
+                                    <input type="text" name="hin" value={formData.hin} onChange={handleChange} className="w-full h-10 rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
+                                </div>
+
+                                <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-700">Cliente (Customer)</label>
                                     <input type="text" name="customer" value={formData.customer} onChange={handleChange} className="w-full h-10 rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-700">País (Country)</label>
+                                        <label className="text-sm font-medium text-slate-700">País</label>
                                         <input type="text" name="country" value={formData.country} onChange={handleChange} className="w-full h-10 rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-700">BR (Brand/Region?)</label>
+                                        <label className="text-sm font-medium text-slate-700">Brand / Region</label>
                                         <input type="text" name="br" value={formData.br} onChange={handleChange} className="w-full h-10 rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none" />
                                     </div>
                                 </div>
@@ -318,7 +257,7 @@ export default function NewOrderPage() {
                         </Card>
 
                         <Card>
-                            <CardHeader><h3 className="font-semibold text-slate-900">4. Cronograma</h3></CardHeader>
+                            <CardHeader><h3 className="font-semibold text-slate-900">5. Cronograma</h3></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -337,11 +276,11 @@ export default function NewOrderPage() {
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="bg-blue-600 hover:bg-blue-700 w-full shadow-md"
-                                disabled={!formData.productModelId || isLoading}
+                                className="bg-blue-600 hover:bg-blue-700 w-full shadow-md text-lg h-12"
+                                disabled={!formData.productModelId || !formData.assetId || isLoading}
                             >
                                 <Save className="mr-2 h-5 w-5" />
-                                {isLoading ? 'Gerando Workflow...' : 'Criar Ordem'}
+                                {isLoading ? 'Processando...' : 'Criar Ordem'}
                             </Button>
                         </div>
                     </div>

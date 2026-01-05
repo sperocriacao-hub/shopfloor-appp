@@ -126,12 +126,52 @@ export interface ProductionOrder {
     area?: string;
 
     // Instance Workflow
-    hasFoam?: boolean; // Carpentry Option
-    hasTapizados?: boolean; // Upholstery Option 1 (Tapizados)
-    hasCanvas?: boolean; // Upholstery Option 2 (Lonas)
-    preAssemblySelection?: string[]; // Production Option (Pré-Montagem)
-    hasBottomPaint?: boolean; // Production Option (Corte)
-    activeOperations?: OperationDefinition[]; // Operations specific to this order instance
+    assetId?: string; // Target Station (Shopfloor 3.0)
+    selectedOptions?: string[]; // Array of ProductOption IDs (Shopfloor 3.0)
+
+    // Legacy Fields (Deprecated)
+    hasFoam?: boolean;
+    hasTapizados?: boolean;
+    hasCanvas?: boolean;
+    preAssemblySelection?: string[];
+    hasBottomPaint?: boolean;
+    activeOperations?: OperationDefinition[];
+}
+
+// --- Shopfloor 3.0: Options & Checklists ---
+
+export interface ProductOption {
+    id: string;
+    productModelId?: string;
+    name: string;
+    description?: string;
+}
+
+export interface OptionTask {
+    id: string;
+    optionId: string;
+    description: string;
+    sequence: number;
+    pdfUrl?: string;
+}
+
+export interface TaskExecution {
+    orderId: string;
+    taskId: string;
+    completedAt?: string; // ISO Date
+    completedBy?: string;
+}
+
+export interface OrderIssue {
+    id: string;
+    orderId: string;
+    stationId: string;
+    type: 'material' | 'adjust' | 'blockage' | 'other';
+    description: string;
+    status: 'open' | 'resolved';
+    createdAt: string; // ISO Date
+    resolvedAt?: string;
+    resolvedBy?: string;
 }
 
 export interface ProductionEvent {

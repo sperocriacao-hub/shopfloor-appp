@@ -3,7 +3,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import {
     Asset, ProductModel, Routing, ProductionOrder, ProductionEvent, Employee,
-    OrderStatus, AssetStatus, AbsenteeismRecord
+    OrderStatus, AssetStatus, AbsenteeismRecord,
+    ProductOption, OptionTask, OrderIssue, TaskExecution
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -152,6 +153,12 @@ interface ShopfloorState {
     employees: Employee[];
     absenteeismRecords: AbsenteeismRecord[];
 
+    // Shopfloor 3.0 Data
+    productOptions: ProductOption[];
+    optionTasks: OptionTask[];
+    taskExecutions: TaskExecution[];
+    orderIssues: OrderIssue[];
+
     addAsset: (asset: Asset) => void;
     updateAsset: (id: string, updates: Partial<Asset>) => Promise<void>;
     removeAsset: (id: string) => Promise<void>;
@@ -166,6 +173,13 @@ interface ShopfloorState {
     logEvent: (event: ProductionEvent) => void;
     startOperation: (orderId: string, assetId: string) => Promise<void>;
     stopOperation: (orderId: string, assetId: string, reason?: string, shouldCompleteOrder?: boolean) => Promise<void>;
+
+    // Shopfloor 3.0 Actions
+    addOption: (option: ProductOption) => Promise<void>;
+    addTask: (task: OptionTask) => Promise<void>;
+    toggleTask: (orderId: string, taskId: string, isCompleted: boolean, userId: string) => Promise<void>;
+    reportIssue: (issue: OrderIssue) => Promise<void>;
+    resolveIssue: (issueId: string, resolvedBy: string) => Promise<void>;
 
     addEmployee: (employee: Employee) => Promise<void>;
     updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
@@ -234,10 +248,45 @@ const mapDbToOrder = (db: any): ProductionOrder => ({
     status: db.status as any,
     po: db.po,
     customer: db.customer,
-    area: db.area,
+    area: db.area, // Legacy
+    assetId: db.asset_id, // New
     startDate: db.start_date ? new Date(db.start_date) : undefined,
     finishDate: db.finish_date ? new Date(db.finish_date) : undefined,
     activeOperations: db.active_operations as any
+});
+
+const mapDbToOption = (db: any): ProductOption => ({
+    id: db.id,
+    productModelId: db.product_model_id,
+    name: db.name,
+    description: db.description
+});
+
+const mapDbToTask = (db: any): OptionTask => ({
+    id: db.id,
+    optionId: db.option_id,
+    description: db.description,
+    sequence: db.sequence,
+    pdfUrl: db.pdf_url
+});
+
+const mapDbToExecution = (db: any): TaskExecution => ({
+    orderId: db.order_id,
+    taskId: db.task_id,
+    completedAt: db.completed_at,
+    completedBy: db.completed_by
+});
+
+const mapDbToIssue = (db: any): OrderIssue => ({
+    id: db.id,
+    orderId: db.order_id,
+    stationId: db.station_id,
+    type: db.type,
+    description: db.description,
+    status: db.status,
+    createdAt: db.created_at,
+    resolvedAt: db.resolved_at,
+    resolvedBy: db.resolved_by
 });
 
 const mapDbToEvent = (db: any): ProductionEvent => ({
@@ -263,6 +312,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
             events: [],
             employees: [], // Start empty, syncData fills it
             absenteeismRecords: [],
+
+            // Shopfloor 3.0
+            productOptions: [],
+            optionTasks: [],
+            taskExecutions: [],
+            orderIssues: [],
 
             // Actions
             addAsset: async (asset) => {
@@ -348,6 +403,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
             createOrder: async (order) => {
                 set((state) => ({ orders: [...state.orders, order] }));
+
+                // 1. Insert Order
                 const { error } = await supabase.from('orders').insert({
                     id: order.id,
                     product_model_id: order.productModelId,
@@ -355,12 +412,23 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     status: order.status,
                     po: order.po,
                     customer: order.customer,
-                    area: order.area,
+                    area: order.area, // Legacy
+                    asset_id: order.assetId, // New
                     start_date: order.startDate || null,
                     finish_date: order.finishDate || null,
                     active_operations: order.activeOperations || []
                 });
                 if (error) console.error("Error creating order DB:", error);
+
+                // 2. Insert Selected Options (Pivot)
+                if (order.selectedOptions && order.selectedOptions.length > 0) {
+                    const pivotData = order.selectedOptions.map(optId => ({
+                        order_id: order.id,
+                        option_id: optId
+                    }));
+                    const { error: pivotError } = await supabase.from('production_order_options').insert(pivotData);
+                    if (pivotError) console.error("Error linking options to order:", pivotError);
+                }
             },
 
             updateOrderStatus: async (id, status) => {
@@ -496,6 +564,68 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (error) console.error("Error adding record DB:", error);
             },
 
+            // --- Shopfloor 3.0 Actions ---
+            addOption: async (option) => {
+                set(s => ({ productOptions: [...s.productOptions, option] }));
+                const { error } = await supabase.from('product_options').insert({
+                    id: option.id, product_model_id: option.productModelId, name: option.name, description: option.description
+                });
+                if (error) console.error("Error adding option:", error);
+            },
+
+            addTask: async (task) => {
+                set(s => ({ optionTasks: [...s.optionTasks, task] }));
+                const { error } = await supabase.from('option_tasks').insert({
+                    id: task.id, option_id: task.optionId, description: task.description, sequence: task.sequence, pdf_url: task.pdfUrl
+                });
+                if (error) console.error("Error adding task:", error);
+            },
+
+            toggleTask: async (orderId, taskId, isCompleted, userId) => {
+                // Optimistic Update
+                const completedAt = isCompleted ? new Date().toISOString() : undefined;
+                set(s => {
+                    const existing = s.taskExecutions.find(te => te.orderId === orderId && te.taskId === taskId);
+                    if (existing) {
+                        return {
+                            taskExecutions: s.taskExecutions.map(te => te.orderId === orderId && te.taskId === taskId
+                                ? { ...te, completedAt, completedBy: userId }
+                                : te)
+                        };
+                    } else {
+                        return {
+                            taskExecutions: [...s.taskExecutions, { orderId, taskId, completedAt, completedBy: userId }]
+                        };
+                    }
+                });
+
+                if (isCompleted) {
+                    await supabase.from('task_executions').upsert({
+                        order_id: orderId, task_id: taskId, completed_at: completedAt, completed_by: userId
+                    });
+                } else {
+                    await supabase.from('task_executions').delete().match({ order_id: orderId, task_id: taskId });
+                }
+            },
+
+            reportIssue: async (issue) => {
+                set(s => ({ orderIssues: [...s.orderIssues, issue] }));
+                const { error } = await supabase.from('order_issues').insert({
+                    id: issue.id, order_id: issue.orderId, station_id: issue.stationId,
+                    type: issue.type, description: issue.description, status: issue.status
+                });
+                if (error) console.error("Error reporting issue:", error);
+            },
+
+            resolveIssue: async (issueId, resolvedBy) => {
+                const resolvedAt = new Date().toISOString();
+                set(s => ({
+                    orderIssues: s.orderIssues.map(i => i.id === issueId ? { ...i, status: 'resolved', resolvedAt, resolvedBy } : i)
+                }));
+                await supabase.from('order_issues').update({ status: 'resolved', resolved_at: resolvedAt, resolved_by: resolvedBy })
+                    .eq('id', issueId);
+            },
+
             removeAbsenteeismRecord: async (id) => {
                 set((state) => ({
                     absenteeismRecords: state.absenteeismRecords.filter(r => r.id !== id)
@@ -520,20 +650,20 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // Products & Routings (Derived from Products)
                 const { data: products } = await supabase.from('products').select('*');
                 if (products && products.length > 0) {
-                     set({ products: products.map(mapDbToProduct) });
-                     
-                     // Generate routings from product operations
-                     const derivedRoutings: Routing[] = products
+                    set({ products: products.map(mapDbToProduct) });
+
+                    // Generate routings from product operations
+                    const derivedRoutings: Routing[] = products
                         .filter(p => p.operations && Array.isArray(p.operations))
                         .map(p => ({
                             id: `rt-${p.id}`,
                             productModelId: p.id,
                             operations: p.operations
                         }));
-                     
-                     if (derivedRoutings.length > 0) {
-                         set({ routings: derivedRoutings });
-                     }
+
+                    if (derivedRoutings.length > 0) {
+                        set({ routings: derivedRoutings });
+                    }
                 }
 
                 // Orders
@@ -543,6 +673,29 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // Events
                 const { data: events } = await supabase.from('events').select('*');
                 if (events && events.length > 0) set({ events: events.map(mapDbToEvent) });
+
+                // Shopfloor 3.0 Data Sync
+                const { data: opts } = await supabase.from('product_options').select('*');
+                if (opts) set({ productOptions: opts.map(mapDbToOption) });
+
+                const { data: tasks } = await supabase.from('option_tasks').select('*');
+                if (tasks) set({ optionTasks: tasks.map(mapDbToTask) });
+
+                const { data: execs } = await supabase.from('task_executions').select('*');
+                if (execs) set({ taskExecutions: execs.map(mapDbToExecution) });
+
+                const { data: issues } = await supabase.from('order_issues').select('*');
+                if (issues) set({ orderIssues: issues.map(mapDbToIssue) });
+
+                // Fetch Order Options Pivot and Map to Orders
+                const { data: pivot } = await supabase.from('production_order_options').select('*');
+                if (orders && pivot) {
+                    const mappedOrders = orders.map(mapDbToOrder).map(o => {
+                        const myOptions = pivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.option_id);
+                        return { ...o, selectedOptions: myOptions };
+                    });
+                    set({ orders: mappedOrders });
+                }
 
                 console.log("Sync complete.");
             }

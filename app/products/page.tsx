@@ -13,7 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ProductModel, OperationDefinition } from "@/types";
 import { RoutingEditor } from "@/components/engineering/RoutingEditor";
+import { RoutingEditor } from "@/components/engineering/RoutingEditor";
 import { ProductOrdersList } from "@/components/engineering/ProductOrdersList";
+import { OptionsManager } from "@/components/engineering/OptionsManager";
+import { Layers } from "lucide-react";
 
 export default function ProductsPage() {
     const router = useRouter();
@@ -26,7 +29,9 @@ export default function ProductsPage() {
     const [editForm, setEditForm] = useState<Partial<ProductModel>>({});
     const [selectedProductForRouting, setSelectedProductForRouting] = useState<ProductModel | null>(null);
     const [isRoutingOpen, setIsRoutingOpen] = useState(false);
+    const [isRoutingOpen, setIsRoutingOpen] = useState(false);
     const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+    const [isOptionsOpen, setIsOptionsOpen] = useState(false);
 
     // Helpers
     const getRoutingForProduct = (product: ProductModel) => {
@@ -103,9 +108,9 @@ export default function ProductsPage() {
         setSelectedProductForRouting(product); // Reusing this generic 'selected' state for context
         setIsOrdersOpen(true);
     };
-    
+
     // Derived state for current dialogs
-    const selectedProductOrders = selectedProductForRouting 
+    const selectedProductOrders = selectedProductForRouting
         ? orders.filter(o => o.productModelId === selectedProductForRouting.id)
         : [];
 
@@ -124,6 +129,9 @@ export default function ProductsPage() {
                     <p className="text-slate-500">Gestão de Modelos e Roteiros de Fabricação.</p>
                 </div>
                 <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setIsOptionsOpen(true)} className="border-purple-200 text-purple-700 hover:bg-purple-50">
+                        <Layers className="mr-2 h-4 w-4" /> Opcionais e Kits
+                    </Button>
                     <input
                         type="file"
                         ref={fileInputRef}
@@ -264,15 +272,15 @@ export default function ProductsPage() {
             {/* Routing Dialog */}
             <Dialog open={isRoutingOpen} onOpenChange={setIsRoutingOpen}>
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                     <DialogHeader>
+                    <DialogHeader>
                         <DialogTitle>Editor de Roteiro - {selectedProductForRouting?.name}</DialogTitle>
                         <DialogDescription>
                             Defina a sequência de operações para a fabricação deste modelo.
                         </DialogDescription>
                     </DialogHeader>
-                    
-                    <RoutingEditor 
-                        initialOperations={selectedProductForRouting?.operations || []} 
+
+                    <RoutingEditor
+                        initialOperations={selectedProductForRouting?.operations || []}
                         onSave={handleSaveRouting}
                     />
 
@@ -282,18 +290,32 @@ export default function ProductsPage() {
             {/* Orders Dialog */}
             <Dialog open={isOrdersOpen} onOpenChange={setIsOrdersOpen}>
                 <DialogContent className="max-w-3xl">
-                     <DialogHeader>
+                    <DialogHeader>
                         <DialogTitle>Ordens de Produção - {selectedProductForRouting?.name}</DialogTitle>
                         <DialogDescription>
                             Histórico de ordens vinculadas a este modelo.
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <ProductOrdersList orders={selectedProductOrders} />
-                    
+
                     <DialogFooter>
-                         <Button variant="outline" onClick={() => setIsOrdersOpen(false)}>Fechar</Button>
+                        <Button variant="outline" onClick={() => setIsOrdersOpen(false)}>Fechar</Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Options Dialog */}
+            <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
+                <DialogContent className="max-w-4xl max-h-[85vh]">
+                    <DialogHeader>
+                        <DialogTitle>Gerenciador de Opcionais e Kits</DialogTitle>
+                        <DialogDescription>
+                            Defina os Opcionais disponíveis (ex: Teca, Som) e suas checklists de instalação.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <OptionsManager onClose={() => setIsOptionsOpen(false)} />
+
                 </DialogContent>
             </Dialog>
         </div>
