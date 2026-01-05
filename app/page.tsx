@@ -12,8 +12,7 @@ export default function Home() {
   const [stats, setStats] = useState({
     activeAreas: 0,
     activeOperators: 0,
-    inProgressOrders: 0,
-    efficiency: 'Calculating...'
+    inProgressOrders: 0
   });
 
   useEffect(() => {
