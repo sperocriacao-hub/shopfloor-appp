@@ -103,13 +103,14 @@ export function Sidebar() {
                         P
                     </div>
                     {!isCollapsed && (
+                        <div className="ml-3 truncate">
                             <p className="text-sm font-medium text-white truncate">Produção</p>
                             <p className="text-xs text-blue-200 truncate">Admin</p>
                             <p className="text-[10px] text-blue-400/50 mt-1 truncate">v1.2.0</p>
                         </div>
                     )}
+                </div>
             </div>
-        </div>
         </div >
     );
 }
