@@ -62,7 +62,7 @@ export default function AbsenteeismPage() {
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-blue-900">Controle de Absenteísmo</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-blue-900">Controle de Absentismo</h1>
                         <p className="text-slate-500">Gestão diária de presenças e faltas.</p>
                     </div>
                 </div>

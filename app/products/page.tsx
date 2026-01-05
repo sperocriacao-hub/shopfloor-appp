@@ -125,7 +125,7 @@ export default function ProductsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-blue-900">Engenharia de Produto</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-blue-900">Engenharia de Processos</h1>
                     <p className="text-slate-500">Gestão de Modelos e Roteiros de Fabricação.</p>
                 </div>
                 <div className="flex gap-2">

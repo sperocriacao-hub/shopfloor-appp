@@ -75,7 +75,7 @@ export default function StaffPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-blue-900">Gestão de RH</h1>
-                    <p className="text-slate-500">Controle de eficácia, absenteísmo e skills.</p>
+                    <p className="text-slate-500">Controle de eficácia, absentismo e skills.</p>
                 </div>
                 <div className="flex gap-2">
                     <input
@@ -89,7 +89,7 @@ export default function StaffPage() {
                         <Users className="mr-2 h-4 w-4" /> Organograma
                     </Button>
                     <Button variant="outline" onClick={() => router.push('/staff/absenteeism')} className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
-                        <UserX className="mr-2 h-4 w-4" /> Absenteísmo
+                        <UserX className="mr-2 h-4 w-4" /> Absentismo
                     </Button>
                     <Button variant="outline" onClick={handleExport} className="border-blue-200 text-blue-700 hover:bg-blue-50">
                         <Download className="mr-2 h-4 w-4" /> Modelo
