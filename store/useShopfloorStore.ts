@@ -727,14 +727,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
                     set({ orders: mappedOrders });
                 }
-            }
-
-                console.log("Sync complete.");
-        }
+            },
         }),
-{
-    name: 'shopfloor-storage',
-        storage: createJSONStorage(() => localStorage),
+        {
+            name: 'shopfloor-storage',
+            storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 orders: state.orders,
                 events: state.events,

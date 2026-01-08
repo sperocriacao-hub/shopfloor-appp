@@ -300,6 +300,7 @@ export default function ShopfloorPage() {
                                     ))}
                                 </CardContent>
                             </Card>
+                        )}
                         {/* Staff List */}
                         <Card className="border-blue-200 bg-blue-50/50">
                             <CardHeader className="pb-2">
@@ -384,45 +385,42 @@ export default function ShopfloorPage() {
                                         <SelectItem value="other">Outros</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            </SelectContent>
-                        </Select>
-                </div>
-                            
+                            </div>
+
                             {(issueForm.type === 'material' || issueForm.type === 'adjust') && (
-                <div>
-                    <Label>Estação Causadora (Responsável)</Label>
-                    <Select
-                        value={issueForm.relatedStationId}
-                        onValueChange={v => setIssueForm({ ...issueForm, relatedStationId: v })}
-                    >
-                        <SelectTrigger><SelectValue placeholder="Selecione quem causou..." /></SelectTrigger>
-                        <SelectContent>
-                            {assets.map(a => (
-                                <SelectItem key={a.id} value={a.id}>{a.area} - {a.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                                <div>
+                                    <Label>Estação Causadora (Responsável)</Label>
+                                    <Select
+                                        value={issueForm.relatedStationId}
+                                        onValueChange={v => setIssueForm({ ...issueForm, relatedStationId: v })}
+                                    >
+                                        <SelectTrigger><SelectValue placeholder="Selecione quem causou..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {assets.map(a => (
+                                                <SelectItem key={a.id} value={a.id}>{a.area} - {a.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            <div>
+                                <Label>Descrição</Label>
+                                <Textarea
+                                    value={issueForm.description}
+                                    onChange={e => setIssueForm({ ...issueForm, description: e.target.value })}
+                                    placeholder="Descreva o que aconteceu..."
+                                    className="h-24"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button variant="ghost" onClick={() => setShowIssueModal(false)}>Cancelar</Button>
+                                <Button variant="destructive" onClick={handleReportIssue}>Enviar Reporte</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             )}
-
-            <div>
-                <Label>Descrição</Label>
-                <Textarea
-                    value={issueForm.description}
-                    onChange={e => setIssueForm({ ...issueForm, description: e.target.value })}
-                    placeholder="Descreva o que aconteceu..."
-                    className="h-24"
-                />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={() => setShowIssueModal(false)}>Cancelar</Button>
-                <Button variant="destructive" onClick={handleReportIssue}>Enviar Reporte</Button>
-            </div>
-        </CardContent>
-                    </Card >
-                </div >
-            )
-}
-        </div >
+        </div>
     );
 }
