@@ -17,7 +17,7 @@ interface OptionsManagerProps {
 }
 
 export function OptionsManager({ productModelId, onClose }: OptionsManagerProps) {
-    const { productOptions, optionTasks, addOption, addTask, updateProduct, syncData } = useShopfloorStore();
+    const { productOptions, optionTasks, assets, products, addOption, addTask, updateProduct, syncData } = useShopfloorStore();
 
     // Local state for UI
     const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -29,10 +29,12 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
     // Form State for New/Edit Option
     const [formData, setFormData] = useState<{
         name: string;
+        productModelId: string;
         description: string;
-        tasks: { tempId: string; description: string; pdfUrl: string; sequence: number }[];
+        tasks: { tempId: string; description: string; pdfUrl: string; sequence: number; stationId: string }[];
     }>({
         name: "",
+        productModelId: "",
         description: "",
         tasks: []
     });
@@ -48,11 +50,13 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                 tempId: t.id, // Use real ID
                 description: t.description,
                 pdfUrl: t.pdfUrl || "",
-                sequence: t.sequence
+                sequence: t.sequence,
+                stationId: t.stationId || ""
             }));
 
         setFormData({
             name: opt.name,
+            productModelId: opt.productModelId || "",
             description: opt.description || "",
             tasks
         });
@@ -61,7 +65,7 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
     const handleCreateNew = () => {
         setSelectedOptionId(null);
         setIsCreating(true);
-        setFormData({ name: "", description: "", tasks: [] });
+        setFormData({ name: "", description: "", productModelId: "", tasks: [] });
     };
 
     const handleAddTask = () => {
@@ -69,7 +73,7 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
             ...prev,
             tasks: [
                 ...prev.tasks,
-                { tempId: `temp-${Date.now()}`, description: "", pdfUrl: "", sequence: prev.tasks.length * 10 + 10 }
+                { tempId: `temp-${Date.now()}`, description: "", pdfUrl: "", sequence: prev.tasks.length * 10 + 10, stationId: "" }
             ]
         }));
     };
@@ -97,7 +101,7 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                 id: optionId,
                 name: formData.name,
                 description: formData.description,
-                productModelId: productModelId
+                productModelId: formData.productModelId
             });
         }
         // NOTE: Standard updateOption action missing in store, adding simplified add for now. 
@@ -119,7 +123,8 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                     optionId: optionId,
                     description: t.description,
                     sequence: t.sequence,
-                    pdfUrl: t.pdfUrl
+                    pdfUrl: t.pdfUrl,
+                    stationId: t.stationId
                 });
             }
         }
@@ -138,6 +143,27 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                 <Button onClick={handleCreateNew} className="w-full flex gap-2">
                     <Plus className="h-4 w-4" /> Nova Opção
                 </Button>
+
+                {/* Excel Actions */}
+                <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => {
+                        const csvContent = "data:text/csv;charset=utf-8," +
+                            "Name,Description,ProductModel\n" +
+                            productOptions.map(e => `${e.name},${e.description || ''},${e.productModelId || ''}`).join("\n");
+                        const encodedUri = encodeURI(csvContent);
+                        const link = document.createElement("a");
+                        link.setAttribute("href", encodedUri);
+                        link.setAttribute("download", "options_template.csv");
+                        document.body.appendChild(link);
+                        link.click();
+                    }}>
+                        <FileText className="h-3 w-3 mr-1" /> Modelo Excel
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => alert("Funcionalidade de importação em breve via CSV.")}>
+                        Importar
+                    </Button>
+                </div>
+
                 <div className="overflow-y-auto flex-1 space-y-2 mt-2">
                     {filteredOptions.map(opt => (
                         <Card
@@ -169,6 +195,19 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                                     onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                                     placeholder="Ex: Piso Teca, Som Premium..."
                                 />
+                            </div>
+                            <div>
+                                <Label>Modelo do Produto (Vínculo)</Label>
+                                <select
+                                    className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                                    value={formData.productModelId}
+                                    onChange={e => setFormData(prev => ({ ...prev, productModelId: e.target.value }))}
+                                >
+                                    <option value="">Global / Todos</option>
+                                    {products.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <Label>Descrição</Label>
@@ -221,6 +260,18 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                                                 className="h-7 text-xs text-blue-600 bg-blue-50/50 border-blue-100"
                                                 placeholder="https://... (Link para PDF/Instrução)"
                                             />
+
+                                            {/* Station Allocation (V4) */}
+                                            <select
+                                                className="h-7 w-full rounded border border-slate-200 text-xs bg-white px-2"
+                                                value={task.stationId}
+                                                onChange={e => handleUpdateTask(idx, 'stationId', e.target.value)}
+                                            >
+                                                <option value="">-- Destino da Tarefa (Estação) --</option>
+                                                {assets.map(a => (
+                                                    <option key={a.id} value={a.id}>{a.area} - {a.name}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <Button
                                             variant="ghost"

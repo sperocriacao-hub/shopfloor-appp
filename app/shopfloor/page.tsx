@@ -5,7 +5,7 @@ import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlayCircle, CheckCircle2, AlertTriangle, FileText, ArrowLeft, StopCircle, CheckSquare, Clock } from "lucide-react";
+import { PlayCircle, CheckCircle2, AlertTriangle, FileText, ArrowLeft, StopCircle, CheckSquare, Clock, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,7 @@ export default function ShopfloorPage() {
 
     // UI State
     const [showIssueModal, setShowIssueModal] = useState(false);
-    const [issueForm, setIssueForm] = useState({ type: 'material', description: '' });
+    const [issueForm, setIssueForm] = useState({ type: 'material', description: '', relatedStationId: '' });
 
     // --- Derived Data ---
     const currentStation = assets.find(a => a.id === selectedStationId);
@@ -60,6 +60,9 @@ export default function ShopfloorPage() {
     // Issues Logic
     const activeIssues = orderIssues.filter(i => i.orderId === activeOrder?.id && i.status === 'open');
 
+    // Employees Logic
+    const stationEmployees = employees.filter(e => e.workstation === currentStation?.name || e.area === currentStation?.area);
+
     // --- Handlers ---
 
     const handleStart = async (orderId: string) => {
@@ -89,13 +92,14 @@ export default function ShopfloorPage() {
             id: `iss-${Date.now()}`,
             orderId: activeOrder.id,
             stationId: selectedStationId,
+            relatedStationId: issueForm.relatedStationId || selectedStationId, // Default to self if not specified, or allow empty
             type: issueForm.type as any,
             description: issueForm.description,
             status: 'open',
             createdAt: new Date().toISOString()
         });
         setShowIssueModal(false);
-        setIssueForm({ type: 'material', description: '' });
+        setIssueForm({ type: 'material', description: '', relatedStationId: '' });
     };
 
     // --- Views ---
@@ -296,7 +300,27 @@ export default function ShopfloorPage() {
                                     ))}
                                 </CardContent>
                             </Card>
-                        )}
+                        {/* Staff List */}
+                        <Card className="border-blue-200 bg-blue-50/50">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-blue-900 text-sm flex items-center">
+                                    <Users className="h-4 w-4 mr-2" />
+                                    Equipe na Estação
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-1">
+                                {stationEmployees.length > 0 ? (
+                                    stationEmployees.map(emp => (
+                                        <div key={emp.id} className="text-xs bg-white/60 p-1.5 rounded flex justify-between items-center">
+                                            <span className="font-medium text-blue-900">{emp.name}</span>
+                                            <span className="text-[10px] text-blue-400 bg-blue-100 px-1 rounded">{emp.jobTitle}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-xs text-blue-400 italic">Nenhum operador alocado.</p>
+                                )}
+                            </CardContent>
+                        </Card>
 
                         {/* Action Buttons */}
                         <div className="grid gap-4">
@@ -360,24 +384,45 @@ export default function ShopfloorPage() {
                                         <SelectItem value="other">Outros</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            </div>
-                            <div>
-                                <Label>Descrição</Label>
-                                <Textarea
-                                    value={issueForm.description}
-                                    onChange={e => setIssueForm({ ...issueForm, description: e.target.value })}
-                                    placeholder="Descreva o que aconteceu..."
-                                    className="h-24"
-                                />
-                            </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <Button variant="ghost" onClick={() => setShowIssueModal(false)}>Cancelar</Button>
-                                <Button variant="destructive" onClick={handleReportIssue}>Enviar Reporte</Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </SelectContent>
+                        </Select>
+                </div>
+                            
+                            {(issueForm.type === 'material' || issueForm.type === 'adjust') && (
+                <div>
+                    <Label>Estação Causadora (Responsável)</Label>
+                    <Select
+                        value={issueForm.relatedStationId}
+                        onValueChange={v => setIssueForm({ ...issueForm, relatedStationId: v })}
+                    >
+                        <SelectTrigger><SelectValue placeholder="Selecione quem causou..." /></SelectTrigger>
+                        <SelectContent>
+                            {assets.map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.area} - {a.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             )}
-        </div>
+
+            <div>
+                <Label>Descrição</Label>
+                <Textarea
+                    value={issueForm.description}
+                    onChange={e => setIssueForm({ ...issueForm, description: e.target.value })}
+                    placeholder="Descreva o que aconteceu..."
+                    className="h-24"
+                />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={() => setShowIssueModal(false)}>Cancelar</Button>
+                <Button variant="destructive" onClick={handleReportIssue}>Enviar Reporte</Button>
+            </div>
+        </CardContent>
+                    </Card >
+                </div >
+            )
+}
+        </div >
     );
 }

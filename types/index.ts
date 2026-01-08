@@ -127,6 +127,7 @@ export interface ProductionOrder {
 
     // Instance Workflow
     assetId?: string; // Target Station (Shopfloor 3.0)
+    assetIds?: string[]; // Multiple Stations (Shopfloor 4.0)
     selectedOptions?: string[]; // Array of ProductOption IDs (Shopfloor 3.0)
 
     // Legacy Fields (Deprecated)
@@ -153,6 +154,7 @@ export interface OptionTask {
     description: string;
     sequence: number;
     pdfUrl?: string;
+    stationId?: string; // New: Target Station for this task
 }
 
 export interface TaskExecution {
@@ -165,7 +167,8 @@ export interface TaskExecution {
 export interface OrderIssue {
     id: string;
     orderId: string;
-    stationId: string;
+    stationId: string; // Who reported
+    relatedStationId?: string; // New: Responsible/Causing Station
     type: 'material' | 'adjust' | 'blockage' | 'other';
     description: string;
     status: 'open' | 'resolved';

@@ -249,7 +249,8 @@ const mapDbToOrder = (db: any): ProductionOrder => ({
     po: db.po,
     customer: db.customer,
     area: db.area, // Legacy
-    assetId: db.asset_id, // New
+    assetId: db.asset_id, // Primary (Legacy V3)
+    assetIds: [], // To be populated via Pivot
     startDate: db.start_date ? new Date(db.start_date) : undefined,
     finishDate: db.finish_date ? new Date(db.finish_date) : undefined,
     activeOperations: db.active_operations as any
@@ -257,8 +258,8 @@ const mapDbToOrder = (db: any): ProductionOrder => ({
 
 const mapDbToOption = (db: any): ProductOption => ({
     id: db.id,
-    productModelId: db.product_model_id,
     name: db.name,
+    productModelId: db.product_model_id,
     description: db.description
 });
 
@@ -267,7 +268,8 @@ const mapDbToTask = (db: any): OptionTask => ({
     optionId: db.option_id,
     description: db.description,
     sequence: db.sequence,
-    pdfUrl: db.pdf_url
+    pdfUrl: db.pdf_url,
+    stationId: db.station_id
 });
 
 const mapDbToExecution = (db: any): TaskExecution => ({
@@ -281,6 +283,7 @@ const mapDbToIssue = (db: any): OrderIssue => ({
     id: db.id,
     orderId: db.order_id,
     stationId: db.station_id,
+    relatedStationId: db.related_station_id,
     type: db.type,
     description: db.description,
     status: db.status,
@@ -429,6 +432,16 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     const { error: pivotError } = await supabase.from('production_order_options').insert(pivotData);
                     if (pivotError) console.error("Error linking options to order:", pivotError);
                 }
+
+                // 3. Insert Selected Assets (Pivot - Shopfloor 4.0)
+                if (order.assetIds && order.assetIds.length > 0) {
+                    const assetPivot = order.assetIds.map(aId => ({
+                        order_id: order.id,
+                        asset_id: aId
+                    }));
+                    const { error: assetError } = await supabase.from('production_order_assets').insert(assetPivot);
+                    if (assetError) console.error("Error linking assets to order:", assetError);
+                }
             },
 
             updateOrderStatus: async (id, status) => {
@@ -576,7 +589,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
             addTask: async (task) => {
                 set(s => ({ optionTasks: [...s.optionTasks, task] }));
                 const { error } = await supabase.from('option_tasks').insert({
-                    id: task.id, option_id: task.optionId, description: task.description, sequence: task.sequence, pdf_url: task.pdfUrl
+                    id: task.id, option_id: task.optionId, description: task.description, sequence: task.sequence, pdf_url: task.pdfUrl, station_id: task.stationId
                 });
                 if (error) console.error("Error adding task:", error);
             },
@@ -611,7 +624,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
             reportIssue: async (issue) => {
                 set(s => ({ orderIssues: [...s.orderIssues, issue] }));
                 const { error } = await supabase.from('order_issues').insert({
-                    id: issue.id, order_id: issue.orderId, station_id: issue.stationId,
+                    id: issue.id, order_id: issue.orderId, station_id: issue.stationId, related_station_id: issue.relatedStationId,
                     type: issue.type, description: issue.description, status: issue.status
                 });
                 if (error) console.error("Error reporting issue:", error);
@@ -688,21 +701,40 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (issues) set({ orderIssues: issues.map(mapDbToIssue) });
 
                 // Fetch Order Options Pivot and Map to Orders
+                // Fetch Order Options Pivot and Map to Orders
                 const { data: pivot } = await supabase.from('production_order_options').select('*');
-                if (orders && pivot) {
+                const { data: assetPivot } = await supabase.from('production_order_assets').select('*');
+
+                if (orders) {
                     const mappedOrders = orders.map(mapDbToOrder).map(o => {
-                        const myOptions = pivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.option_id);
-                        return { ...o, selectedOptions: myOptions };
+                        const myOptions = pivot ? pivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.option_id) : [];
+
+                        const myAssets = assetPivot
+                            ? assetPivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.asset_id)
+                            : [];
+
+                        // Fallback to legacy assetId if no pivot data
+                        if (myAssets.length === 0 && o.assetId) {
+                            myAssets.push(o.assetId);
+                        }
+
+                        return {
+                            ...o,
+                            selectedOptions: myOptions,
+                            assetIds: myAssets
+                        };
                     });
+
                     set({ orders: mappedOrders });
                 }
+            }
 
                 console.log("Sync complete.");
-            }
+        }
         }),
-        {
-            name: 'shopfloor-storage',
-            storage: createJSONStorage(() => localStorage),
+{
+    name: 'shopfloor-storage',
+        storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 orders: state.orders,
                 events: state.events,
