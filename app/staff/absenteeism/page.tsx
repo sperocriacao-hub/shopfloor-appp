@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, UserX, Clock, CheckCircle2, AlertCircle, Users } from "lucide-react";
 import { Employee, AbsenteeismRecord } from "@/types";
+import { cn } from "@/lib/utils";
 
 export default function AbsenteeismPage() {
     const router = useRouter();
@@ -14,7 +15,7 @@ export default function AbsenteeismPage() {
 
     // State
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-    const [viewMode, setViewMode] = useState<'daily' | 'history'>('daily');
+    const [viewMode, setViewMode] = useState<'daily' | 'history' | 'report'>('daily');
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null); // For Modal
 
     // Derived Data
@@ -27,9 +28,14 @@ export default function AbsenteeismPage() {
 
     // Stats
     const totalActive = activeEmployees.length;
-    const totalAbsent = absenteeismRecords.filter(r => r.date === selectedDate && r.type === 'Full Day').length;
-    const totalLate = absenteeismRecords.filter(r => r.date === selectedDate && r.type === 'Late').length;
-    const presencePercentage = Math.round(((totalActive - totalAbsent) / totalActive) * 100) || 0;
+    // Stats logic: User requested "Any reason deducts from presence"
+    // So, Total Present = Total Active - Count(Employees with ANY record today)
+    const employeesWithRecord = activeEmployees.filter(e => getStatusForEmployee(e.id)).length;
+    const presencePercentage = Math.round(((totalActive - employeesWithRecord) / totalActive) * 100) || 0;
+
+    // Derived stats for cards
+    const totalFullAbsence = absenteeismRecords.filter(r => r.date === selectedDate && (r.type === 'Full Day' || r.type === 'Sick Leave')).length;
+    const totalPartial = absenteeismRecords.filter(r => r.date === selectedDate && (r.type === 'Late' || r.type === 'Early Departure')).length;
 
     // Handlers
     const handleAddRecord = (type: AbsenteeismRecord['type'], duration?: number) => {
@@ -89,6 +95,13 @@ export default function AbsenteeismPage() {
                     >
                         Histórico
                     </Button>
+                    <Button
+                        variant={viewMode === 'report' ? 'default' : 'ghost'}
+                        onClick={() => setViewMode('report')}
+                        className={viewMode === 'report' ? "bg-blue-600" : ""}
+                    >
+                        Relatório Diário
+                    </Button>
                 </div>
             </div>
 
@@ -123,21 +136,21 @@ export default function AbsenteeismPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-red-50 border-red-200">
+                            <Card className={cn("border-red-200", totalFullAbsence > 0 ? "bg-red-50" : "bg-white")}>
                                 <CardContent className="p-4 flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium text-red-700">Ausentes</p>
-                                        <h3 className="text-2xl font-bold text-red-900">{totalAbsent}</h3>
+                                        <p className="text-sm font-medium text-red-700">Ausências (Dia)</p>
+                                        <h3 className="text-2xl font-bold text-red-900">{totalFullAbsence}</h3>
                                     </div>
                                     <UserX className="h-8 w-8 text-red-500 opacity-50" />
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-amber-50 border-amber-200">
+                            <Card className={cn("border-amber-200", totalPartial > 0 ? "bg-amber-50" : "bg-white")}>
                                 <CardContent className="p-4 flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium text-amber-700">Atrasos</p>
-                                        <h3 className="text-2xl font-bold text-amber-900">{totalLate}</h3>
+                                        <p className="text-sm font-medium text-amber-700">Parciais (Atraso/Saída)</p>
+                                        <h3 className="text-2xl font-bold text-amber-900">{totalPartial}</h3>
                                     </div>
                                     <Clock className="h-8 w-8 text-amber-500 opacity-50" />
                                 </CardContent>
@@ -167,10 +180,8 @@ export default function AbsenteeismPage() {
                                                 if (!acc[area]) acc[area] = { total: 0, absent: 0 };
                                                 acc[area].total++;
                                                 const record = getStatusForEmployee(emp.id);
-                                                // Count 'Full Day' and 'Sick Leave' as absent for KPI? Or just Full Day?
-                                                // Usually Sick Leave affects presence, but maybe not "unplanned absence".
-                                                // Let's count any non-presence as absent for the % calculation strictly.
-                                                if (record && (record.type === 'Full Day' || record.type === 'Sick Leave')) {
+                                                // Count ANY record as absent for KPI as per request "any reason deducts from presence"
+                                                if (record) {
                                                     acc[area].absent++;
                                                 }
                                                 return acc;
@@ -244,9 +255,9 @@ export default function AbsenteeismPage() {
                                                             } else if (record.type === 'Vacation') {
                                                                 statusColor = "border-l-4 border-l-blue-500 bg-blue-50";
                                                                 statusText = "Férias";
-                                                            } else if (record.type === 'Warning') {
+                                                            } else if (record.type === 'Early Departure') {
                                                                 statusColor = "border-l-4 border-l-slate-500 bg-slate-50";
-                                                                statusText = "Aviso";
+                                                                statusText = "Saída/Chegada";
                                                             }
                                                         }
 
@@ -336,6 +347,121 @@ export default function AbsenteeismPage() {
                 )
             }
 
+            {/* Daily Report View */}
+            {
+                viewMode === 'report' && (
+                    <div className="space-y-6 print:space-y-4">
+                        <Card className="print:shadow-none print:border-none">
+                            <CardHeader className="border-b bg-slate-50 print:bg-white print:border-b-2 print:pb-0">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <CardTitle>Relatório Diário de Presença</CardTitle>
+                                        <p className="text-sm text-slate-500">Data de Referência: {selectedDate.split('-').reverse().join('/')}</p>
+                                    </div>
+                                    <Button variant="outline" size="sm" onClick={() => window.print()} className="print:hidden">
+                                        🖨️ Imprimir / PDF
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-6">
+                                {/* Summary Header */}
+                                <div className="grid grid-cols-4 gap-4 text-center border rounded-lg p-4 bg-slate-50/50 print:border-slate-300">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase">Total Ativos</p>
+                                        <p className="text-2xl font-bold text-slate-900">{totalActive}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase">Presentes</p>
+                                        <p className="text-2xl font-bold text-green-600">{totalActive - employeesWithRecord}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase">Ausências Totais</p>
+                                        <p className="text-2xl font-bold text-red-600">{totalFullAbsence}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase">Parciais</p>
+                                        <p className="text-2xl font-bold text-amber-600">{totalPartial}</p>
+                                    </div>
+                                </div>
+
+                                {/* Report List Grouped by Supervisor/Leader */}
+                                <div className="space-y-6">
+                                    {Object.entries(
+                                        activeEmployees.reduce((acc, emp) => {
+                                            const sup = emp.supervisor || 'N/A';
+                                            if (!acc[sup]) acc[sup] = { leaders: {} };
+
+                                            const lead = emp.leader || 'N/A';
+                                            if (!acc[sup].leaders[lead]) acc[sup].leaders[lead] = [];
+
+                                            acc[sup].leaders[lead].push(emp);
+                                            return acc;
+                                        }, {} as Record<string, { leaders: Record<string, Employee[]> }>)
+                                    ).sort().map(([supervisor, { leaders }]) => (
+                                        <div key={supervisor} className="break-inside-avoid">
+                                            <h3 className="font-bold text-lg text-blue-900 border-b-2 border-blue-100 mb-2 pb-1">{supervisor}</h3>
+
+                                            <div className="space-y-4">
+                                                {Object.entries(leaders).sort().map(([leader, team]) => (
+                                                    <div key={leader} className="ml-4">
+                                                        <h4 className="font-semibold text-slate-700 text-sm mb-2 flex items-center">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span>
+                                                            Líder: {leader}
+                                                        </h4>
+
+                                                        <table className="w-full text-xs text-left border-collapse">
+                                                            <thead>
+                                                                <tr className="border-b border-slate-200 text-slate-500">
+                                                                    <th className="py-1 w-12">ID</th>
+                                                                    <th className="py-1">Nome</th>
+                                                                    <th className="py-1 w-32">Status</th>
+                                                                    <th className="py-1 w-24">Detalhe</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {team.sort((a, b) => a.name.localeCompare(b.name)).map(emp => {
+                                                                    const status = getStatusForEmployee(emp.id);
+
+                                                                    let statusLabel = <span className="text-green-600 font-medium">Presente</span>;
+                                                                    let detail = "-";
+
+                                                                    if (status) {
+                                                                        if (status.type === 'Full Day') statusLabel = <span className="text-red-600 font-bold">Falta</span>;
+                                                                        else if (status.type === 'Sick Leave') statusLabel = <span className="text-purple-600 font-bold">Baixa Médica</span>;
+                                                                        else if (status.type === 'Vacation') statusLabel = <span className="text-blue-600 font-bold">Férias</span>;
+                                                                        else if (status.type === 'Late') {
+                                                                            statusLabel = <span className="text-amber-600 font-bold">Atraso</span>;
+                                                                            detail = `${status.durationMinutes}m`;
+                                                                        }
+                                                                        else if (status.type === 'Early Departure') {
+                                                                            statusLabel = <span className="text-slate-600 font-bold">Saída/Chegada Ant.</span>;
+                                                                            detail = `${status.durationMinutes}m`;
+                                                                        }
+                                                                    }
+
+                                                                    return (
+                                                                        <tr key={emp.id} className="border-b border-slate-50 hover:bg-slate-50">
+                                                                            <td className="py-1 font-mono text-slate-400">{emp.workerNumber}</td>
+                                                                            <td className="py-1 font-medium text-slate-800">{emp.name}</td>
+                                                                            <td className="py-1">{statusLabel}</td>
+                                                                            <td className="py-1 text-slate-500">{detail}</td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
+            }
+
             {/* Modal de Ação (Dialog simulado para simplicidade) */}
             {
                 selectedEmployee && (
@@ -387,10 +513,10 @@ export default function AbsenteeismPage() {
                                     <Button
                                         className="w-full justify-start text-sm h-12 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
                                         variant="outline"
-                                        onClick={() => handleAddRecord('Warning')}
+                                        onClick={() => handleAddRecord('Early Departure', 30)}
                                     >
-                                        <AlertCircle className="mr-2 h-4 w-4" />
-                                        Aviso / Advertência
+                                        <Clock className="mr-2 h-4 w-4" />
+                                        Saída/Chegada Antecupada
                                     </Button>
                                 </div>
 
