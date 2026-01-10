@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Cell, PieChart, Pie, Legend } from 'recharts';
 import { ArrowLeft, Calendar, UserX, Clock, CheckCircle2, AlertCircle, Users } from "lucide-react";
 import { Employee, AbsenteeismRecord } from "@/types";
 import { cn } from "@/lib/utils";
@@ -157,93 +161,100 @@ export default function AbsenteeismPage() {
                             </Card>
                         </div>
 
-                        {/* Area Statistics Breakdown */}
-                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="px-4 py-3 border-b bg-slate-50">
-                                <h3 className="font-semibold text-slate-700">Métricas por Área</h3>
+                        {/* Area Statistics Breakdown (Visual Cards) */}
+                        <div className="space-y-4">
+                            <div className="px-1">
+                                <h3 className="font-semibold text-slate-700 text-lg">Métricas por Área</h3>
+                                <p className="text-sm text-slate-500">Visão geral do desempenho de presença por setor e estação.</p>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-slate-50 text-slate-500 font-medium">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left">Área / Estação</th>
-                                            <th className="px-4 py-2 text-right">Total</th>
-                                            <th className="px-4 py-2 text-right">Presentes</th>
-                                            <th className="px-4 py-2 text-right">Ausentes</th>
-                                            <th className="px-4 py-2 text-right">% Presença</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {Object.entries(
-                                            activeEmployees.reduce((acc, emp) => {
-                                                const area = emp.area || 'Indefinido';
-                                                const station = emp.workstation || 'Sem Estação'; // Or 'Geral'
 
-                                                if (!acc[area]) acc[area] = { total: 0, absent: 0, stations: {} };
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {Object.entries(
+                                    activeEmployees.reduce((acc, emp) => {
+                                        const area = emp.area || 'Indefinido';
+                                        const station = emp.workstation || 'Geral';
 
-                                                // Update Area Totals
-                                                acc[area].total++;
+                                        if (!acc[area]) acc[area] = { total: 0, absent: 0, stations: {} };
 
-                                                // Initialize Station if needed
-                                                if (!acc[area].stations[station]) acc[area].stations[station] = { total: 0, absent: 0 };
-                                                acc[area].stations[station].total++; // Update Station Totals
+                                        acc[area].total++;
 
-                                                const record = getStatusForEmployee(emp.id);
-                                                if (record) {
-                                                    acc[area].absent++;
-                                                    acc[area].stations[station].absent++;
-                                                }
-                                                return acc;
-                                            }, {} as Record<string, { total: number; absent: number, stations: Record<string, { total: number, absent: number }> }>)
-                                        )
-                                            .sort((a, b) => a[0].localeCompare(b[0])) // Sort Areas Alphabetically
-                                            .map(([area, stats]) => {
-                                                const areaPresent = stats.total - stats.absent;
-                                                const areaPct = Math.round((areaPresent / stats.total) * 100);
-                                                const areaPctColor = areaPct < 90 ? 'text-red-600 font-bold' : areaPct < 95 ? 'text-amber-600 font-bold' : 'text-green-600 font-bold';
+                                        if (!acc[area].stations[station]) acc[area].stations[station] = { total: 0, absent: 0 };
+                                        acc[area].stations[station].total++; // Update Station Totals
 
-                                                return (
-                                                    <>
-                                                        {/* Area Header Row */}
-                                                        <tr key={area} className="bg-slate-50/50">
-                                                            <td className="px-4 py-2 font-bold text-slate-800">{area}</td>
-                                                            <td className="px-4 py-2 text-right font-semibold text-slate-900">{stats.total}</td>
-                                                            <td className="px-4 py-2 text-right font-semibold text-green-700">{areaPresent}</td>
-                                                            <td className="px-4 py-2 text-right font-semibold text-red-700">{stats.absent}</td>
-                                                            <td className={`px-4 py-2 text-right ${areaPctColor}`}>{areaPct}%</td>
-                                                        </tr>
+                                        const record = getStatusForEmployee(emp.id);
+                                        if (record) {
+                                            acc[area].absent++;
+                                            acc[area].stations[station].absent++;
+                                        }
+                                        return acc;
+                                    }, {} as Record<string, { total: number; absent: number, stations: Record<string, { total: number, absent: number }> }>)
+                                )
+                                    .sort((a, b) => a[0].localeCompare(b[0])) // Sort Areas Alphabetically
+                                    .map(([area, stats]) => {
+                                        const areaPresent = stats.total - stats.absent;
+                                        const areaPct = Math.round((areaPresent / stats.total) * 100);
+                                        const areaPctColor = areaPct < 90 ? 'text-red-600' : areaPct < 95 ? 'text-amber-600' : 'text-green-600';
 
-                                                        {/* Station Sub-rows */}
-                                                        {Object.entries(stats.stations)
-                                                            .sort((a, b) => a[0].localeCompare(b[0])) // Sort Stations Alphabetically
-                                                            .map(([station, stStats]) => {
-                                                                const stPresent = stStats.total - stStats.absent;
-                                                                const stPct = Math.round((stPresent / stStats.total) * 100);
+                                        // Prepare Chart Data
+                                        const chartData = Object.entries(stats.stations)
+                                            .sort((a, b) => a[0].localeCompare(b[0]))
+                                            .map(([stName, stStats]) => ({
+                                                name: stName.length > 20 ? stName.substring(0, 20) + '...' : stName,
+                                                full_name: stName,
+                                                Total: stStats.total,
+                                                Present: stStats.total - stStats.absent,
+                                                Absent: stStats.absent,
+                                                pct: Math.round(((stStats.total - stStats.absent) / stStats.total) * 100)
+                                            }));
 
-                                                                // Subtle color for stations
-                                                                const stPctColor = stPct < 90 ? 'text-red-500' : stPct < 95 ? 'text-amber-600' : 'text-green-600';
+                                        const chartHeight = Math.max(chartData.length * 50, 200);
 
-                                                                return (
-                                                                    <tr key={`${area}-${station}`} className="hover:bg-slate-50 text-xs">
-                                                                        <td className="px-4 py-1 pl-8 text-slate-500 border-l-4 border-l-transparent hover:border-l-blue-200">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                                                                                {station}
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="px-4 py-1 text-right text-slate-600">{stStats.total}</td>
-                                                                        <td className="px-4 py-1 text-right text-green-600/80">{stPresent}</td>
-                                                                        <td className="px-4 py-1 text-right text-red-600/80">{stStats.absent > 0 ? stStats.absent : '-'}</td>
-                                                                        <td className={`px-4 py-1 text-right font-medium ${stPctColor}`}>{stPct}%</td>
-                                                                    </tr>
-                                                                );
-                                                            })
-                                                        }
-                                                    </>
-                                                );
-                                            })}
-                                    </tbody>
-                                </table>
+                                        return (
+                                            <Card key={area} className="overflow-hidden border-slate-200 shadow-md hover:shadow-lg transition-shadow">
+                                                <CardHeader className="bg-slate-50 border-b pb-3">
+                                                    <div className="flex justify-between items-center">
+                                                        <CardTitle className="text-base font-bold text-blue-950 truncate" title={area}>
+                                                            {area}
+                                                        </CardTitle>
+                                                        <div className={`text-xl font-bold ${areaPctColor} bg-white px-2 py-1 rounded shadow-sm border`}>
+                                                            {areaPct}%
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex text-xs text-slate-500 gap-3 mt-1">
+                                                        <span><Users className="inline h-3 w-3 mr-1" />{stats.total} Colaboradores</span>
+                                                        <span className="text-red-500 font-medium">{stats.absent} Ausências</span>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent className="p-4 pt-6">
+                                                    <div style={{ height: chartHeight, width: '100%' }}>
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <BarChart
+                                                                layout="vertical"
+                                                                data={chartData}
+                                                                margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                                                            >
+                                                                <XAxis type="number" hide />
+                                                                <YAxis
+                                                                    dataKey="name"
+                                                                    type="category"
+                                                                    width={100}
+                                                                    tick={{ fontSize: 11, fill: '#64748b' }}
+                                                                    interval={0}
+                                                                />
+                                                                <RechartsTooltip
+                                                                    cursor={{ fill: '#f1f5f9' }}
+                                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                                    labelStyle={{ fontWeight: 'bold', color: '#1e293b', marginBottom: '4px' }}
+                                                                />
+                                                                <Bar dataKey="Present" name="Presentes" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} barSize={20} />
+                                                                <Bar dataKey="Absent" name="Ausentes" stackId="a" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20} />
+                                                            </BarChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })}
                             </div>
                         </div>
 
