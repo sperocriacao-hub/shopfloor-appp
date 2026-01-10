@@ -306,8 +306,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
     persist(
         (set, get) => ({
             // Master Data
-            assets: initialAssets,
-            products: initialProducts,
+            assets: [], // Start Empty (Wait for Sync)
+            products: [], // Start Empty (Wait for Sync)
             routings: [],
 
             // Execution Data
@@ -657,12 +657,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
                 // Assets
                 const { data: assets } = await supabase.from('assets').select('*');
-                if (assets && assets.length > 0) set({ assets: assets.map(mapDbToAsset) });
+                if (assets) set({ assets: assets.map(mapDbToAsset) });
 
                 // Products
                 // Products & Routings (Derived from Products)
                 const { data: products } = await supabase.from('products').select('*');
-                if (products && products.length > 0) {
+                if (products) {
                     set({ products: products.map(mapDbToProduct) });
 
                     // Generate routings from product operations
@@ -674,18 +674,16 @@ export const useShopfloorStore = create<ShopfloorState>()(
                             operations: p.operations
                         }));
 
-                    if (derivedRoutings.length > 0) {
-                        set({ routings: derivedRoutings });
-                    }
+                    set({ routings: derivedRoutings }); // Always update routings
                 }
 
                 // Orders
                 const { data: orders } = await supabase.from('orders').select('*');
-                if (orders && orders.length > 0) set({ orders: orders.map(mapDbToOrder) });
+                if (orders) set({ orders: orders.map(mapDbToOrder) });
 
                 // Events
                 const { data: events } = await supabase.from('events').select('*');
-                if (events && events.length > 0) set({ events: events.map(mapDbToEvent) });
+                if (events) set({ events: events.map(mapDbToEvent) });
 
                 // Shopfloor 3.0 Data Sync
                 const { data: opts } = await supabase.from('product_options').select('*');
