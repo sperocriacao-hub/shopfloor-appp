@@ -176,7 +176,12 @@ interface ShopfloorState {
 
     // Shopfloor 3.0 Actions
     addOption: (option: ProductOption) => Promise<void>;
+    updateOption: (id: string, updates: Partial<ProductOption>) => Promise<void>;
+    removeOption: (id: string) => Promise<void>;
+
     addTask: (task: OptionTask) => Promise<void>;
+    updateTask: (id: string, updates: Partial<OptionTask>) => Promise<void>;
+    removeTask: (id: string) => Promise<void>;
     toggleTask: (orderId: string, taskId: string, isCompleted: boolean, userId: string) => Promise<void>;
     reportIssue: (issue: OrderIssue) => Promise<void>;
     resolveIssue: (issueId: string, resolvedBy: string) => Promise<void>;
@@ -592,6 +597,49 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     id: task.id, option_id: task.optionId, description: task.description, sequence: task.sequence, pdf_url: task.pdfUrl, station_id: task.stationId
                 });
                 if (error) console.error("Error adding task:", error);
+            },
+
+            updateTask: async (id, updates) => {
+                set(s => ({
+                    optionTasks: s.optionTasks.map(t => t.id === id ? { ...t, ...updates } : t)
+                }));
+                const toUpdate: any = {};
+                if (updates.description) toUpdate.description = updates.description;
+                if (updates.sequence) toUpdate.sequence = updates.sequence;
+                if (updates.pdfUrl) toUpdate.pdf_url = updates.pdfUrl;
+                if (updates.stationId) toUpdate.station_id = updates.stationId;
+
+                if (Object.keys(toUpdate).length > 0) {
+                    const { error } = await supabase.from('option_tasks').update(toUpdate).eq('id', id);
+                    if (error) console.error("Error updating task:", error);
+                }
+            },
+
+            removeTask: async (id) => {
+                set(s => ({ optionTasks: s.optionTasks.filter(t => t.id !== id) }));
+                const { error } = await supabase.from('option_tasks').delete().eq('id', id);
+                if (error) console.error("Error deleting task:", error);
+            },
+
+            updateOption: async (id, updates) => {
+                set(s => ({
+                    productOptions: s.productOptions.map(o => o.id === id ? { ...o, ...updates } : o)
+                }));
+                const toUpdate: any = {};
+                if (updates.name) toUpdate.name = updates.name;
+                if (updates.description) toUpdate.description = updates.description;
+                if (updates.productModelId) toUpdate.product_model_id = updates.productModelId;
+
+                if (Object.keys(toUpdate).length > 0) {
+                    const { error } = await supabase.from('product_options').update(toUpdate).eq('id', id);
+                    if (error) console.error("Error updating option:", error);
+                }
+            },
+
+            removeOption: async (id) => {
+                set(s => ({ productOptions: s.productOptions.filter(o => o.id !== id) }));
+                const { error } = await supabase.from('product_options').delete().eq('id', id);
+                if (error) console.error("Error deleting option:", error);
             },
 
             toggleTask: async (orderId, taskId, isCompleted, userId) => {

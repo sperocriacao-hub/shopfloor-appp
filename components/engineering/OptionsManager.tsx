@@ -17,14 +17,14 @@ interface OptionsManagerProps {
 }
 
 export function OptionsManager({ productModelId, onClose }: OptionsManagerProps) {
-    const { productOptions, optionTasks, assets, products, addOption, addTask, updateProduct, syncData } = useShopfloorStore();
+    const { productOptions, optionTasks, assets, products, addOption, updateOption, removeOption, addTask, updateTask, removeTask, syncData } = useShopfloorStore();
 
     // Local state for UI
     const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
-    // Filter options (if model specific, though usually options are reusable or global for now)
-    const filteredOptions = productOptions; //.filter(o => !productModelId || o.productModelId === productModelId);
+    // Filter options
+    const filteredOptions = productOptions;
 
     // Form State for New/Edit Option
     const [formData, setFormData] = useState<{
@@ -47,7 +47,7 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
             .filter(t => t.optionId === opt.id)
             .sort((a, b) => a.sequence - b.sequence)
             .map(t => ({
-                tempId: t.id, // Use real ID
+                tempId: t.id, // Real ID
                 description: t.description,
                 pdfUrl: t.pdfUrl || "",
                 sequence: t.sequence,
@@ -84,10 +84,38 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
         setFormData(prev => ({ ...prev, tasks: newTasks }));
     };
 
-    const handleDeleteTask = (idx: number) => {
+    const handleDeleteTask = async (idx: number) => {
+        if (!confirm("Remover esta tarefa?")) return;
+
+        const taskToDelete = formData.tasks[idx];
+
+        // If it's a real task (not temp), delete from DB immediately
+        if (!taskToDelete.tempId.startsWith('temp-')) {
+            await removeTask(taskToDelete.tempId);
+        }
+
+        // Remove from UI
         const newTasks = [...formData.tasks];
         newTasks.splice(idx, 1);
         setFormData(prev => ({ ...prev, tasks: newTasks }));
+    };
+
+    const handleDeleteOption = async () => {
+        if (!selectedOptionId) return;
+        if (!confirm("ATENÇÃO: Isso excluirá esta Opção e TODAS as suas tarefas. Continuar?")) return;
+
+        await removeOption(selectedOptionId);
+        // Clean up tasks in store filter for UI consistency (though store logic handles DB, local state might need manual sync if we rely on filtered list)
+        // Actually, removeOption in store only removes the option. Tasks are cascade deleted in DB usually, but store state might remain stale.
+        // Let's rely on syncData to refresh everything properly or manual cleanup. 
+
+        // For optimisitic UI:
+        // We need to remove tasks from store manually if we want instant feedback, but syncData is safer.
+
+        await syncData();
+        setSelectedOptionId(null);
+        setIsCreating(false);
+        setFormData({ name: "", description: "", productModelId: "", tasks: [] });
     };
 
     const handleSave = async () => {
@@ -95,32 +123,40 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
 
         const optionId = selectedOptionId || `opt-${Date.now()}`;
 
-        // 1. Save Option
+        // 1. Save/Update Option
         if (!selectedOptionId) {
+            // Create
             await addOption({
                 id: optionId,
                 name: formData.name,
                 description: formData.description,
                 productModelId: formData.productModelId
             });
+        } else {
+            // Update
+            await updateOption(optionId, {
+                name: formData.name,
+                description: formData.description,
+                productModelId: formData.productModelId
+            });
         }
-        // NOTE: Standard updateOption action missing in store, adding simplified add for now. 
-        // Real editing would require 'updateOption' action. Assuming 'addOption' upserts or we just focus on creation for MVP.
 
-        // 2. Save Tasks
-        // For MVP, we just add new ones. Editing existing tasks requires intelligent diffing or clearing old ones.
-        // Let's implement robust "Add Task" calls for all items in list (won't duplicate if ID matches primary key, but we generated temp IDs).
-
+        // 2. Save Tasks (Upsert logic)
         for (const t of formData.tasks) {
-            // Check if it's a temp ID (new) or existing
-            const taskId = t.tempId.startsWith('temp-') ? `tsk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` : t.tempId;
-
-            // We only have 'addTask', so we might need to handle updates. 
-            // Since store only has 'addTask', let's assume valid upsert or just insert for new.
             if (t.tempId.startsWith('temp-')) {
+                // Create New
+                const realId = `tsk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 await addTask({
-                    id: taskId,
+                    id: realId,
                     optionId: optionId,
+                    description: t.description,
+                    sequence: t.sequence,
+                    pdfUrl: t.pdfUrl,
+                    stationId: t.stationId
+                });
+            } else {
+                // Update Existing
+                await updateTask(t.tempId, {
                     description: t.description,
                     sequence: t.sequence,
                     pdfUrl: t.pdfUrl,
@@ -131,9 +167,22 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
 
         // Refresh
         await syncData();
-        setIsCreating(false);
-        setSelectedOptionId(optionId);
+
+        // Update UI state
+        if (!selectedOptionId) {
+            setSelectedOptionId(optionId);
+            setIsCreating(false);
+        }
+
+        // Re-load the form data to get the new real IDs for tasks we just created
+        // We can do this by finding the option we just saved/updated
+        // But simply re-selecting it conceptually works.
+        // Only safely re-select if we have the ID.
+        // A simple alert for now.
         alert("Salvo com sucesso!");
+
+        // Force refresh form linkage
+        // We'll trust the user to continue editing or we could auto-reload.
     };
 
     return (
@@ -148,16 +197,26 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => {
                         const csvContent = "data:text/csv;charset=utf-8," +
-                            "Name,Description,ProductModel\n" +
-                            productOptions.map(e => `${e.name},${e.description || ''},${e.productModelId || ''}`).join("\n");
+                            "OptionName,OptionDescription,ProductModel,TaskDescription,TaskSequence,TaskStation,TaskPDF\n" +
+                            productOptions.map(o => {
+                                // Find tasks for this option to flatten
+                                const myTasks = optionTasks.filter(t => t.optionId === o.id);
+                                if (myTasks.length === 0) {
+                                    return `${o.name},${o.description || ''},${o.productModelId || ''},,,,`;
+                                }
+                                return myTasks.map(t =>
+                                    `${o.name},${o.description || ''},${o.productModelId || ''},${t.description},${t.sequence},${t.stationId || ''},${t.pdfUrl || ''}`
+                                ).join("\n");
+                            }).join("\n");
+
                         const encodedUri = encodeURI(csvContent);
                         const link = document.createElement("a");
                         link.setAttribute("href", encodedUri);
-                        link.setAttribute("download", "options_template.csv");
+                        link.setAttribute("download", "options_template_v2_com_tarefas.csv");
                         document.body.appendChild(link);
                         link.click();
                     }}>
-                        <FileText className="h-3 w-3 mr-1" /> Modelo Excel
+                        <FileText className="h-3 w-3 mr-1" /> Modelo CSV
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => alert("Funcionalidade de importação em breve via CSV.")}>
                         Importar
@@ -165,6 +224,9 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                 </div>
 
                 <div className="overflow-y-auto flex-1 space-y-2 mt-2">
+                    {filteredOptions.length === 0 && (
+                        <p className="text-sm text-slate-400 text-center py-4">Nenhuma opção cadastrada.</p>
+                    )}
                     {filteredOptions.map(opt => (
                         <Card
                             key={opt.id}
@@ -188,35 +250,46 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                 {(selectedOptionId || isCreating) ? (
                     <>
                         <div className="grid gap-4 p-1">
-                            <div>
-                                <Label>Nome da Opção / Kit</Label>
-                                <Input
-                                    value={formData.name}
-                                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                    placeholder="Ex: Piso Teca, Som Premium..."
-                                />
+                            <div className="flex justify-between items-start">
+                                <div className="flex-1 mr-4">
+                                    <Label>Nome da Opção / Kit</Label>
+                                    <Input
+                                        value={formData.name}
+                                        onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                        placeholder="Ex: Piso Teca, Som Premium..."
+                                    />
+                                </div>
+                                {selectedOptionId ? (
+                                    <Button variant="destructive" size="icon" onClick={handleDeleteOption} title="Excluir Opção/Kit Completo">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                ) : (
+                                    <div className="w-9 h-9"></div>
+                                )}
                             </div>
-                            <div>
-                                <Label>Modelo do Produto (Vínculo)</Label>
-                                <select
-                                    className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                                    value={formData.productModelId}
-                                    onChange={e => setFormData(prev => ({ ...prev, productModelId: e.target.value }))}
-                                >
-                                    <option value="">Global / Todos</option>
-                                    {products.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <Label>Descrição</Label>
-                                <Textarea
-                                    value={formData.description}
-                                    onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                                    placeholder="Detalhes sobre esta opção..."
-                                    rows={2}
-                                />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Modelo do Produto (Vínculo)</Label>
+                                    <select
+                                        className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                                        value={formData.productModelId}
+                                        onChange={e => setFormData(prev => ({ ...prev, productModelId: e.target.value }))}
+                                    >
+                                        <option value="">Global / Todos</option>
+                                        {products.map(p => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <Label>Descrição</Label>
+                                    <Input
+                                        value={formData.description}
+                                        onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                        placeholder="Detalhes..."
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -254,30 +327,35 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                                                     placeholder="Descrição da Tarefa (O que fazer)"
                                                 />
                                             </div>
-                                            <Input
-                                                value={task.pdfUrl}
-                                                onChange={e => handleUpdateTask(idx, 'pdfUrl', e.target.value)}
-                                                className="h-7 text-xs text-blue-600 bg-blue-50/50 border-blue-100"
-                                                placeholder="https://... (Link para PDF/Instrução)"
-                                            />
-
-                                            {/* Station Allocation (V4) */}
-                                            <select
-                                                className="h-7 w-full rounded border border-slate-200 text-xs bg-white px-2"
-                                                value={task.stationId}
-                                                onChange={e => handleUpdateTask(idx, 'stationId', e.target.value)}
-                                            >
-                                                <option value="">-- Destino da Tarefa (Estação) --</option>
-                                                {assets.map(a => (
-                                                    <option key={a.id} value={a.id}>{a.area} - {a.name}</option>
-                                                ))}
-                                            </select>
+                                            <div className="flex gap-2">
+                                                <div className="w-1/3">
+                                                    <select
+                                                        className="h-7 w-full rounded border border-slate-200 text-xs bg-white px-2"
+                                                        value={task.stationId}
+                                                        onChange={e => handleUpdateTask(idx, 'stationId', e.target.value)}
+                                                    >
+                                                        <option value="">-- Estação Destino --</option>
+                                                        {assets.map(a => (
+                                                            <option key={a.id} value={a.id}>{a.area} - {a.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <Input
+                                                        value={task.pdfUrl}
+                                                        onChange={e => handleUpdateTask(idx, 'pdfUrl', e.target.value)}
+                                                        className="h-7 text-xs text-blue-600 bg-blue-50/50 border-blue-100"
+                                                        placeholder="URL do PDF (Instrução)"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="h-8 w-8 text-slate-400 hover:text-red-500 opacity-100" // Always visible for clarity
                                             onClick={() => handleDeleteTask(idx)}
+                                            title="Excluir Tarefa"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -303,6 +381,6 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

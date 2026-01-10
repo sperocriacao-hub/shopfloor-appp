@@ -10,7 +10,15 @@ interface ProductOrdersListProps {
     orders: ProductionOrder[];
 }
 
+import { useShopfloorStore } from "@/store/useShopfloorStore";
+
+interface ProductOrdersListProps {
+    orders: ProductionOrder[];
+}
+
 export function ProductOrdersList({ orders }: ProductOrdersListProps) {
+    const { products } = useShopfloorStore();
+
     if (!orders || orders.length === 0) {
         return (
             <div className="text-center py-10 text-slate-500 bg-slate-50 rounded-lg border border-dashed">
@@ -40,40 +48,48 @@ export function ProductOrdersList({ orders }: ProductOrdersListProps) {
         }
     }
 
+    // Sort by ID descending (newest first) as proxy for creation date
+    const sortedOrders = [...orders].sort((a, b) => b.id.localeCompare(a.id));
+
     return (
         <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {orders.map(order => (
-                    <div key={order.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-                        <div className={`absolute top-0 left-0 w-1 h-full ${order.status === 'in_progress' ? 'bg-blue-500' : 'bg-transparent'}`} />
+                {sortedOrders.map(order => {
+                    const product = products.find(p => p.id === order.productModelId);
+                    const title = product ? `${product.name} # ${order.po}` : `Ordem #${order.po || order.id}`;
 
-                        <div className="flex justify-between items-start mb-3">
-                            <div>
-                                <h4 className="font-semibold text-slate-800">{order.po || order.id}</h4>
-                                <div className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                                    <User className="h-3 w-3" /> {order.customer || "Cliente não informado"}
+                    return (
+                        <div key={order.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                            <div className={`absolute top-0 left-0 w-1 h-full ${order.status === 'in_progress' ? 'bg-blue-500' : 'bg-transparent'}`} />
+
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <h4 className="font-semibold text-slate-800">{title}</h4>
+                                    <div className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                                        <User className="h-3 w-3" /> {order.customer || "Cliente não informado"}
+                                    </div>
                                 </div>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getStatusColor(order.status)}`}>
-                                {getStatusLabel(order.status)}
-                            </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div className="bg-slate-50 p-2 rounded">
-                                <span className="text-xs text-slate-500 block">Quantidade</span>
-                                <span className="font-mono font-medium">{order.quantity} un.</span>
-                            </div>
-                            <div className="bg-slate-50 p-2 rounded">
-                                <span className="text-xs text-slate-500 block">Previsão</span>
-                                <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3 text-slate-400" />
-                                    {order.finishDate ? format(new Date(order.finishDate), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
+                                <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getStatusColor(order.status)}`}>
+                                    {getStatusLabel(order.status)}
                                 </span>
                             </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="bg-slate-50 p-2 rounded">
+                                    <span className="text-xs text-slate-500 block">Quantidade</span>
+                                    <span className="font-mono font-medium">{order.quantity} un.</span>
+                                </div>
+                                <div className="bg-slate-50 p-2 rounded">
+                                    <span className="text-xs text-slate-500 block">Previsão</span>
+                                    <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3 text-slate-400" />
+                                        {order.finishDate ? format(new Date(order.finishDate), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
         </div>
     );
