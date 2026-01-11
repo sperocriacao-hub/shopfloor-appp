@@ -11,8 +11,8 @@ CREATE TYPE quality_methodology AS ENUM ('ishikawa', '5whys', 'a3', '8d', 'none'
 
 CREATE TABLE IF NOT EXISTS quality_cases (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID REFERENCES orders(id),
-    asset_id UUID REFERENCES assets(id),
+    order_id TEXT REFERENCES orders(id),
+    asset_id TEXT REFERENCES assets(id),
     description TEXT NOT NULL,
     type quality_type NOT NULL,
     severity quality_severity DEFAULT 'medium',
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS quality_cases (
     methodology quality_methodology DEFAULT 'none',
     methodology_data JSONB DEFAULT '{}', -- Stores the structured data for the chosen methodology
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID -- Reference to auth.users or employees
+    created_by TEXT -- Reference to auth.users or employees
 );
 
 -- 3. Quality Actions Table
@@ -42,14 +42,14 @@ CREATE TYPE scrap_action AS ENUM ('recycle', 'trash', 'rework', 'replacement');
 
 CREATE TABLE IF NOT EXISTS scrap_reports (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID REFERENCES orders(id),
-    asset_id UUID REFERENCES assets(id),
-    reported_by UUID, -- Reference to employee
+    order_id TEXT REFERENCES orders(id),
+    asset_id TEXT REFERENCES assets(id),
+    reported_by TEXT, -- Reference to employee
     type scrap_type NOT NULL,
     item_description TEXT, -- Required if partial
     quantity INTEGER DEFAULT 1,
     reason TEXT,
     action_taken scrap_action DEFAULT 'recycle',
-    replacement_order_id UUID REFERENCES orders(id), -- If a new order was created
+    replacement_order_id TEXT REFERENCES orders(id), -- If a new order was created
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
