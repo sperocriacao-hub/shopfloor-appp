@@ -11,7 +11,7 @@ CREATE TYPE quality_methodology AS ENUM ('ishikawa', '5whys', 'a3', '8d', 'none'
 
 CREATE TABLE IF NOT EXISTS quality_cases (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID REFERENCES production_orders(id),
+    order_id UUID REFERENCES orders(id),
     asset_id UUID REFERENCES assets(id),
     description TEXT NOT NULL,
     type quality_type NOT NULL,
@@ -38,11 +38,11 @@ CREATE TABLE IF NOT EXISTS quality_actions (
 
 -- 4. Scrap Reports Table
 CREATE TYPE scrap_type AS ENUM ('total', 'partial');
-CREATE TYPE scrap_action AS ENUM ('recycle', 'trash', 'rework');
+CREATE TYPE scrap_action AS ENUM ('recycle', 'trash', 'rework', 'replacement');
 
 CREATE TABLE IF NOT EXISTS scrap_reports (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID REFERENCES production_orders(id),
+    order_id UUID REFERENCES orders(id),
     asset_id UUID REFERENCES assets(id),
     reported_by UUID, -- Reference to employee
     type scrap_type NOT NULL,
@@ -50,6 +50,6 @@ CREATE TABLE IF NOT EXISTS scrap_reports (
     quantity INTEGER DEFAULT 1,
     reason TEXT,
     action_taken scrap_action DEFAULT 'recycle',
-    replacement_order_id UUID REFERENCES production_orders(id), -- If a new order was created
+    replacement_order_id UUID REFERENCES orders(id), -- If a new order was created
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -8,13 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertOctagon, Microscope, Plus, Search, FileText } from "lucide-react";
 import { useState } from "react";
-import { QualityCase, QualityCaseStatus, QualityMethodology } from "@/types";
+import { QualityCase, QualityStatus, QualityMethodology } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function QualityPage() {
     const { qualityCases, qualityActions, assets, orders, addQualityCase, updateQualityCase } = useShopfloorStore();
     const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState<QualityCaseStatus | 'all'>('all');
+    const [statusFilter, setStatusFilter] = useState<QualityStatus | 'all'>('all');
     const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
 
     // Form State
@@ -54,7 +54,7 @@ export default function QualityPage() {
         setNewCase({ type: 'internal_fail', severity: 'medium', methodology: 'ishikawa', status: 'open', description: '' });
     };
 
-    const getStatusColor = (status: QualityCaseStatus) => {
+    const getStatusColor = (status: QualityStatus) => {
         switch (status) {
             case 'open': return 'bg-red-100 text-red-800';
             case 'investigating': return 'bg-yellow-100 text-yellow-800';
