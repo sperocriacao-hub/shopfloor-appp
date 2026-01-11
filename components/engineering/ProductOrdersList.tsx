@@ -48,15 +48,22 @@ export function ProductOrdersList({ orders }: ProductOrdersListProps) {
         }
     }
 
-    // Sort by ID descending (newest first) as proxy for creation date
-    const sortedOrders = [...orders].sort((a, b) => b.id.localeCompare(a.id));
+    // Sort by Start Date Descending, then ID Descending (creation proxy)
+    const sortedOrders = [...orders].sort((a, b) => {
+        const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+        const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+        if (dateA !== dateB) return dateB - dateA;
+        return b.id.localeCompare(a.id);
+    });
 
     return (
         <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {sortedOrders.map(order => {
                     const product = products.find(p => p.id === order.productModelId);
-                    const title = product ? `${product.name} # ${order.po}` : `Ordem #${order.po || order.id}`;
+                    // Title Format: Model # HIN (or PO fallback)
+                    const identifier = order.hin || order.po || order.id;
+                    const title = product ? `${product.name} # ${identifier}` : `Ordem #${identifier}`;
 
                     return (
                         <div key={order.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">

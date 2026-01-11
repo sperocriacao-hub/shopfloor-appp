@@ -10,6 +10,8 @@ export interface Asset {
     status: AssetStatus;
     capabilities: string[]; // ex: ["Cutting", "Drilling"]
     defaultCycleTime?: number; // Minutes
+    sequence?: number; // Custom sorting order
+    enableQualityModule?: boolean; // V5: Feature Switch
 }
 
 // --- Product Engineering (Como fazer) ---
@@ -185,4 +187,51 @@ export interface ProductionEvent {
     timestamp: string; // ISO Date
     type: 'START' | 'STOP' | 'PAUSE' | 'RESUME' | 'COMPLETE';
     reason?: string; // Para paradas (Ex: Falta de material)
+}
+// --- Quality Module (Shopfloor V5) ---
+export type QualityCaseType = 'internal' | 'supplier' | 'warranty';
+export type QualitySeverity = 'low' | 'medium' | 'high' | 'critical';
+export type QualityStatus = 'open' | 'investigating' | 'action_plan' | 'resolved';
+export type QualityMethodology = 'ishikawa' | '5whys' | 'a3' | '8d' | 'none';
+
+export interface QualityCase {
+    id: string;
+    orderId?: string;
+    assetId: string;
+    description: string;
+    type: QualityCaseType;
+    severity: QualitySeverity;
+    status: QualityStatus;
+    methodology: QualityMethodology;
+    methodologyData?: any; // JSONB
+    createdAt: string; // ISO
+    createdBy?: string;
+}
+
+export interface QualityAction {
+    id: string;
+    caseId: string;
+    description: string;
+    responsible?: string;
+    deadline?: string; // ISO Date (YYYY-MM-DD or full)
+    status: 'pending' | 'in_progress' | 'completed';
+    completedAt?: string;
+}
+
+// --- Scrap Management (Shopfloor V5) ---
+export type ScrapType = 'total' | 'partial';
+export type ScrapAction = 'recycle' | 'trash' | 'rework' | 'replacement';
+
+export interface ScrapReport {
+    id: string;
+    orderId: string;
+    assetId: string;
+    reportedBy?: string;
+    type: ScrapType;
+    itemDescription?: string; // If partial
+    quantity: number;
+    reason?: string;
+    actionTaken: ScrapAction;
+    replacementOrderId?: string;
+    createdAt: string;
 }

@@ -5,7 +5,7 @@ import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlayCircle, CheckCircle2, AlertTriangle, FileText, ArrowLeft, StopCircle, CheckSquare, Clock, Users } from "lucide-react";
+import { PlayCircle, CheckCircle2, AlertTriangle, FileText, ArrowLeft, StopCircle, CheckSquare, Clock, Users, Microscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,8 @@ export default function ShopfloorPage() {
     const {
         assets, orders, events, employees,
         productOptions, optionTasks, taskExecutions, orderIssues,
-        startOperation, stopOperation, toggleTask, reportIssue
+        startOperation, stopOperation, toggleTask, reportIssue,
+        addQualityCase, addScrapReport
     } = useShopfloorStore();
 
     // Session State
@@ -25,6 +26,14 @@ export default function ShopfloorPage() {
     // UI State
     const [showIssueModal, setShowIssueModal] = useState(false);
     const [issueForm, setIssueForm] = useState({ type: 'material', description: '', relatedStationId: '' });
+
+    // Quality Modal State
+    const [showQualityModal, setShowQualityModal] = useState(false);
+    const [qualityForm, setQualityForm] = useState({ description: '', severity: 'medium' });
+
+    // Scrap Modal State
+    const [showScrapModal, setShowScrapModal] = useState(false);
+    const [scrapForm, setScrapForm] = useState({ quantity: 1, reason: 'process_fail', actionTaken: 'discard', itemDescription: '' });
 
     // --- Derived Data ---
     const currentStation = assets.find(a => a.id === selectedStationId);
@@ -61,7 +70,27 @@ export default function ShopfloorPage() {
     const activeIssues = orderIssues.filter(i => i.orderId === activeOrder?.id && i.status === 'open');
 
     // Employees Logic
-    const stationEmployees = employees.filter(e => e.workstation === currentStation?.name || e.area === currentStation?.area);
+    // Derived Logic for Sequencing
+    const getTaskStatus = (taskId: string, index: number) => {
+        const isCompleted = completedTaskIds.includes(taskId);
+        const prevTask = index > 0 ? activeTasks[index - 1] : null;
+        const isPrevDone = prevTask ? completedTaskIds.includes(prevTask.id) : true;
+        const isLocked = !isPrevDone && !isCompleted;
+        return { isCompleted, isLocked };
+    };
+
+    // Employees Logic (Refined: Match Area AND (Station OR Generic))
+    const stationEmployees = employees.filter(e =>
+        e.area === currentStation?.area &&
+        (!e.workstation || e.workstation === currentStation?.name)
+    );
+
+    // Timer Logic
+    const startTime = activeOrderEvent ? new Date(activeOrderEvent.timestamp) : null;
+    const elapsedMinutes = startTime ? Math.floor((new Date().getTime() - startTime.getTime()) / 60000) : 0;
+    // Mock estimated time (sum of task times or default) - in real app comes from routing
+    const estimatedMinutes = activeTasks.length * 15; // 15 min per task assumption
+    const timeColor = elapsedMinutes > estimatedMinutes ? 'text-red-600' : 'text-slate-600';
 
     // --- Handlers ---
 
@@ -70,11 +99,20 @@ export default function ShopfloorPage() {
         await startOperation(orderId, selectedStationId);
     };
 
-    const handleTaskToggle = async (taskId: string) => {
+    const handleTaskToggle = async (taskId: string, index: number) => {
         if (!activeOrder) return;
-        const isCompleted = completedTaskIds.includes(taskId);
+        const { isCompleted, isLocked } = getTaskStatus(taskId, index);
+
+        if (isLocked) {
+            const password = prompt("BLOQUEIO DE SEQUÊNCIA: Tarefa anterior pendente.\nInsira senha de supervisor para liberar (1234):");
+            if (password !== process.env.NEXT_PUBLIC_SUPERVISOR_PWD && password !== "1234") {
+                return alert("Senha incorreta.");
+            }
+            // If correct, allow toggle (override)
+        }
+
         // Toggle logic
-        await toggleTask(activeOrder.id, taskId, !isCompleted, "user-tablet"); // TODO: Add real user ID later
+        await toggleTask(activeOrder.id, taskId, !isCompleted, "user-tablet");
     };
 
     const handleFinishOrder = async () => {
@@ -100,6 +138,49 @@ export default function ShopfloorPage() {
         });
         setShowIssueModal(false);
         setIssueForm({ type: 'material', description: '', relatedStationId: '' });
+    };
+
+    const handleReportQuality = async () => {
+        if (!activeOrder || !qualityForm.description) return;
+        await addQualityCase({
+            id: `qc-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+            description: qualityForm.description,
+            type: 'internal', // Default for shopfloor
+            severity: qualityForm.severity as any,
+            status: 'open',
+            methodology: 'ishikawa', // Default
+            assetId: selectedStationId,
+            orderId: activeOrder.id,
+            createdBy: "Operator" // TODO: Real user
+        });
+        setShowQualityModal(false);
+        setQualityForm({ description: '', severity: 'medium' });
+        alert("Não conformidade registrada com sucesso.");
+    };
+
+    const handleReportScrap = async () => {
+        if (!activeOrder) return;
+        await addScrapReport({
+            id: `scr-${Date.now()}`,
+            orderId: activeOrder.id,
+            assetId: selectedStationId,
+            reportedBy: "Operator", // TODO: Real user
+            type: scrapForm.actionTaken === 'replacement' ? 'total' : 'partial',
+            itemDescription: scrapForm.itemDescription || activeOrder.productModelId,
+            quantity: scrapForm.quantity,
+            reason: scrapForm.reason,
+            actionTaken: scrapForm.actionTaken as any,
+            createdAt: new Date().toISOString()
+        });
+        setShowScrapModal(false);
+        setScrapForm({ quantity: 1, reason: 'process_fail', actionTaken: 'discard', itemDescription: '' });
+
+        if (scrapForm.actionTaken === 'replacement') {
+            alert(`Refugo registrado! Uma solicitação de reposição para ${scrapForm.quantity} itens foi criada.`);
+        } else {
+            alert("Refugo registrado.");
+        }
     };
 
     // --- Views ---
@@ -207,7 +288,13 @@ export default function ShopfloorPage() {
                                 <div>
                                     <p className="text-xs text-slate-500 uppercase font-bold">Ordem Atual</p>
                                     <h2 className="text-2xl font-bold text-slate-900">{activeOrder?.productModelId}</h2>
-                                    <p className="text-sm text-slate-600">PO: {activeOrder?.po}</p>
+                                    <div className="flex gap-4 text-sm mt-1">
+                                        <span className="text-slate-600">PO: {activeOrder?.po}</span>
+                                        <span className={`flex items-center font-mono font-medium ${timeColor}`}>
+                                            <Clock className="h-4 w-4 mr-1" />
+                                            {elapsedMinutes}m / {estimatedMinutes}m (Est.)
+                                        </span>
+                                    </div>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-3xl font-mono font-bold text-blue-600">
@@ -222,7 +309,7 @@ export default function ShopfloorPage() {
                                 <div className="bg-slate-50 px-4 py-3 border-b flex justify-between items-center">
                                     <h3 className="font-semibold text-slate-800 flex items-center">
                                         <CheckSquare className="mr-2 h-5 w-5 text-slate-500" />
-                                        Lista de Tarefas
+                                        Lista de Tarefas (Sequencial)
                                     </h3>
                                     <span className="bg-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">{completedTaskIds.length}/{activeTasks.length}</span>
                                 </div>
@@ -232,30 +319,31 @@ export default function ShopfloorPage() {
                                             Nenhuma tarefa de checklist configurada para este modelo/opcionais.
                                         </div>
                                     ) : (
-                                        activeTasks.map(task => {
-                                            const isDone = completedTaskIds.includes(task.id);
+                                        activeTasks.map((task, index) => {
+                                            const { isCompleted, isLocked } = getTaskStatus(task.id, index);
                                             return (
                                                 <div
                                                     key={task.id}
                                                     className={cn(
                                                         "p-4 flex items-start gap-4 transition-colors",
-                                                        isDone ? "bg-green-50/50" : "hover:bg-slate-50"
+                                                        isCompleted ? "bg-green-50/50" : isLocked ? "bg-slate-100 opacity-60" : "hover:bg-slate-50"
                                                     )}
                                                 >
                                                     <button
-                                                        onClick={() => handleTaskToggle(task.id)}
+                                                        onClick={() => handleTaskToggle(task.id, index)}
                                                         className={cn(
                                                             "mt-1 h-8 w-8 rounded-lg border-2 flex items-center justify-center transition-all shrink-0",
-                                                            isDone ? "bg-green-500 border-green-500 text-white" : "border-slate-300 text-transparent hover:border-green-400"
+                                                            isCompleted ? "bg-green-500 border-green-500 text-white" :
+                                                                isLocked ? "border-slate-300 bg-slate-200 cursor-not-allowed text-slate-400" : "border-slate-300 text-transparent hover:border-green-400"
                                                         )}
                                                     >
-                                                        <CheckCircle2 className="h-5 w-5" />
+                                                        {isLocked && !isCompleted ? <StopCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
                                                     </button>
 
                                                     <div className="flex-1">
                                                         <p className={cn(
                                                             "text-lg font-medium transition-all",
-                                                            isDone ? "text-green-800 line-through opacity-70" : "text-slate-800"
+                                                            isCompleted ? "text-green-800 line-through opacity-70" : "text-slate-800"
                                                         )}>
                                                             {task.description}
                                                         </p>
@@ -333,6 +421,28 @@ export default function ShopfloorPage() {
                             >
                                 <AlertTriangle className="mr-2 h-6 w-6" />
                                 Reportar Problema
+                            </Button>
+
+                            {currentStation.enableQualityModule && (
+                                <Button
+                                    variant="outline"
+                                    size="lg"
+                                    className="h-16 border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+                                    onClick={() => setShowQualityModal(true)}
+                                >
+                                    <Microscope className="mr-2 h-6 w-6" />
+                                    Não Conformidade
+                                </Button>
+                            )}
+
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                className="h-16 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"
+                                onClick={() => setShowScrapModal(true)}
+                            >
+                                <AlertTriangle className="mr-2 h-6 w-6" />
+                                Refugo (Scrap)
                             </Button>
 
                             <Button
@@ -416,6 +526,114 @@ export default function ShopfloorPage() {
                             <div className="flex justify-end gap-2 pt-2">
                                 <Button variant="ghost" onClick={() => setShowIssueModal(false)}>Cancelar</Button>
                                 <Button variant="destructive" onClick={handleReportIssue}>Enviar Reporte</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Quality Modal */}
+            {showQualityModal && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in">
+                    <Card className="w-full max-w-lg shadow-2xl border-purple-200">
+                        <CardHeader>
+                            <CardTitle className="text-purple-900 flex items-center">
+                                <Microscope className="mr-2 h-5 w-5" />
+                                Registrar Não Conformidade (Qualidade)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <Label>Severidade</Label>
+                                <Select
+                                    value={qualityForm.severity}
+                                    onValueChange={v => setQualityForm({ ...qualityForm, severity: v })}
+                                >
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">Baixa (Cosmético)</SelectItem>
+                                        <SelectItem value="medium">Média (Retrabalho)</SelectItem>
+                                        <SelectItem value="high">Alta (Perda Funcional)</SelectItem>
+                                        <SelectItem value="critical">Crítica (Segurança)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <Label>Descrição do Defeito</Label>
+                                <Textarea
+                                    value={qualityForm.description}
+                                    onChange={e => setQualityForm({ ...qualityForm, description: e.target.value })}
+                                    placeholder="Descreva o que está fora do padrão..."
+                                    className="h-32"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button variant="ghost" onClick={() => setShowQualityModal(false)}>Cancelar</Button>
+                                <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleReportQuality}>Registrar NC</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Scrap Modal */}
+            {showScrapModal && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in">
+                    <Card className="w-full max-w-lg shadow-2xl border-red-200">
+                        <CardHeader>
+                            <CardTitle className="text-red-900 flex items-center">
+                                <AlertTriangle className="mr-2 h-5 w-5" />
+                                Reportar Refugo (Perda)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Quantidade Perdida</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        value={scrapForm.quantity}
+                                        onChange={e => setScrapForm({ ...scrapForm, quantity: parseInt(e.target.value) || 0 })}
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Ação</Label>
+                                    <Select
+                                        value={scrapForm.actionTaken}
+                                        onValueChange={v => setScrapForm({ ...scrapForm, actionTaken: v })}
+                                    >
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="discard">Descarte Simples</SelectItem>
+                                            <SelectItem value="rework">Retrabalho Interno</SelectItem>
+                                            <SelectItem value="replacement">Solicitar Reposição (Nova OP)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label>Motivo</Label>
+                                <Select
+                                    value={scrapForm.reason}
+                                    onValueChange={v => setScrapForm({ ...scrapForm, reason: v })}
+                                >
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="process_fail">Falha de Processo</SelectItem>
+                                        <SelectItem value="machine_fail">Falha de Máquina</SelectItem>
+                                        <SelectItem value="material_defect">Defeito de Material</SelectItem>
+                                        <SelectItem value="operator_error">Erro Operacional</SelectItem>
+                                        <SelectItem value="setup_part">Peça de Setup/Teste</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button variant="ghost" onClick={() => setShowScrapModal(false)}>Cancelar</Button>
+                                <Button className="bg-red-600 hover:bg-red-700" onClick={handleReportScrap}>Confirmar Refugo</Button>
                             </div>
                         </CardContent>
                     </Card>

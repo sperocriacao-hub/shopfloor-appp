@@ -4,7 +4,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import {
     Asset, ProductModel, Routing, ProductionOrder, ProductionEvent, Employee,
     OrderStatus, AssetStatus, AbsenteeismRecord,
-    ProductOption, OptionTask, OrderIssue, TaskExecution
+    ProductOption, OptionTask, OrderIssue, TaskExecution,
+    QualityCase, QualityAction, ScrapReport
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -159,6 +160,11 @@ interface ShopfloorState {
     taskExecutions: TaskExecution[];
     orderIssues: OrderIssue[];
 
+    // Shopfloor V5 (Quality & Scrap)
+    qualityCases: QualityCase[];
+    qualityActions: QualityAction[];
+    scrapReports: ScrapReport[];
+
     addAsset: (asset: Asset) => void;
     updateAsset: (id: string, updates: Partial<Asset>) => Promise<void>;
     removeAsset: (id: string) => Promise<void>;
@@ -174,6 +180,10 @@ interface ShopfloorState {
     startOperation: (orderId: string, assetId: string) => Promise<void>;
     stopOperation: (orderId: string, assetId: string, reason?: string, shouldCompleteOrder?: boolean) => Promise<void>;
 
+    // Order Management Actions
+    updateOrder: (id: string, updates: Partial<ProductionOrder>) => Promise<void>;
+    deleteOrder: (id: string) => Promise<void>;
+
     // Shopfloor 3.0 Actions
     addOption: (option: ProductOption) => Promise<void>;
     updateOption: (id: string, updates: Partial<ProductOption>) => Promise<void>;
@@ -185,6 +195,13 @@ interface ShopfloorState {
     toggleTask: (orderId: string, taskId: string, isCompleted: boolean, userId: string) => Promise<void>;
     reportIssue: (issue: OrderIssue) => Promise<void>;
     resolveIssue: (issueId: string, resolvedBy: string) => Promise<void>;
+
+    // Shopfloor V5 Actions
+    addQualityCase: (qCase: QualityCase) => Promise<void>;
+    updateQualityCase: (id: string, updates: Partial<QualityCase>) => Promise<void>;
+    addQualityAction: (action: QualityAction) => Promise<void>;
+    updateQualityAction: (id: string, updates: Partial<QualityAction>) => Promise<void>;
+    addScrapReport: (report: ScrapReport) => Promise<void>;
 
     addEmployee: (employee: Employee) => Promise<void>;
     updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
@@ -236,7 +253,8 @@ const mapDbToAsset = (db: any): Asset => ({
     subarea: db.subarea,
     status: db.status as any,
     capabilities: db.capabilities || [],
-    defaultCycleTime: db.default_cycle_time
+    defaultCycleTime: db.default_cycle_time,
+    sequence: db.sequence
 });
 
 const mapDbToProduct = (db: any): ProductModel => ({
@@ -307,6 +325,45 @@ const mapDbToEvent = (db: any): ProductionEvent => ({
     reason: db.reason
 });
 
+// V5 Helpers
+const mapDbToQualityCase = (db: any): QualityCase => ({
+    id: db.id,
+    orderId: db.order_id,
+    assetId: db.asset_id,
+    description: db.description,
+    type: db.type,
+    severity: db.severity,
+    status: db.status,
+    methodology: db.methodology,
+    methodologyData: db.methodology_data,
+    createdAt: db.created_at,
+    createdBy: db.created_by
+});
+
+const mapDbToQualityAction = (db: any): QualityAction => ({
+    id: db.id,
+    caseId: db.case_id,
+    description: db.description,
+    responsible: db.responsible,
+    deadline: db.deadline,
+    status: db.status,
+    completedAt: db.completed_at
+});
+
+const mapDbToScrapReport = (db: any): ScrapReport => ({
+    id: db.id,
+    orderId: db.order_id,
+    assetId: db.asset_id,
+    reportedBy: db.reported_by,
+    type: db.type,
+    itemDescription: db.item_description,
+    quantity: db.quantity,
+    reason: db.reason,
+    actionTaken: db.action_taken,
+    replacementOrderId: db.replacement_order_id,
+    createdAt: db.created_at
+});
+
 export const useShopfloorStore = create<ShopfloorState>()(
     persist(
         (set, get) => ({
@@ -327,6 +384,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
             taskExecutions: [],
             orderIssues: [],
 
+            // Shopfloor V5
+            qualityCases: [],
+            qualityActions: [],
+            scrapReports: [],
+
             // Actions
             addAsset: async (asset) => {
                 set((state) => ({ assets: [...state.assets, asset] }));
@@ -338,7 +400,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     subarea: asset.subarea,
                     status: asset.status,
                     capabilities: asset.capabilities,
-                    default_cycle_time: asset.defaultCycleTime
+                    default_cycle_time: asset.defaultCycleTime,
+                    sequence: asset.sequence
                 });
                 if (error) console.error("Error adding asset DB:", error);
             },
@@ -455,6 +518,37 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 }));
                 const { error } = await supabase.from('orders').update({ status }).eq('id', id);
                 if (error) console.error("Error updating order status DB:", error);
+                if (error) console.error("Error updating order status DB:", error);
+            },
+
+            updateOrder: async (id, updates) => {
+                set((state) => ({
+                    orders: state.orders.map(o => o.id === id ? { ...o, ...updates } : o)
+                }));
+                const toUpdate: any = {};
+                // Map frontend fields back to DB columns if needed
+                if (updates.quantity) toUpdate.quantity = updates.quantity;
+                if (updates.po) toUpdate.po = updates.po;
+                if (updates.customer) toUpdate.customer = updates.customer;
+                if (updates.startDate) toUpdate.start_date = updates.startDate;
+                if (updates.finishDate) toUpdate.finish_date = updates.finishDate;
+                if (updates.assetId) toUpdate.asset_id = updates.assetId;
+                if (updates.status) toUpdate.status = updates.status;
+
+                if (Object.keys(toUpdate).length > 0) {
+                    const { error } = await supabase.from('orders').update(toUpdate).eq('id', id);
+                    if (error) console.error("Error updating order DB:", error);
+                }
+            },
+
+            deleteOrder: async (id) => {
+                set((state) => ({
+                    orders: state.orders.filter(o => o.id !== id)
+                }));
+                // Cascade delete should handle related items in DB, or we delete here manually
+                // For now assuming basic delete
+                const { error } = await supabase.from('orders').delete().eq('id', id);
+                if (error) console.error("Error deleting order DB:", error);
             },
 
             logEvent: async (event) => {
@@ -687,6 +781,56 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     .eq('id', issueId);
             },
 
+            // --- Shopfloor V5 Actions ---
+            addQualityCase: async (qCase) => {
+                set(s => ({ qualityCases: [...s.qualityCases, qCase] }));
+                const { error } = await supabase.from('quality_cases').insert({
+                    id: qCase.id, order_id: qCase.orderId, asset_id: qCase.assetId,
+                    description: qCase.description, type: qCase.type, severity: qCase.severity,
+                    status: qCase.status, methodology: qCase.methodology, methodology_data: qCase.methodologyData
+                });
+                if (error) console.error("Error adding quality case:", error);
+            },
+
+            updateQualityCase: async (id, updates) => {
+                set(s => ({ qualityCases: s.qualityCases.map(c => c.id === id ? { ...c, ...updates } : c) }));
+                const toUpdate: any = {};
+                if (updates.status) toUpdate.status = updates.status;
+                if (updates.methodology) toUpdate.methodology = updates.methodology;
+                if (updates.methodologyData) toUpdate.methodology_data = updates.methodologyData;
+
+                if (Object.keys(toUpdate).length > 0) {
+                    await supabase.from('quality_cases').update(toUpdate).eq('id', id);
+                }
+            },
+
+            addQualityAction: async (action) => {
+                set(s => ({ qualityActions: [...s.qualityActions, action] }));
+                const { error } = await supabase.from('quality_actions').insert({
+                    id: action.id, case_id: action.caseId, description: action.description,
+                    responsible: action.responsible, deadline: action.deadline, status: action.status
+                });
+                if (error) console.error("Error adding quality action:", error);
+            },
+
+            updateQualityAction: async (id, updates) => {
+                set(s => ({ qualityActions: s.qualityActions.map(a => a.id === id ? { ...a, ...updates } : a) }));
+                await supabase.from('quality_actions').update({
+                    status: updates.status, completed_at: updates.status === 'completed' ? new Date().toISOString() : null
+                }).eq('id', id);
+            },
+
+            addScrapReport: async (report) => {
+                set(s => ({ scrapReports: [...s.scrapReports, report] }));
+                const { error } = await supabase.from('scrap_reports').insert({
+                    id: report.id, order_id: report.orderId, asset_id: report.assetId,
+                    reported_by: report.reportedBy, type: report.type, item_description: report.itemDescription,
+                    quantity: report.quantity, reason: report.reason, action_taken: report.actionTaken,
+                    replacement_order_id: report.replacementOrderId
+                });
+                if (error) console.error("Error adding scrap report:", error);
+            },
+
             removeAbsenteeismRecord: async (id) => {
                 set((state) => ({
                     absenteeismRecords: state.absenteeismRecords.filter(r => r.id !== id)
@@ -745,6 +889,16 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
                 const { data: issues } = await supabase.from('order_issues').select('*');
                 if (issues) set({ orderIssues: issues.map(mapDbToIssue) });
+
+                // V5 Sync
+                const { data: qCases } = await supabase.from('quality_cases').select('*');
+                if (qCases) set({ qualityCases: qCases.map(mapDbToQualityCase) });
+
+                const { data: qActions } = await supabase.from('quality_actions').select('*');
+                if (qActions) set({ qualityActions: qActions.map(mapDbToQualityAction) });
+
+                const { data: scrap } = await supabase.from('scrap_reports').select('*');
+                if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
 
                 // Fetch Order Options Pivot and Map to Orders
                 // Fetch Order Options Pivot and Map to Orders

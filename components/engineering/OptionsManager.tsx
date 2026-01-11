@@ -218,7 +218,7 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                     }}>
                         <FileText className="h-3 w-3 mr-1" /> Modelo CSV
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => alert("Funcionalidade de importação em breve via CSV.")}>
+                    <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => document.getElementById('csv-import-input')?.click()}>
                         Importar
                     </Button>
                 </div>
@@ -259,14 +259,109 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                                         placeholder="Ex: Piso Teca, Som Premium..."
                                     />
                                 </div>
-                                {selectedOptionId ? (
-                                    <Button variant="destructive" size="icon" onClick={handleDeleteOption} title="Excluir Opção/Kit Completo">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                ) : (
-                                    <div className="w-9 h-9"></div>
-                                )}
+                                <div className="mt-6">
+                                    {selectedOptionId ? (
+                                        <Button variant="destructive" size="icon" onClick={handleDeleteOption} title="Excluir Opção/Kit Completo">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    ) : (
+                                        <div className="w-9 h-9"></div>
+                                    )}
+                                </div>
                             </div>
+
+                            {/* Hidden Import Input */}
+                            <input
+                                type="file"
+                                accept=".csv"
+                                className="hidden"
+                                id="csv-import-input"
+                                onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+
+                                    const text = await file.text();
+                                    const rows = text.split('\n').filter(r => r.trim() !== '');
+                                    // Basic CSV parse (assuming simple structure, no quoted multiline for now)
+                                    // Headers: OptionName,OptionDescription,ProductModel,TaskDescription,TaskSequence,TaskStation,TaskPDF
+
+                                    let importCount = 0;
+
+                                    // Group by Option
+                                    const optionsMap = new Map<string, {
+                                        desc: string,
+                                        model: string,
+                                        tasks: { desc: string, seq: string, station: string, pdf: string }[]
+                                    }>();
+
+                                    rows.slice(1).forEach(row => {
+                                        const cols = row.split(',').map(c => c.trim());
+                                        if (cols.length < 1) return;
+
+                                        const [optName, optDesc, prodModel, taskDesc, taskSeq, taskStation, taskPdf] = cols;
+                                        if (!optName) return;
+
+                                        if (!optionsMap.has(optName)) {
+                                            optionsMap.set(optName, {
+                                                desc: optDesc || '',
+                                                model: prodModel || '',
+                                                tasks: []
+                                            });
+                                        }
+
+                                        if (taskDesc) {
+                                            optionsMap.get(optName)!.tasks.push({
+                                                desc: taskDesc,
+                                                seq: taskSeq || '0',
+                                                station: taskStation || '',
+                                                pdf: taskPdf || ''
+                                            });
+                                        }
+                                    });
+
+                                    // Process Upserts
+                                    for (const [name, data] of optionsMap.entries()) {
+                                        // 1. Find or Create Option
+                                        let opt = productOptions.find(p => p.name === name);
+                                        let optId = opt?.id;
+
+                                        if (!opt) {
+                                            optId = `opt-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                                            await addOption({
+                                                id: optId,
+                                                name: name,
+                                                description: data.desc,
+                                                productModelId: data.model // Note: Needs ID, user implies Name import. Assuming exact ID Match? 
+                                                // Or we try to look up Product by Name?
+                                                // For now, assume raw ID or empty.
+                                            });
+                                        } else {
+                                            // Update
+                                            await updateOption(optId!, {
+                                                description: data.desc,
+                                                productModelId: data.model
+                                            });
+                                        }
+
+                                        // 2. Add Tasks
+                                        for (const t of data.tasks) {
+                                            await addTask({
+                                                id: `tsk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                                optionId: optId!,
+                                                description: t.desc,
+                                                sequence: parseInt(t.seq) || 0,
+                                                stationId: t.station, // Needs ID
+                                                pdfUrl: t.pdf
+                                            });
+                                        }
+                                        importCount++;
+                                    }
+
+                                    await syncData();
+                                    alert(`Importação concluída! ${importCount} opções processadas.`);
+                                    e.target.value = ''; // Reset
+                                }}
+                            />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

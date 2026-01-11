@@ -147,17 +147,48 @@ export default function OrdersPage() {
                                     </p>
                                 </div>
 
-                                <div className="flex items-center space-x-6">
+                                <div className="flex items-center space-x-4">
                                     <div className="text-right">
                                         <p className="text-xs text-slate-400">Progresso</p>
                                         <p className="text-2xl font-bold text-slate-700">33%</p>
                                     </div>
-                                    <Link href={`/orders/${order.id}`}>
-                                        <Button className="bg-blue-600 hover:bg-blue-700">
-                                            Abrir Cockpit
-                                            <ChevronRight className="ml-2 h-4 w-4" />
-                                        </Button>
-                                    </Link>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2">
+                                        <Link href={`/orders/${order.id}`}>
+                                            <Button className="bg-blue-600 hover:bg-blue-700">
+                                                Abrir Cockpit
+                                                <ChevronRight className="ml-2 h-4 w-4" />
+                                            </Button>
+                                        </Link>
+
+                                        {/* Simple Edit/Delete (Future: Move to proper Dropdown or Modal) */}
+                                        <div className="flex flex-col gap-1">
+                                            <Button variant="ghost" size="sm" className="h-6 w-full justify-start text-xs text-slate-500 hover:text-slate-800"
+                                                onClick={() => {
+                                                    const newStatus = prompt("Novo Status (planned | in_progress | completed | hold):", order.status);
+                                                    if (newStatus && ['planned', 'in_progress', 'completed', 'hold'].includes(newStatus)) {
+                                                        // Using direct store access via hook (need to ensure it is available in scope or passed)
+                                                        // Since we are inside map, we can't use hook here directly if we haven't destructured usage.
+                                                        // We have 'orders' from store. We need 'updateOrderStatus'.
+                                                        // Let's rely on destructuring from top level.
+                                                        useShopfloorStore.getState().updateOrderStatus(order.id, newStatus as any);
+                                                    }
+                                                }}
+                                            >
+                                                Status
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-6 w-full justify-start text-xs text-red-400 hover:text-red-700 hover:bg-red-50"
+                                                onClick={async () => {
+                                                    if (confirm("ATENÇÃO: Deseja excluir esta ordem permanentemente?")) {
+                                                        await useShopfloorStore.getState().deleteOrder(order.id);
+                                                    }
+                                                }}
+                                            >
+                                                Excluir
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div className="bg-slate-50 px-6 py-2 border-t flex items-center text-xs text-slate-500 space-x-4">

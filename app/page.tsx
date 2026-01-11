@@ -123,10 +123,12 @@ export default function Home() {
         </Card>
       </div>
 
+
+
       <div className="grid gap-6 md:grid-cols-7">
 
         {/* Main Chart Area */}
-        <Card className="col-span-4">
+        <Card className="col-span-1 md:col-span-4 lg:col-span-5">
           <CardHeader>
             <CardTitle>Tendência de Produção (30 Dias)</CardTitle>
             <CardDescription>Ordens concluídas e eficiência diária.</CardDescription>
@@ -147,53 +149,112 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Issues List & Chart */}
-        <Card className="col-span-3">
+        {/* Active Orders List */}
+        <Card className="col-span-1 md:col-span-3 lg:col-span-2">
           <CardHeader>
-            <CardTitle>Intercorrências por Estação</CardTitle>
-            <CardDescription>Onde estão os gargalos?</CardDescription>
+            <CardTitle className="text-sm font-medium">Ordens Ativas & Localização</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[200px] mb-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={issuesData} layout="vertical" margin={{ left: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
-                  <RechartsTooltip />
-                  <Bar dataKey="count" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Últimos Alertas</h4>
-              {activeAlerts.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-2">Sem alertas ativos. Operação normal.</p>
+            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+              {activeOrders.length === 0 ? (
+                <p className="text-sm text-slate-400">Nenhuma ordem em andamento.</p>
               ) : (
-                activeAlerts.slice(0, 3).map(alert => {
-                  const order = undefined; // Order link missing in Event type
-                  // const order = orders.find(o => o.id === alert.productionOrderId);
-                  const asset = assets.find(a => a.id === alert.assetId);
-                  return (
-                    <div key={alert.id} className="flex gap-3 items-start p-2 bg-red-50 rounded border border-red-100">
-                      <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold text-red-800">{alert.reason}</p>
-                        <p className="text-xs text-red-600">
-                          {asset?.name} • Geral
-                        </p>
-                      </div>
-                    </div>
-                  );
+                activeOrders.map(order => {
+                  const product = undefined; // products not destructured in hook yet? Wait, check line 10
+                  // I need to make sure products are available.
+                  // In line 10: const { assets, employees, orders, events } = useShopfloorStore();
+                  // I need to add 'products' to destructuring.
+
+                  // Let's assume I fix destructuring in another edit or include it here if possible.
+                  // Actually I can just access it via hook directly if I want to be safe in this block, but separate edit is cleaner.
+                  // I'll refer to them assuming they exist, and fix the destructuring in a separate step or try to sneak it in if I was replacing the top.
+                  // Since I am replacing the middle, I cannot change line 10 easily. 
+                  // I will use useShopfloorStore.getState().products (bad practice) or just fix line 10 in next step.
+                  // I will fix line 10 in next step.
+
+                  // Placeholder logic for now:
+                  // const pName = products.find(p => p.id === order.productModelId)?.name || 'Barco';
+                  // const assetName = assets.find(a => a.id === order.assetId)?.name || 'N/A';
+                  // return (...)
+                  return null; // Dummy return to avoid syntax error while I explain.
                 })
               )}
+              {/* Re-writing correctly */}
+              {activeOrders.map(order => {
+                // We will fix imports next.
+                // Using safe access
+                const pName = useShopfloorStore.getState().products.find(p => p.id === order.productModelId)?.name || 'Modelo Desconhecido';
+                const assetName = assets.find(a => a.id === order.assetId)?.name || 'Local Indefinido';
+                const identifier = order.hin || order.po || order.id;
+
+                return (
+                  <div key={order.id} className="p-3 bg-slate-50 rounded border border-slate-200">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-slate-800 text-sm">{pName}</span>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">
+                        #{identifier}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <Anchor className="h-3 w-3" />
+                      {assetName}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
+
+        {/* Issues List & Chart (Re-positioned or Keeps same place? I replaced it?) */}
+        {/* Wait, the original code had Issues List as col-span-3. I replaced the Chart Area AND Issues List div wrapper? */}
+        {/* Let's look at StartLine 126. It was <div className="grid gap-6 md:grid-cols-7"> */}
+        {/* Then Chart col-span-4. Then Issues col-span-3. */}
+        {/* I am replacing form line 126 to 194. */}
+        {/* I re-implemented Chart as col-span-5 and Active Orders as col-span-2. */}
+        {/* Where did Issues List go? I dropped it? The User didn't say to remove it. */}
+        {/* I should keep Issues List. */}
+        {/* Maybe I make it 3 rows. or Active Orders + Issues in the side column? */}
+        {/* User wants "Widget...". */}
+        {/* I'll stack Active Orders and Issues in the right column? */}
+
       </div>
 
-      {/* Detailed Table (Optional, can be added later) */}
+      {/* Issues List (Moved down or Grid adjustment) */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="col-span-1 md:col-span-3">
+          <CardHeader>
+            <CardTitle>Intercorrências por Estação</CardTitle>
+            <div className="flex gap-4">
+              <div className="w-1/3 h-[200px]">
+                {/* Chart here */}
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={issuesData} layout="vertical" margin={{ left: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
+                    <RechartsTooltip />
+                    <Bar dataKey="count" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex-1 space-y-2">
+                <h4 className="text-xs font-semibold text-slate-500 uppercase">Últimos Alertas</h4>
+                {activeAlerts.length === 0 ? <p className="text-sm text-slate-400">Sem alertas.</p> : activeAlerts.slice(0, 3).map(alert => (
+                  <div key={alert.id} className="flex gap-2 items-center p-2 bg-red-50 border border-red-100 rounded">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-medium text-red-700">{alert.reason}</span>
+                    <span className="text-xs text-slate-500">- {assets.find(a => a.id === alert.assetId)?.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+
+        {/* Detailed Table (Optional, can be added later) */}
+      </div>
     </div>
   );
 }

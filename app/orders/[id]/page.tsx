@@ -12,7 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 export default function OrderDashboardPage() {
     const params = useParams();
     const router = useRouter();
-    const { orders, products, productOptions, events, assets, optionTasks } = useShopfloorStore();
+    const { orders, products, productOptions, events, assets, optionTasks, taskExecutions } = useShopfloorStore();
 
     const order = orders.find(o => o.id === params.id);
     const product = products.find(p => p.id === order?.productModelId);
@@ -26,16 +26,25 @@ export default function OrderDashboardPage() {
         order.selectedOptions?.includes(opt.id)
     );
 
-    // 2. Metrics (Mocked for now as we don't have full history table yet)
-    const oee = 85;
-    const progress = 42;
-    const totalTimeHours = 125;
+    // 2. Metrics (Real Data)
+    const orderEvents = events.filter(e => e.orderId === order.id);
+    const stopEvents = orderEvents.filter(e => e.type === 'STOP').sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    // 3. Issues (Stoppages)
-    // Filter events where type is STOP and some correlation to order (if we had orderId in events)
-    // Assuming events link to assets, we can find events on assets used by this order? 
-    // For now, let's mock sample issues or show empty if none linked directly in this schema version
-    const issues = events.filter(e => e.type === 'STOP').slice(0, 3);
+    // Progress Calculation (Based on Checklist Tasks)
+    const orderTasks = optionTasks.filter(t => order.selectedOptions?.includes(t.optionId));
+    const completedTasksCount = useShopfloorStore.getState().taskExecutions.filter(te => te.orderId === order.id).length; // Direct store access for fresh data if needed, or rely on hook
+    // Actually use hook data:
+    const myExecutions = useShopfloorStore(s => s.taskExecutions).filter(te => te.orderId === order.id);
+
+    const progress = orderTasks.length > 0
+        ? Math.round((myExecutions.length / orderTasks.length) * 100)
+        : (order.status === 'completed' ? 100 : 0);
+
+    const oee = 85; // Still mocked as it requires complex shift logic
+    const totalTimeHours = 0; // Placeholder
+
+    // 3. Issues (Real Stoppages)
+    const issues = stopEvents.slice(0, 5);
 
     // 4. Time per Station (Mocked vs Average)
     const stationData = [
@@ -55,7 +64,7 @@ export default function OrderDashboardPage() {
                     </Button>
                     <div>
                         <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                            {product.name} <span className="text-slate-400">#</span> {order.po}
+                            {product.name} <span className="text-slate-400">#</span> {order.hin || order.po || order.id}
                         </h1>
                         <p className="text-sm text-slate-500">Painel de Monitoramento da Ordem (Read-Only)</p>
                     </div>
@@ -83,12 +92,12 @@ export default function OrderDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{oee}%</div>
-                        <p className="text-xs text-slate-500">+2% vs média histórica</p>
+                        <p className="text-xs text-slate-500">Simulado (Sem Histórico)</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Progresso Geral</CardTitle>
+                        <CardTitle className="text-sm font-medium">Progresso Checklist</CardTitle>
                         <CheckSquare className="h-4 w-4 text-green-600" />
                     </CardHeader>
                     <CardContent>
@@ -105,7 +114,7 @@ export default function OrderDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{totalTimeHours}h</div>
-                        <p className="text-xs text-slate-500">Estimado: 110h</p>
+                        <p className="text-xs text-slate-500">Estimado: -</p>
                     </CardContent>
                 </Card>
                 <Card>

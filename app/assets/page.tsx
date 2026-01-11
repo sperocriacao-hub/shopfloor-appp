@@ -95,8 +95,30 @@ export default function AssetsPage() {
         }
     };
 
-    // Group assets by Area
-    const groupedAssets = assets.reduce((acc, asset) => {
+    // Filter Assets (Search)
+    const [searchTerm, setSearchTerm] = useState("");
+
+    // Sort logic (Sequence, then Name)
+    const filteredAssets = assets
+        .filter(a => {
+            if (!searchTerm) return true;
+            const term = searchTerm.toLowerCase();
+            return a.name.toLowerCase().includes(term) ||
+                a.type.toLowerCase().includes(term) ||
+                a.area.toLowerCase().includes(term);
+        })
+        .sort((a, b) => {
+            // Sort by Sequence if available, otherwise by Name
+            if (a.sequence !== undefined && b.sequence !== undefined) {
+                return a.sequence - b.sequence;
+            }
+            if (a.sequence !== undefined) return -1;
+            if (b.sequence !== undefined) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+    // Group assets by Area (using filtered list)
+    const groupedAssets = filteredAssets.reduce((acc, asset) => {
         const area = asset.area || 'Outros';
         if (!acc[area]) acc[area] = [];
         acc[area].push(asset);
@@ -137,7 +159,9 @@ export default function AssetsPage() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                     <input
                         type="text"
-                        placeholder="Buscar ativo por nome ou tipo..."
+                        placeholder="Buscar ativo por nome, tipo ou área..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-9 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                 </div>
@@ -271,6 +295,18 @@ export default function AssetsPage() {
                                 </div>
                             </div>
                         )}
+
+                        <div className="flex items-center space-x-2 pt-2 border-t">
+                            {/* Ideally use a Switch component but checkbox is fine for now */}
+                            <input
+                                type="checkbox"
+                                id="enableQuality"
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                checked={editForm.enableQualityModule || false}
+                                onChange={(e) => setEditForm({ ...editForm, enableQualityModule: e.target.checked })}
+                            />
+                            <Label htmlFor="enableQuality">Ativar Módulo de Qualidade?</Label>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
