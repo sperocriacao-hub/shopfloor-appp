@@ -189,7 +189,7 @@ export interface ProductionEvent {
     reason?: string; // Para paradas (Ex: Falta de material)
 }
 // --- Quality Module (Shopfloor V5) ---
-export type QualityCaseType = 'internal' | 'supplier' | 'warranty';
+export type QualityCaseType = 'internal' | 'supplier' | 'warranty' | 'audit';
 export type QualitySeverity = 'low' | 'medium' | 'high' | 'critical';
 export type QualityStatus = 'open' | 'investigating' | 'action_plan' | 'resolved';
 export type QualityMethodology = 'ishikawa' | '5whys' | 'a3' | '8d' | 'none';

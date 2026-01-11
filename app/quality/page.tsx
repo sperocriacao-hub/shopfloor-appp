@@ -19,7 +19,7 @@ export default function QualityPage() {
 
     // Form State
     const [newCase, setNewCase] = useState<Partial<QualityCase>>({
-        type: 'internal_fail',
+        type: 'internal',
         severity: 'medium',
         methodology: 'ishikawa',
         status: 'open',
@@ -51,7 +51,7 @@ export default function QualityPage() {
             createdBy: 'Admin' // TODO: Get user
         });
         setIsNewCaseOpen(false);
-        setNewCase({ type: 'internal_fail', severity: 'medium', methodology: 'ishikawa', status: 'open', description: '' });
+        setNewCase({ type: 'internal', severity: 'medium', methodology: 'ishikawa', status: 'open', description: '' });
     };
 
     const getStatusColor = (status: QualityStatus) => {
@@ -136,10 +136,10 @@ export default function QualityPage() {
                                     >
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="internal_fail">Falha Interna</SelectItem>
-                                            <SelectItem value="supplier_complaint">Reclamação Fornecedor</SelectItem>
-                                            <SelectItem value="customer_return">Retorno Cliente</SelectItem>
-                                            <SelectItem value="audit_finding">Auditoria</SelectItem>
+                                            <SelectItem value="internal">Falha Interna</SelectItem>
+                                            <SelectItem value="supplier">Reclamação Fornecedor</SelectItem>
+                                            <SelectItem value="warranty">Retorno Cliente (Garantia)</SelectItem>
+                                            <SelectItem value="audit">Auditoria</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
