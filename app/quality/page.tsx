@@ -60,7 +60,7 @@ export default function QualityPage() {
             case 'investigating': return 'bg-yellow-100 text-yellow-800';
             case 'action_plan': return 'bg-blue-100 text-blue-800';
             case 'monitoring': return 'bg-purple-100 text-purple-800';
-            case 'closed': return 'bg-green-100 text-green-800';
+            case 'resolved': return 'bg-green-100 text-green-800';
             default: return 'bg-slate-100';
         }
     };
@@ -216,7 +216,7 @@ export default function QualityPage() {
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{qualityCases.filter(c => c.status === 'closed').length}</div>
+                        <div className="text-2xl font-bold">{qualityCases.filter(c => c.status === 'resolved').length}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -237,7 +237,8 @@ export default function QualityPage() {
                         <SelectItem value="open">Aberto</SelectItem>
                         <SelectItem value="investigating">Investigando</SelectItem>
                         <SelectItem value="action_plan">Plano de Ação</SelectItem>
-                        <SelectItem value="closed">Encerrado</SelectItem>
+                        <SelectItem value="monitoring">Monitoramento</SelectItem>
+                        <SelectItem value="resolved">Resolvido</SelectItem>
                     </SelectContent>
                 </Select>
             </Card>

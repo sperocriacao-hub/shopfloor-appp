@@ -191,7 +191,7 @@ export interface ProductionEvent {
 // --- Quality Module (Shopfloor V5) ---
 export type QualityCaseType = 'internal' | 'supplier' | 'warranty' | 'audit';
 export type QualitySeverity = 'low' | 'medium' | 'high' | 'critical';
-export type QualityStatus = 'open' | 'investigating' | 'action_plan' | 'resolved';
+export type QualityStatus = 'open' | 'investigating' | 'action_plan' | 'monitoring' | 'resolved';
 export type QualityMethodology = 'ishikawa' | '5whys' | 'a3' | '8d' | 'none';
 
 export interface QualityCase {

@@ -6,7 +6,7 @@ ALTER TABLE assets ADD COLUMN IF NOT EXISTS enable_quality_module BOOLEAN DEFAUL
 -- 2. Quality Cases Table
 CREATE TYPE quality_type AS ENUM ('internal', 'supplier', 'warranty', 'audit');
 CREATE TYPE quality_severity AS ENUM ('low', 'medium', 'high', 'critical');
-CREATE TYPE quality_status AS ENUM ('open', 'investigating', 'action_plan', 'resolved');
+CREATE TYPE quality_status AS ENUM ('open', 'investigating', 'action_plan', 'monitoring', 'resolved');
 CREATE TYPE quality_methodology AS ENUM ('ishikawa', '5whys', 'a3', '8d', 'none');
 
 CREATE TABLE IF NOT EXISTS quality_cases (
