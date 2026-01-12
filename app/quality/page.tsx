@@ -327,11 +327,5 @@ export default function QualityPage() {
                 </DialogContent>
             </Dialog>
         </div>
-                        </CardContent >
-                    </Card >
-                ))
-}
-            </div >
-        </div >
     );
 }
