@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { OperationDefinition } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
+import * as XLSX from 'xlsx';
 
 interface RoutingEditorProps {
     initialOperations: OperationDefinition[];
@@ -77,18 +78,18 @@ export function RoutingEditor({ initialOperations, onSave }: RoutingEditorProps)
     };
 
     const handleExport = () => {
-        const csvContent = "data:text/csv;charset=utf-8," +
-            "Sequence,OperationName,AssetType,StandardTimeMinutes,Instructions\n" +
-            operations.map(op =>
-                `${op.sequence},${op.name},${op.requiredAssetType},${op.standardTimeMinutes},${op.instructions || ''}`
-            ).join("\n");
+        const data = operations.map(op => ({
+            Sequence: op.sequence,
+            OperationName: op.name,
+            AssetType: op.requiredAssetType,
+            StandardTimeMinutes: op.standardTimeMinutes,
+            Instructions: op.instructions
+        }));
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "routing_template.csv");
-        document.body.appendChild(link);
-        link.click();
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Routing");
+        XLSX.writeFile(wb, "routing_template.xlsx");
     };
 
     return (
@@ -97,35 +98,38 @@ export function RoutingEditor({ initialOperations, onSave }: RoutingEditorProps)
                 <h3 className="text-lg font-semibold text-slate-800">Definição do Roteiro</h3>
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={handleExport}>
-                        <FileText className="h-4 w-4 mr-2" /> Exportar/Modelo
+                        <FileText className="h-4 w-4 mr-2" /> Exportar Excel
                     </Button>
                     <div className="relative">
                         <input
                             type="file"
-                            accept=".csv"
+                            accept=".xlsx, .xls"
                             className="hidden"
                             id="routing-import"
                             onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
-                                const text = await file.text();
-                                const rows = text.split('\n').slice(1).filter(r => r.trim() !== '');
-                                const newOps = rows.map((row, i) => {
-                                    const [seq, name, type, time, instr] = row.split(',').map(c => c.trim());
-                                    return {
-                                        id: `op-imp-${Date.now()}-${i}`,
-                                        sequence: parseInt(seq) || (i + 1) * 10,
-                                        name: name || 'Nova Operação',
-                                        requiredAssetType: type || 'Workstation',
-                                        standardTimeMinutes: parseInt(time) || 60,
-                                        instructions: instr || ''
-                                    };
-                                });
+
+                                const data = await file.arrayBuffer();
+                                const workbook = XLSX.read(data);
+                                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                                const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+                                const newOps = jsonData.map((row, i) => ({
+                                    id: `op-imp-${Date.now()}-${i}`,
+                                    sequence: row.Sequence || (i + 1) * 10,
+                                    name: row.OperationName || 'Nova Operação',
+                                    requiredAssetType: row.AssetType || 'Workstation',
+                                    standardTimeMinutes: row.StandardTimeMinutes || 60,
+                                    instructions: row.Instructions || ''
+                                }));
                                 setOperations(newOps);
+                                // Clear input
+                                e.target.value = '';
                             }}
                         />
                         <Button variant="outline" size="sm" onClick={() => document.getElementById('routing-import')?.click()}>
-                            Importar CSV
+                            Importar Excel
                         </Button>
                     </div>
                     <Button onClick={handleAddOperation} size="sm" className="gap-2 ml-2">

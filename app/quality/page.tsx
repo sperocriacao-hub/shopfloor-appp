@@ -16,6 +16,7 @@ export default function QualityPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState<QualityStatus | 'all'>('all');
     const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
+    const [selectedSubject, setSelectedSubject] = useState<QualityCase | null>(null);
 
     // Form State
     const [newCase, setNewCase] = useState<Partial<QualityCase>>({
@@ -264,10 +265,7 @@ export default function QualityPage() {
                                         <span><strong>Metodologia:</strong> {qc.methodology}</span>
                                     </div>
                                 </div>
-                                <Button variant="outline" size="sm" onClick={() => {
-                                    // TODO: Open detail view
-                                    alert("Detalhes do caso " + qc.id);
-                                }}>
+                                <Button variant="outline" size="sm" onClick={() => setSelectedSubject(qc)}>
                                     Gerenciar
                                 </Button>
                             </div>
@@ -275,6 +273,65 @@ export default function QualityPage() {
                     </Card>
                 ))}
             </div>
+
+            <Dialog open={!!selectedSubject} onOpenChange={(open) => !open && setSelectedSubject(null)}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Gerenciar Caso de Qualidade: {selectedSubject?.id}</DialogTitle>
+                    </DialogHeader>
+                    {selectedSubject && (
+                        <div className="grid gap-6 py-4">
+                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg">
+                                <div>
+                                    <h4 className="font-semibold text-sm text-slate-500">Descrição</h4>
+                                    <p className="text-slate-900">{selectedSubject.description}</p>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-sm text-slate-500">Detalhes</h4>
+                                    <ul className="text-sm text-slate-600 space-y-1">
+                                        <li><strong>Asset:</strong> {assets.find(a => a.id === selectedSubject.assetId)?.name}</li>
+                                        <li><strong>Tipo:</strong> {selectedSubject.type}</li>
+                                        <li><strong>Severidade:</strong> {selectedSubject.severity}</li>
+                                        <li><strong>Metodologia:</strong> {selectedSubject.methodology}</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="font-semibold flex items-center gap-2">
+                                    <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                                    Mudar Status do Processo
+                                </h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {(['open', 'investigating', 'action_plan', 'monitoring', 'resolved'] as const).map(status => (
+                                        <Button
+                                            key={status}
+                                            variant={selectedSubject.status === status ? "default" : "outline"}
+                                            className={selectedSubject.status === status ? "bg-blue-600" : ""}
+                                            onClick={async () => {
+                                                await updateQualityCase(selectedSubject.id, { status });
+                                                setSelectedSubject(prev => prev ? ({ ...prev, status }) : null);
+                                            }}
+                                        >
+                                            {status.toUpperCase()}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button onClick={() => setSelectedSubject(null)}>Fechar</Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
+                        </CardContent >
+                    </Card >
+                ))
+}
+            </div >
+        </div >
     );
 }

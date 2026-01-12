@@ -140,7 +140,9 @@ export default function OrdersPage() {
                                             {order.status === 'in_progress' ? 'Em Andamento' : order.status}
                                         </span>
                                     </div>
-                                    <h3 className="text-xl font-bold text-blue-900">{product?.name}</h3>
+                                    <h3 className="text-xl font-bold text-blue-900">
+                                        {product?.name} <span className="text-slate-500 font-normal"># {order.hin || order.po || order.id}</span>
+                                    </h3>
                                     <p className="text-sm text-slate-500 flex items-center">
                                         <Activity className="mr-1 h-4 w-4" />
                                         Operação Atual: {order.currentOperationId ? 'Laminação de Casco (Op. 20)' : 'Não iniciada'}

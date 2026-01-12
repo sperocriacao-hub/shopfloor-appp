@@ -260,6 +260,19 @@ export default function AssetsPage() {
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="sequence" className="text-right">
+                                Ordem (Seq)
+                            </Label>
+                            <Input
+                                id="sequence"
+                                type="number"
+                                value={editForm.sequence || ''}
+                                onChange={(e) => setEditForm({ ...editForm, sequence: parseInt(e.target.value) })}
+                                className="col-span-3"
+                                placeholder="Ex: 10, 20..."
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="type" className="text-right">
                                 Tipo
                             </Label>

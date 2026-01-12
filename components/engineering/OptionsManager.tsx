@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Save, FileText, GripVertical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import * as XLSX from 'xlsx';
 
 interface OptionsManagerProps {
     productModelId?: string; // Optional: filter by model
@@ -196,31 +197,128 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                 {/* Excel Actions */}
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => {
-                        const csvContent = "data:text/csv;charset=utf-8," +
-                            "OptionName,OptionDescription,ProductModel,TaskDescription,TaskSequence,TaskStation,TaskPDF\n" +
-                            productOptions.map(o => {
-                                // Find tasks for this option to flatten
-                                const myTasks = optionTasks.filter(t => t.optionId === o.id);
-                                if (myTasks.length === 0) {
-                                    return `${o.name},${o.description || ''},${o.productModelId || ''},,,,`;
-                                }
-                                return myTasks.map(t =>
-                                    `${o.name},${o.description || ''},${o.productModelId || ''},${t.description},${t.sequence},${t.stationId || ''},${t.pdfUrl || ''}`
-                                ).join("\n");
-                            }).join("\n");
+                        const data = productOptions.flatMap(o => {
+                            const myTasks = optionTasks.filter(t => t.optionId === o.id);
+                            if (myTasks.length === 0) {
+                                return [{
+                                    OptionName: o.name,
+                                    OptionDescription: o.description || '',
+                                    ProductModel: o.productModelId || '',
+                                    TaskDescription: '',
+                                    TaskSequence: 0,
+                                    TaskStation: '',
+                                    TaskPDF: ''
+                                }];
+                            }
+                            return myTasks.map(t => ({
+                                OptionName: o.name,
+                                OptionDescription: o.description || '',
+                                ProductModel: o.productModelId || '',
+                                TaskDescription: t.description,
+                                TaskSequence: t.sequence || 0,
+                                TaskStation: t.stationId || '',
+                                TaskPDF: t.pdfUrl || ''
+                            }));
+                        });
 
-                        const encodedUri = encodeURI(csvContent);
-                        const link = document.createElement("a");
-                        link.setAttribute("href", encodedUri);
-                        link.setAttribute("download", "options_template_v2_com_tarefas.csv");
-                        document.body.appendChild(link);
-                        link.click();
+                        const ws = XLSX.utils.json_to_sheet(data);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Options");
+                        XLSX.writeFile(wb, "options_template.xlsx");
                     }}>
-                        <FileText className="h-3 w-3 mr-1" /> Modelo CSV
+                        <FileText className="h-3 w-3 mr-1" /> Modelo Excel
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => document.getElementById('csv-import-input')?.click()}>
-                        Importar
-                    </Button>
+                    <div className="relative flex-1">
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls"
+                            className="hidden"
+                            id="options-import-input"
+                            onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+
+                                const data = await file.arrayBuffer();
+                                const workbook = XLSX.read(data);
+                                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                                const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+                                let importCount = 0;
+
+                                // Group by Option
+                                const optionsMap = new Map<string, {
+                                    desc: string,
+                                    model: string,
+                                    tasks: { desc: string, seq: string, station: string, pdf: string }[]
+                                }>();
+
+                                jsonData.forEach(row => {
+                                    const optName = row.OptionName;
+                                    if (!optName) return;
+
+                                    if (!optionsMap.has(optName)) {
+                                        optionsMap.set(optName, {
+                                            desc: row.OptionDescription || '',
+                                            model: row.ProductModel || '',
+                                            tasks: []
+                                        });
+                                    }
+
+                                    if (row.TaskDescription) {
+                                        optionsMap.get(optName)!.tasks.push({
+                                            desc: row.TaskDescription,
+                                            seq: row.TaskSequence || '0',
+                                            station: row.TaskStation || '',
+                                            pdf: row.TaskPDF || ''
+                                        });
+                                    }
+                                });
+
+                                // Process Upserts
+                                for (const [name, data] of optionsMap.entries()) {
+                                    // 1. Find or Create Option
+                                    let opt = productOptions.find(p => p.name === name);
+                                    let optId = opt?.id;
+
+                                    if (!opt) {
+                                        optId = `opt-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                                        await addOption({
+                                            id: optId,
+                                            name: name,
+                                            description: data.desc,
+                                            productModelId: data.model
+                                        });
+                                    } else {
+                                        // Update
+                                        await updateOption(optId!, {
+                                            description: data.desc,
+                                            productModelId: data.model
+                                        });
+                                    }
+
+                                    // 2. Add Tasks
+                                    for (const t of data.tasks) {
+                                        await addTask({
+                                            id: `tsk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                            optionId: optId!,
+                                            description: t.desc,
+                                            sequence: parseInt(t.seq) || 0,
+                                            stationId: t.station,
+                                            pdfUrl: t.pdf
+                                        });
+                                    }
+                                    importCount++;
+                                }
+
+                                await syncData();
+                                alert(`Importação concluída! ${importCount} opções processadas.`);
+                                e.target.value = ''; // Reset
+                            }}
+                        />
+                        <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => document.getElementById('options-import-input')?.click()}>
+                            Importar Excel
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="overflow-y-auto flex-1 space-y-2 mt-2">
