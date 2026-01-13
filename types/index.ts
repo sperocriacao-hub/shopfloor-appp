@@ -204,6 +204,8 @@ export interface QualityCase {
     status: QualityStatus;
     methodology: QualityMethodology;
     methodologyData?: any; // JSONB
+    images?: string[]; // Array of base64/url
+    dueDate?: string; // ISO Date for deadline
     createdAt: string; // ISO
     createdBy?: string;
 }

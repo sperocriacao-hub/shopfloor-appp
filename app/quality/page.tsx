@@ -11,6 +11,39 @@ import { useState } from "react";
 import { QualityCase, QualityStatus, QualityMethodology } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 
+const METHODOLOGY_TEMPLATES = {
+    ishikawa: `### Ishikawa (Espinha de Peixe)
+- **Máquina**: 
+- **Método**: 
+- **Material**: 
+- **Mão de Obra**: 
+- **Medição**: 
+- **Meio Ambiente**: `,
+    '5whys': `### 5 Porquês
+1. Por que? 
+2. Por que? 
+3. Por que? 
+4. Por que? 
+5. Por que? `,
+    '8d': `### 8D Report
+- **D1 (Equipe)**: 
+- **D2 (Problema)**: 
+- **D3 (Contenção)**: 
+- **D4 (Causa Raiz)**: 
+- **D5 (Ação Corretiva)**: 
+- **D6 (Implementação)**: 
+- **D7 (Prevenção)**: 
+- **D8 (Congratular)**: `,
+    a3: `### A3 Problem Solving
+1. **Contexto/Background**: 
+2. **Situação Atual**: 
+3. **Objetivo**: 
+4. **Análise de Causa**: 
+5. **Contramedidas**: 
+6. **Plano de Ação**: 
+7. **Follow-up**: `
+};
+
 export default function QualityPage() {
     const { qualityCases, qualityActions, assets, orders, addQualityCase, updateQualityCase } = useShopfloorStore();
     const [searchTerm, setSearchTerm] = useState("");
@@ -48,11 +81,16 @@ export default function QualityPage() {
             status: 'open',
             methodology: newCase.methodology as any,
             assetId: newCase.assetId || '',
+            status: 'open',
+            methodology: newCase.methodology as any,
+            assetId: newCase.assetId || '',
             orderId: newCase.orderId || undefined,
+            dueDate: newCase.dueDate,
+            images: newCase.images || [],
             createdBy: 'Admin' // TODO: Get user
         });
         setIsNewCaseOpen(false);
-        setNewCase({ type: 'internal', severity: 'medium', methodology: 'ishikawa', status: 'open', description: '' });
+        setNewCase({ type: 'internal', severity: 'medium', methodology: 'ishikawa', status: 'open', description: '', images: [] });
     };
 
     const getStatusColor = (status: QualityStatus) => {
@@ -120,11 +158,12 @@ export default function QualityPage() {
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium mb-1 block">Descrição do Problema</label>
-                                <Input
+                                <label className="text-sm font-medium mb-1 block">Descrição do Problema / Análise</label>
+                                <textarea
+                                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[150px] font-mono"
                                     value={newCase.description}
                                     onChange={(e) => setNewCase({ ...newCase, description: e.target.value })}
-                                    placeholder="Descreva o defeito ou não-conformidade..."
+                                    placeholder="Descreva o defeito ou preencha o modelo..."
                                 />
                             </div>
 
@@ -163,7 +202,15 @@ export default function QualityPage() {
                                     <label className="text-sm font-medium mb-1 block">Metodologia</label>
                                     <Select
                                         value={newCase.methodology}
-                                        onValueChange={(v: any) => setNewCase({ ...newCase, methodology: v })}
+                                        onValueChange={(v: any) => {
+                                            const template = METHODOLOGY_TEMPLATES[v as keyof typeof METHODOLOGY_TEMPLATES];
+                                            setNewCase({
+                                                ...newCase,
+                                                methodology: v,
+                                                // Only inject if description is empty or looks like a different template
+                                                description: (!newCase.description || newCase.description.length < 10) ? template : newCase.description
+                                            });
+                                        }}
                                     >
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -173,6 +220,46 @@ export default function QualityPage() {
                                             <SelectItem value="a3">A3 Problem Solving</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                </div>
+                            </div>
+
+
+
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Data Limite (Fechamento)</label>
+                                    <Input
+                                        type="date"
+                                        value={newCase.dueDate ? newCase.dueDate.split('T')[0] : ''}
+                                        onChange={(e) => setNewCase({ ...newCase, dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                                    />
+                                    <p className="text-xs text-slate-500 mt-1">Estimativa de resolução.</p>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Imagens (Max 4)</label>
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        className="h-9 text-xs"
+                                        onChange={async (e) => {
+                                            const files = Array.from(e.target.files || []).slice(0, 4);
+                                            const promises = files.map(file => new Promise<string>((resolve) => {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => resolve(reader.result as string);
+                                                reader.readAsDataURL(file);
+                                            }));
+                                            const base64Images = await Promise.all(promises);
+                                            setNewCase({ ...newCase, images: base64Images });
+                                        }}
+                                    />
+                                    <div className="flex gap-2 mt-2">
+                                        {newCase.images?.map((img, i) => (
+                                            <div key={i} className="h-10 w-10 relative border rounded overflow-hidden">
+                                                <img src={img} alt="preview" className="object-cover w-full h-full" />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
@@ -293,9 +380,28 @@ export default function QualityPage() {
                                         <li><strong>Tipo:</strong> {selectedSubject.type}</li>
                                         <li><strong>Severidade:</strong> {selectedSubject.severity}</li>
                                         <li><strong>Metodologia:</strong> {selectedSubject.methodology}</li>
+                                        {selectedSubject.dueDate && (
+                                            <li><strong className="text-red-600">Prazo:</strong> {new Date(selectedSubject.dueDate).toLocaleDateString()}</li>
+                                        )}
                                     </ul>
                                 </div>
                             </div>
+
+                            {selectedSubject.images && selectedSubject.images.length > 0 && (
+                                <div>
+                                    <h4 className="font-semibold text-sm text-slate-500 mb-2">Evidências (Imagens)</h4>
+                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                        {selectedSubject.images.map((img, i) => (
+                                            <div key={i} className="h-32 w-32 shrink-0 border rounded-lg overflow-hidden bg-slate-100 relative group">
+                                                <img src={img} alt={`evidencia-${i}`} className="object-cover w-full h-full" />
+                                                <a href={img} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                                                    Abrir
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="space-y-4">
                                 <h3 className="font-semibold flex items-center gap-2">
@@ -326,6 +432,6 @@ export default function QualityPage() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }
