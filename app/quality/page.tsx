@@ -57,7 +57,7 @@ export default function QualityPage() {
         severity: 'medium',
         methodology: 'ishikawa',
         status: 'open',
-        description: '',
+        description: METHODOLOGY_TEMPLATES['ishikawa'],
         assetId: '',
         orderId: ''
     });
@@ -88,7 +88,7 @@ export default function QualityPage() {
             createdBy: 'Admin' // TODO: Get user
         });
         setIsNewCaseOpen(false);
-        setNewCase({ type: 'internal', severity: 'medium', methodology: 'ishikawa', status: 'open', description: '', images: [] });
+        setNewCase({ type: 'internal', severity: 'medium', methodology: 'ishikawa', status: 'open', description: METHODOLOGY_TEMPLATES['ishikawa'], images: [] });
     };
 
     const getStatusColor = (status: QualityStatus) => {
@@ -156,7 +156,21 @@ export default function QualityPage() {
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium mb-1 block">Descrição do Problema / Análise</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="text-sm font-medium">Descrição do Problema / Análise</label>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 text-xs text-blue-600"
+                                        onClick={() => {
+                                            const template = METHODOLOGY_TEMPLATES[newCase.methodology as keyof typeof METHODOLOGY_TEMPLATES];
+                                            setNewCase({ ...newCase, description: template });
+                                        }}
+                                    >
+                                        Carregar Modelo
+                                    </Button>
+                                </div>
                                 <textarea
                                     className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[150px] font-mono"
                                     value={newCase.description}
