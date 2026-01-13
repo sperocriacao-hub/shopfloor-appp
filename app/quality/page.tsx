@@ -78,9 +78,7 @@ export default function QualityPage() {
             description: newCase.description || '',
             type: newCase.type as any,
             severity: newCase.severity as any,
-            status: 'open',
-            methodology: newCase.methodology as any,
-            assetId: newCase.assetId || '',
+
             status: 'open',
             methodology: newCase.methodology as any,
             assetId: newCase.assetId || '',
