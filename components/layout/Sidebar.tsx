@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope } from 'lucide-react';
+import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ export function Sidebar() {
         { name: 'Engenharia', href: '/products', icon: Settings },
         { name: 'Recursos Humanos', href: '/staff', icon: Users },
         { name: 'Qualidade', href: '/quality', icon: Microscope },
+        { name: 'Ferramentaria', href: '/tools', icon: Wrench },
         { name: 'Modo Operador', href: '/shopfloor', icon: Ship },
     ];
 

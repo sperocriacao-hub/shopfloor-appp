@@ -237,3 +237,44 @@ export interface ScrapReport {
     replacementOrderId?: string;
     createdAt: string;
 }
+
+// --- Tool Management (Ferramentaria) ---
+export type ToolStatus = 'available' | 'in_use' | 'maintenance' | 'scrapped' | 'lost';
+export type ToolCondition = 'new' | 'good' | 'fair' | 'poor';
+export type ToolAction = 'checkout' | 'checkin' | 'maintenance_out' | 'maintenance_return';
+
+export interface Tool {
+    id: string;
+    code: string;
+    name: string;
+    category: string;
+    status: ToolStatus;
+    condition: ToolCondition;
+    currentHolderId?: string; // Employee ID
+    location: 'ferramentaria' | 'maintenance' | 'employee';
+    purchaseDate?: string;
+    lastMaintenance?: string;
+}
+
+export interface ToolTransaction {
+    id: string;
+    toolId: string;
+    employeeId?: string;
+    action: ToolAction;
+    signature?: string; // Base64
+    notes?: string;
+    createdAt: string;
+    createdBy?: string;
+}
+
+export interface ToolMaintenance {
+    id: string;
+    toolId: string;
+    description: string;
+    status: 'pending' | 'in_progress' | 'waiting_parts' | 'completed' | 'condemned';
+    cost?: number;
+    replacementRequested?: boolean;
+    technicianNotes?: string;
+    createdAt: string;
+    completedAt?: string;
+}

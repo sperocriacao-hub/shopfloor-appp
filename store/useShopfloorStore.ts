@@ -5,7 +5,8 @@ import {
     Asset, ProductModel, Routing, ProductionOrder, ProductionEvent, Employee,
     OrderStatus, AssetStatus, AbsenteeismRecord,
     ProductOption, OptionTask, OrderIssue, TaskExecution,
-    QualityCase, QualityAction, ScrapReport
+    QualityCase, QualityAction, ScrapReport,
+    Tool, ToolTransaction, ToolMaintenance
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -208,6 +209,18 @@ interface ShopfloorState {
     removeEmployee: (id: string) => Promise<void>;
     addAbsenteeismRecord: (record: AbsenteeismRecord) => Promise<void>;
     removeAbsenteeismRecord: (id: string) => Promise<void>;
+
+    // Shopfloor V7 Actions (Tools)
+    tools: Tool[];
+    toolTransactions: ToolTransaction[];
+    toolMaintenances: ToolMaintenance[];
+
+    addTool: (tool: Tool) => Promise<void>;
+    updateTool: (id: string, updates: Partial<Tool>) => Promise<void>;
+    addToolTransaction: (transaction: ToolTransaction) => Promise<void>;
+    addToolMaintenance: (maintenance: ToolMaintenance) => Promise<void>;
+    updateToolMaintenance: (id: string, updates: Partial<ToolMaintenance>) => Promise<void>;
+
     syncData: () => Promise<void>;
 }
 
@@ -388,6 +401,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
             qualityCases: [],
             qualityActions: [],
             scrapReports: [],
+
+            // Shopfloor V7 (Tools)
+            tools: [],
+            toolTransactions: [],
+            toolMaintenances: [],
 
             // Actions
             addAsset: async (asset) => {
@@ -838,6 +856,54 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 await supabase.from('absenteeism_records').delete().eq('id', id);
             },
 
+            // --- Tool Management Actions ---
+            addTool: async (tool) => {
+                set(s => ({ tools: [...s.tools, tool] }));
+                const { error } = await supabase.from('tools').insert({
+                    id: tool.id, code: tool.code, name: tool.name, category: tool.category,
+                    status: tool.status, condition: tool.condition, current_holder_id: tool.currentHolderId,
+                    location: tool.location
+                });
+                if (error) console.error("Error adding tool:", error);
+            },
+
+            updateTool: async (id, updates) => {
+                set(s => ({ tools: s.tools.map(t => t.id === id ? { ...t, ...updates } : t) }));
+                const toUpdate: any = {};
+                if (updates.status) toUpdate.status = updates.status;
+                if (updates.currentHolderId !== undefined) toUpdate.current_holder_id = updates.currentHolderId;
+                if (updates.condition) toUpdate.condition = updates.condition;
+                if (updates.location) toUpdate.location = updates.location;
+
+                await supabase.from('tools').update(toUpdate).eq('id', id);
+            },
+
+            addToolTransaction: async (tx) => {
+                set(s => ({ toolTransactions: [...s.toolTransactions, tx] }));
+                const { error } = await supabase.from('tool_transactions').insert({
+                    id: tx.id, tool_id: tx.toolId, employee_id: tx.employeeId,
+                    action: tx.action, signature: tx.signature, notes: tx.notes, created_by: tx.createdBy
+                });
+                if (error) console.error("Error adding tool transaction:", error);
+            },
+
+            addToolMaintenance: async (m) => {
+                set(s => ({ toolMaintenances: [...s.toolMaintenances, m] }));
+                const { error } = await supabase.from('tool_maintenance').insert({
+                    id: m.id, tool_id: m.toolId, description: m.description,
+                    status: m.status, technician_notes: m.technicianNotes
+                });
+            },
+
+            updateToolMaintenance: async (id, updates) => {
+                set(s => ({ toolMaintenances: s.toolMaintenances.map(m => m.id === id ? { ...m, ...updates } : m) }));
+                const toUpdate: any = { status: updates.status };
+                if (updates.status === 'completed' || updates.status === 'condemned') {
+                    toUpdate.completed_at = new Date().toISOString();
+                }
+                await supabase.from('tool_maintenance').update(toUpdate).eq('id', id);
+            },
+
             syncData: async () => {
                 // Employees
                 const { data: emps } = await supabase.from('employees').select('*');
@@ -898,6 +964,35 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (qActions) set({ qualityActions: qActions.map(mapDbToQualityAction) });
 
                 const { data: scrap } = await supabase.from('scrap_reports').select('*');
+                if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
+
+                // V7 Tools Sync
+                const { data: tools } = await supabase.from('tools').select('*');
+                if (tools) set({
+                    tools: tools.map((t: any) => ({
+                        id: t.id, code: t.code, name: t.name, category: t.category,
+                        status: t.status, condition: t.condition, currentHolderId: t.current_holder_id,
+                        location: t.location, purchaseDate: t.purchase_date, lastMaintenance: t.last_maintenance
+                    }))
+                });
+
+                const { data: toolTxs } = await supabase.from('tool_transactions').select('*');
+                if (toolTxs) set({
+                    toolTransactions: toolTxs.map((t: any) => ({
+                        id: t.id, toolId: t.tool_id, employeeId: t.employee_id,
+                        action: t.action, signature: t.signature, notes: t.notes,
+                        createdAt: t.created_at, createdBy: t.created_by
+                    }))
+                });
+
+                const { data: toolMaint } = await supabase.from('tool_maintenance').select('*');
+                if (toolMaint) set({
+                    toolMaintenances: toolMaint.map((t: any) => ({
+                        id: t.id, toolId: t.tool_id, description: t.description, status: t.status,
+                        cost: t.cost, replacementRequested: t.replacement_requested,
+                        technicianNotes: t.technician_notes, createdAt: t.created_at, completedAt: t.completed_at
+                    }))
+                });
                 if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
 
                 // Fetch Order Options Pivot and Map to Orders
