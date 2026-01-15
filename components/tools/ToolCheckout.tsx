@@ -62,7 +62,7 @@ export function ToolCheckout() {
                     <div>
                         <Label>Ferramenta Disponível</Label>
                         <Select value={selectedToolId} onValueChange={setSelectedToolId}>
-                            <SelectTrigger>
+                            <SelectTrigger className="bg-white">
                                 <SelectValue placeholder="Selecione..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -77,7 +77,7 @@ export function ToolCheckout() {
                     <div>
                         <Label>Funcionário</Label>
                         <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-                            <SelectTrigger>
+                            <SelectTrigger className="bg-white">
                                 <SelectValue placeholder="Selecione..." />
                             </SelectTrigger>
                             <SelectContent>

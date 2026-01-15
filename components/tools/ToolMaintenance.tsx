@@ -125,7 +125,7 @@ export function ToolMaintenance() {
                                                     <div>
                                                         <Label>Status</Label>
                                                         <Select value={statusUpdate} onValueChange={setStatusUpdate}>
-                                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                                            <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="pending">Pendente</SelectItem>
                                                                 <SelectItem value="in_progress">Em Progresso</SelectItem>

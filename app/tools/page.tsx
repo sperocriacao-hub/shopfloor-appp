@@ -121,7 +121,7 @@ export default function ToolsPage() {
                                 <div>
                                     <Label>Categoria</Label>
                                     <Select value={newTool.category} onValueChange={v => setNewTool({ ...newTool, category: v })}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Manual">Manual</SelectItem>
                                             <SelectItem value="Elétrica">Elétrica</SelectItem>
@@ -134,7 +134,7 @@ export default function ToolsPage() {
                                 <div>
                                     <Label>Condição</Label>
                                     <Select value={newTool.condition} onValueChange={v => setNewTool({ ...newTool, condition: v as any })}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="new">Nova</SelectItem>
                                             <SelectItem value="good">Boa</SelectItem>

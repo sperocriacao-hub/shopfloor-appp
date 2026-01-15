@@ -96,7 +96,7 @@ export function ToolCheckin() {
                         <div>
                             <Label>Selecione a Ferramenta a devolver</Label>
                             <Select value={selectedToolId} onValueChange={setSelectedToolId}>
-                                <SelectTrigger>
+                                <SelectTrigger className="bg-white">
                                     <SelectValue placeholder="Selecione..." />
                                 </SelectTrigger>
                                 <SelectContent>
