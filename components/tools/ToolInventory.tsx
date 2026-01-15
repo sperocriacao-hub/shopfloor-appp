@@ -117,15 +117,16 @@ export function ToolInventory() {
                                 <TableCell className="capitalize">{tool.condition}</TableCell>
                             </TableRow>
                         ))}
-                        {tools.length === 0 && (
+                        {filteredTools.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                                    Nenhuma ferramenta cadastrada.
+                                    {tools.length === 0 ? "Nenhuma ferramenta cadastrada." : "Nenhuma ferramenta encontrada com os filtros atuais."}
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
             </div>
-            );
+        </div>
+    );
 }
