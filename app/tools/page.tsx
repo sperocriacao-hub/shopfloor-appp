@@ -8,6 +8,7 @@ import { ToolCheckout } from "@/components/tools/ToolCheckout";
 import { ToolCheckin } from "@/components/tools/ToolCheckin";
 import { ToolMaintenance } from "@/components/tools/ToolMaintenance";
 import { ToolReports } from "@/components/tools/ToolReports";
+import { ToolDashboard } from "@/components/tools/ToolDashboard";
 import { Wrench, Plus, Upload, Download } from "lucide-react";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Button } from "@/components/ui/button";
@@ -170,8 +171,9 @@ export default function ToolsPage() {
                 </Dialog>
             </div>
 
-            <Tabs defaultValue="inventory" className="space-y-4">
+            <Tabs defaultValue="dashboard" className="space-y-4">
                 <TabsList>
+                    <TabsTrigger value="dashboard">Visão Geral</TabsTrigger>
                     <TabsTrigger value="inventory">Inventário ({tools.length})</TabsTrigger>
                     <TabsTrigger value="checkout">Entregas</TabsTrigger>
                     <TabsTrigger value="checkin">Devoluções</TabsTrigger>
@@ -179,6 +181,7 @@ export default function ToolsPage() {
                     <TabsTrigger value="reports">Relatórios</TabsTrigger>
                 </TabsList>
 
+                <TabsContent value="dashboard"><ToolDashboard /></TabsContent>
                 <TabsContent value="inventory"><ToolInventory /></TabsContent>
                 <TabsContent value="checkout"><div className="max-w-2xl mx-auto"><ToolCheckout /></div></TabsContent>
                 <TabsContent value="checkin"><div className="max-w-2xl mx-auto"><ToolCheckin /></div></TabsContent>

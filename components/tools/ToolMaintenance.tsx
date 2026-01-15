@@ -18,15 +18,27 @@ export function ToolMaintenance() {
     const [statusUpdate, setStatusUpdate] = useState("");
     const [techNotes, setTechNotes] = useState("");
 
+    const [searchTerm, setSearchTerm] = useState("");
+
     // Join Maintenance records with Tool details
     const activeMaintenance = toolMaintenances
         .filter(m => m.status !== 'completed' && m.status !== 'condemned')
-        .map(m => ({ ...m, tool: tools.find(t => t.id === m.toolId) }));
+        .map(m => ({ ...m, tool: tools.find(t => t.id === m.toolId) }))
+        .filter(m =>
+            m.tool?.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            m.tool?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            m.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
     const historyMaintenance = toolMaintenances
         .filter(m => m.status === 'completed' || m.status === 'condemned')
         .sort((a, b) => new Date(b.completedAt || '').getTime() - new Date(a.completedAt || '').getTime())
-        .map(m => ({ ...m, tool: tools.find(t => t.id === m.toolId) }));
+        .map(m => ({ ...m, tool: tools.find(t => t.id === m.toolId) }))
+        .filter(m =>
+            m.tool?.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            m.tool?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            m.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
     const handleUpdate = async () => {
         if (!selectedMaintenance) return;
@@ -58,6 +70,18 @@ export function ToolMaintenance() {
 
     return (
         <div className="space-y-8">
+            {/* Filters */}
+            <div className="flex gap-4 p-4 border rounded-md bg-slate-50">
+                <div className="flex-1 max-w-sm">
+                    <Label className="mb-1 block text-xs">Busca Rápida</Label>
+                    <Input
+                        placeholder="Buscar ferramenta, defeito..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="bg-white"
+                    />
+                </div>
+            </div>
             {/* Active Repairs */}
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
