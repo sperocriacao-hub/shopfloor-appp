@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import SignatureCanvas from 'react-signature-canvas';
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,33 +62,21 @@ export function ToolCheckout() {
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <Label>Ferramenta Disponível</Label>
-                        <Select value={selectedToolId} onValueChange={setSelectedToolId}>
-                            <SelectTrigger className="bg-white">
-                                <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableTools.map(t => (
-                                    <SelectItem key={t.id} value={t.id}>
-                                        {t.code} - {t.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <SearchableSelect
+                            options={availableTools.map(t => ({ value: t.id, label: `${t.code} - ${t.name}` }))}
+                            value={selectedToolId}
+                            onChange={setSelectedToolId}
+                            placeholder="Buscar ferramenta..."
+                        />
                     </div>
                     <div>
                         <Label>Funcionário</Label>
-                        <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-                            <SelectTrigger className="bg-white">
-                                <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {employees.map(e => (
-                                    <SelectItem key={e.id} value={e.id}>
-                                        {e.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <SearchableSelect
+                            options={employees.map(e => ({ value: e.id, label: e.name }))}
+                            value={selectedEmployeeId}
+                            onChange={setSelectedEmployeeId}
+                            placeholder="Buscar funcionário..."
+                        />
                     </div>
                 </div>
 

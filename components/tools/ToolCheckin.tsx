@@ -5,6 +5,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -95,18 +96,12 @@ export function ToolCheckin() {
                     <>
                         <div>
                             <Label>Selecione a Ferramenta a devolver</Label>
-                            <Select value={selectedToolId} onValueChange={setSelectedToolId}>
-                                <SelectTrigger className="bg-white">
-                                    <SelectValue placeholder="Selecione..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {toolsInUse.map(t => (
-                                        <SelectItem key={t.id} value={t.id}>
-                                            {t.code} - {t.name} (Com: {getHolderName(t.currentHolderId)})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                                options={toolsInUse.map(t => ({ value: t.id, label: `${t.code} - ${t.name} (Com: ${getHolderName(t.currentHolderId)})` }))}
+                                value={selectedToolId}
+                                onChange={setSelectedToolId}
+                                placeholder="Buscar ferramenta devolvida..."
+                            />
                         </div>
 
                         <div>
