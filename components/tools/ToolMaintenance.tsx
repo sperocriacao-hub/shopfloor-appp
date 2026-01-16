@@ -131,7 +131,7 @@ export function ToolMaintenance() {
                                                                 <SelectItem value="in_progress">Em Progresso</SelectItem>
                                                                 <SelectItem value="waiting_parts">Aguardando Peças</SelectItem>
                                                                 <SelectItem value="completed" className="text-green-600 font-bold">Concluído (Disponibilizar)</SelectItem>
-                                                                <SelectItem value="condemned" className="text-red-600 font-bold">Condenar (Descarte)</SelectItem>
+                                                                <SelectItem value="condemned" className="text-red-600 font-bold">Lixo / Inativar (Sem Conserto)</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
@@ -177,7 +177,7 @@ export function ToolMaintenance() {
                                     <TableCell>{m.description}</TableCell>
                                     <TableCell>
                                         {m.status === 'condemned' ?
-                                            <Badge variant="destructive">Condenada</Badge> :
+                                            <Badge variant="destructive">Lixo / Descarte</Badge> :
                                             <Badge className="bg-green-100 text-green-800">Concluída</Badge>
                                         }
                                     </TableCell>

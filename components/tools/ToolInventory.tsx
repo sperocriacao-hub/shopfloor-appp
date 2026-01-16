@@ -6,12 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wrench, User, AlertTriangle, Search } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Wrench, User, AlertTriangle, Search, Trash2, Pencil } from "lucide-react";
 import { useState } from "react";
+import { Tool } from "@/types";
 
 export function ToolInventory() {
-    const { tools, employees } = useShopfloorStore();
+    const { tools, employees, updateTool, removeTool } = useShopfloorStore();
     const [searchTerm, setSearchTerm] = useState("");
+    const [editingTool, setEditingTool] = useState<Tool | null>(null);
+    const [editForm, setEditForm] = useState<Partial<Tool>>({});
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
     const [conditionFilter, setConditionFilter] = useState("all");
@@ -41,6 +46,18 @@ export function ToolInventory() {
             case 'scrapped': return <Badge variant="destructive">Descartada</Badge>;
             default: return <Badge variant="outline">{status}</Badge>;
         }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (confirm("Tem certeza que deseja excluir esta ferramenta?")) {
+            await removeTool(id);
+        }
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingTool) return;
+        await updateTool(editingTool.id, editForm);
+        setEditingTool(null);
     };
 
     return (
@@ -95,6 +112,7 @@ export function ToolInventory() {
                             <TableHead>Status</TableHead>
                             <TableHead>Local / Responsável</TableHead>
                             <TableHead>Condição</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -115,6 +133,71 @@ export function ToolInventory() {
                                     )}
                                 </TableCell>
                                 <TableCell className="capitalize">{tool.condition}</TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                        <Sheet open={editingTool?.id === tool.id} onOpenChange={(open) => {
+                                            if (open) {
+                                                setEditingTool(tool);
+                                                setEditForm({
+                                                    name: tool.name,
+                                                    category: tool.category,
+                                                    condition: tool.condition,
+                                                    location: tool.location
+                                                });
+                                            } else {
+                                                setEditingTool(null);
+                                            }
+                                        }}>
+                                            <SheetTrigger asChild>
+                                                <Button variant="ghost" size="sm"><Pencil className="h-4 w-4 text-blue-500" /></Button>
+                                            </SheetTrigger>
+                                            <SheetContent>
+                                                <SheetHeader>
+                                                    <SheetTitle>Editar Ferramenta</SheetTitle>
+                                                </SheetHeader>
+                                                <div className="grid gap-4 py-4">
+                                                    <div>
+                                                        <Label>Nome</Label>
+                                                        <Input value={editForm.name || ""} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                                                    </div>
+                                                    <div>
+                                                        <Label>Categoria</Label>
+                                                        <Select value={editForm.category} onValueChange={v => setEditForm({ ...editForm, category: v })}>
+                                                            <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="Manual">Manual</SelectItem>
+                                                                <SelectItem value="Elétrica">Elétrica</SelectItem>
+                                                                <SelectItem value="Bateria">Bateria</SelectItem>
+                                                                <SelectItem value="Pneumática">Pneumática</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div>
+                                                        <Label>Condição</Label>
+                                                        <Select value={editForm.condition} onValueChange={v => setEditForm({ ...editForm, condition: v as any })}>
+                                                            <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="new">Nova</SelectItem>
+                                                                <SelectItem value="good">Boa</SelectItem>
+                                                                <SelectItem value="fair">Razoável</SelectItem>
+                                                                <SelectItem value="poor">Ruim</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div>
+                                                        <Label>Localização (Padrão)</Label>
+                                                        <Input value={editForm.location || ""} onChange={e => setEditForm({ ...editForm, location: e.target.value })} />
+                                                    </div>
+                                                    <Button onClick={handleSaveEdit}>Salvar</Button>
+                                                </div>
+                                            </SheetContent>
+                                        </Sheet>
+
+                                        <Button variant="ghost" size="sm" onClick={() => handleDelete(tool.id)}>
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                    </div>
+                                </TableCell>
                             </TableRow>
                         ))}
                         {filteredTools.length === 0 && (

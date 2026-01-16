@@ -217,6 +217,7 @@ interface ShopfloorState {
 
     addTool: (tool: Tool) => Promise<void>;
     updateTool: (id: string, updates: Partial<Tool>) => Promise<void>;
+    removeTool: (id: string) => Promise<void>;
     addToolTransaction: (transaction: ToolTransaction) => Promise<void>;
     addToolMaintenance: (maintenance: ToolMaintenance) => Promise<void>;
     updateToolMaintenance: (id: string, updates: Partial<ToolMaintenance>) => Promise<void>;
@@ -876,6 +877,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.location) toUpdate.location = updates.location;
 
                 await supabase.from('tools').update(toUpdate).eq('id', id);
+            },
+
+            removeTool: async (id) => {
+                set(s => ({ tools: s.tools.filter(t => t.id !== id) }));
+                const { error } = await supabase.from('tools').delete().eq('id', id);
+                if (error) console.error("Error deleting tool:", error);
             },
 
             addToolTransaction: async (tx) => {
