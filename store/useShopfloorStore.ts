@@ -198,7 +198,7 @@ interface ShopfloorState {
     resolveIssue: (issueId: string, resolvedBy: string) => Promise<void>;
 
     // Shopfloor V5 Actions
-    addQualityCase: (qCase: QualityCase) => Promise<void>;
+    addQualityCase: (qCase: QualityCase) => Promise<{ error: any }>;
     updateQualityCase: (id: string, updates: Partial<QualityCase>) => Promise<void>;
     addQualityAction: (action: QualityAction) => Promise<void>;
     updateQualityAction: (id: string, updates: Partial<QualityAction>) => Promise<void>;
