@@ -251,7 +251,7 @@ export interface Tool {
     status: ToolStatus;
     condition: ToolCondition;
     currentHolderId?: string; // Employee ID
-    location: 'ferramentaria' | 'maintenance' | 'employee';
+    location: string; // 'ferramentaria', 'maintenance', 'employee', or specific shelf like 'A-01'
     purchaseDate?: string;
     lastMaintenance?: string;
 }
