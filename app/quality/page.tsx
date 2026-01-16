@@ -389,107 +389,113 @@ export default function QualityPage() {
                                 </Card>
                             ))}
                         </div>
+                    </TabsContent>
 
-                        <Dialog open={!!selectedSubject} onOpenChange={(open) => !open && setSelectedSubject(null)}>
-                            <DialogContent className="max-w-3xl">
-                                <DialogHeader>
-                                    <DialogTitle>Gerenciar Caso de Qualidade: {selectedSubject?.id}</DialogTitle>
-                                </DialogHeader>
-                                {selectedSubject && (
-                                    <div className="grid gap-6 py-4">
-                                        <div className="py-4">
-                                            <Tabs defaultValue="overview" className="w-full">
-                                                <TabsList className="grid w-full grid-cols-2">
-                                                    <TabsTrigger value="overview">Visão Geral & Evidências</TabsTrigger>
-                                                    <TabsTrigger value="analysis">Análise & Metodologia</TabsTrigger>
-                                                </TabsList>
-                                                <TabsContent value="overview" className="space-y-4 mt-4">
-                                                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg">
-                                                        <div>
-                                                            <h4 className="font-semibold text-sm text-slate-500">Resumo</h4>
-                                                            <p className="text-slate-900 line-clamp-3">{selectedSubject.description}</p>
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-semibold text-sm text-slate-500">Detalhes</h4>
-                                                            <ul className="text-sm text-slate-600 space-y-1">
-                                                                <li><strong>Asset:</strong> {assets.find(a => a.id === selectedSubject.assetId)?.name}</li>
-                                                                <li><strong>Tipo:</strong> {selectedSubject.type}</li>
-                                                                <li><strong>Severidade:</strong> {selectedSubject.severity}</li>
-                                                                <li><strong>Metodologia:</strong> {selectedSubject.methodology}</li>
-                                                                {selectedSubject.dueDate && (
-                                                                    <li><strong className="text-red-600">Prazo:</strong> {new Date(selectedSubject.dueDate).toLocaleDateString()}</li>
-                                                                )}
-                                                            </ul>
-                                                        </div>
-                                                    </div>
+                    <TabsContent value="reports" className="mt-6">
+                        <QualityReports />
+                    </TabsContent>
+                </Tabs>
 
-                                                    {selectedSubject.images && selectedSubject.images.length > 0 && (
-                                                        <div>
-                                                            <h4 className="font-semibold text-sm text-slate-500 mb-2">Evidências (Imagens)</h4>
-                                                            <div className="flex gap-2 overflow-x-auto pb-2">
-                                                                {selectedSubject.images.map((img, i) => (
-                                                                    <div key={i} className="h-32 w-32 shrink-0 border rounded-lg overflow-hidden bg-slate-100 relative group">
-                                                                        <img src={img} alt={`evidencia-${i}`} className="object-cover w-full h-full" />
-                                                                        <a href={img} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
-                                                                            Abrir
-                                                                        </a>
-                                                                    </div>
-                                                                ))}
+                <Dialog open={!!selectedSubject} onOpenChange={(open) => !open && setSelectedSubject(null)}>
+                    <DialogContent className="max-w-3xl">
+                        <DialogHeader>
+                            <DialogTitle>Gerenciar Caso de Qualidade: {selectedSubject?.id}</DialogTitle>
+                        </DialogHeader>
+                        {selectedSubject && (
+                            <div className="grid gap-6 py-4">
+                                <div className="py-4">
+                                    <Tabs defaultValue="overview" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-2">
+                                            <TabsTrigger value="overview">Visão Geral & Evidências</TabsTrigger>
+                                            <TabsTrigger value="analysis">Análise & Metodologia</TabsTrigger>
+                                        </TabsList>
+                                        <TabsContent value="overview" className="space-y-4 mt-4">
+                                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg">
+                                                <div>
+                                                    <h4 className="font-semibold text-sm text-slate-500">Resumo</h4>
+                                                    <p className="text-slate-900 line-clamp-3">{selectedSubject.description}</p>
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-sm text-slate-500">Detalhes</h4>
+                                                    <ul className="text-sm text-slate-600 space-y-1">
+                                                        <li><strong>Asset:</strong> {assets.find(a => a.id === selectedSubject.assetId)?.name}</li>
+                                                        <li><strong>Tipo:</strong> {selectedSubject.type}</li>
+                                                        <li><strong>Severidade:</strong> {selectedSubject.severity}</li>
+                                                        <li><strong>Metodologia:</strong> {selectedSubject.methodology}</li>
+                                                        {selectedSubject.dueDate && (
+                                                            <li><strong className="text-red-600">Prazo:</strong> {new Date(selectedSubject.dueDate).toLocaleDateString()}</li>
+                                                        )}
+                                                    </ul>
+                                                </div>
+                                            </div>
+
+                                            {selectedSubject.images && selectedSubject.images.length > 0 && (
+                                                <div>
+                                                    <h4 className="font-semibold text-sm text-slate-500 mb-2">Evidências (Imagens)</h4>
+                                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                                        {selectedSubject.images.map((img, i) => (
+                                                            <div key={i} className="h-32 w-32 shrink-0 border rounded-lg overflow-hidden bg-slate-100 relative group">
+                                                                <img src={img} alt={`evidencia-${i}`} className="object-cover w-full h-full" />
+                                                                <a href={img} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                                                                    Abrir
+                                                                </a>
                                                             </div>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="space-y-4">
-                                                        <h3 className="font-semibold flex items-center gap-2">
-                                                            <CheckCircle2 className="h-5 w-5 text-blue-600" />
-                                                            Mudar Status do Processo
-                                                        </h3>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {(['open', 'investigating', 'action_plan', 'monitoring', 'resolved'] as const).map(status => (
-                                                                <Button
-                                                                    key={status}
-                                                                    variant={selectedSubject.status === status ? "default" : "outline"}
-                                                                    className={selectedSubject.status === status ? "bg-blue-600" : ""}
-                                                                    onClick={async () => {
-                                                                        await updateQualityCase(selectedSubject.id, { status });
-                                                                        setSelectedSubject(prev => prev ? ({ ...prev, status }) : null);
-                                                                    }}
-                                                                >
-                                                                    {status.toUpperCase()}
-                                                                </Button>
-                                                            ))}
-                                                        </div>
+                                                        ))}
                                                     </div>
-                                                </TabsContent>
-                                                <TabsContent value="analysis" className="mt-4">
-                                                    <div className="space-y-2">
-                                                        <label className="text-sm font-medium">Análise de Causa Raiz ({selectedSubject.methodology.toUpperCase()})</label>
-                                                        <textarea
-                                                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[300px] font-mono"
-                                                            value={selectedSubject.description}
-                                                            onChange={(e) => {
-                                                                // Live update local state for editing
-                                                                setSelectedSubject({ ...selectedSubject, description: e.target.value });
-                                                            }}
-                                                            onBlur={async () => {
-                                                                // Save on blur
-                                                                await updateQualityCase(selectedSubject.id, { description: selectedSubject.description });
-                                                                toast("Análise atualizada!");
-                                                            }}
-                                                        />
-                                                        <p className="text-xs text-slate-500">As alterações são salvas automaticamente ao sair do campo.</p>
-                                                    </div>
-                                                </TabsContent>
-                                            </Tabs>
+                                                </div>
+                                            )}
 
-                                            <DialogFooter className="mt-4">
-                                                <Button onClick={() => setSelectedSubject(null)}>Fechar</Button>
-                                            </DialogFooter>
-                                        </div>
-                                    </div>
-                                )}
-                            </DialogContent>
-                        </Dialog>
-                    </div >
-                    );
+                                            <div className="space-y-4">
+                                                <h3 className="font-semibold flex items-center gap-2">
+                                                    <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                                                    Mudar Status do Processo
+                                                </h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {(['open', 'investigating', 'action_plan', 'monitoring', 'resolved'] as const).map(status => (
+                                                        <Button
+                                                            key={status}
+                                                            variant={selectedSubject.status === status ? "default" : "outline"}
+                                                            className={selectedSubject.status === status ? "bg-blue-600" : ""}
+                                                            onClick={async () => {
+                                                                await updateQualityCase(selectedSubject.id, { status });
+                                                                setSelectedSubject(prev => prev ? ({ ...prev, status }) : null);
+                                                            }}
+                                                        >
+                                                            {status.toUpperCase()}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </TabsContent>
+                                        <TabsContent value="analysis" className="mt-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium">Análise de Causa Raiz ({selectedSubject.methodology.toUpperCase()})</label>
+                                                <textarea
+                                                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[300px] font-mono"
+                                                    value={selectedSubject.description}
+                                                    onChange={(e) => {
+                                                        // Live update local state for editing
+                                                        setSelectedSubject({ ...selectedSubject, description: e.target.value });
+                                                    }}
+                                                    onBlur={async () => {
+                                                        // Save on blur
+                                                        await updateQualityCase(selectedSubject.id, { description: selectedSubject.description });
+                                                        toast("Análise atualizada!");
+                                                    }}
+                                                />
+                                                <p className="text-xs text-slate-500">As alterações são salvas automaticamente ao sair do campo.</p>
+                                            </div>
+                                        </TabsContent>
+                                    </Tabs>
+
+                                    <DialogFooter className="mt-4">
+                                        <Button onClick={() => setSelectedSubject(null)}>Fechar</Button>
+                                    </DialogFooter>
+                                </div>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+            </div >
+            );
 }
