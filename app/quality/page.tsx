@@ -497,5 +497,7 @@ export default function QualityPage() {
                     </DialogContent>
                 </Dialog>
             </div >
+        </div >
+        </div >
             );
 }
