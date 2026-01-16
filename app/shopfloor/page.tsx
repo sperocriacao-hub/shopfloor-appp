@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 export default function ShopfloorPage() {
     const {
@@ -195,18 +196,13 @@ export default function ShopfloorPage() {
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Selecione sua Estação</label>
-                            <Select onValueChange={setSelectedStationId} value={selectedStationId}>
-                                <SelectTrigger className="h-14 text-lg">
-                                    <SelectValue placeholder="Escolher Estação..." />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-[300px]">
-                                    {assets.map(asset => (
-                                        <SelectItem key={asset.id} value={asset.id}>
-                                            {asset.area} - {asset.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                                options={assets.map(asset => ({ value: asset.id, label: `${asset.area} - ${asset.name}` }))}
+                                value={selectedStationId}
+                                onChange={setSelectedStationId}
+                                placeholder="Escolher Estação..."
+                                className="h-14 text-lg"
+                            />
                         </div>
                         <Button
                             className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700"
@@ -500,17 +496,12 @@ export default function ShopfloorPage() {
                             {(issueForm.type === 'material' || issueForm.type === 'adjust') && (
                                 <div>
                                     <Label>Estação Causadora (Responsável)</Label>
-                                    <Select
+                                    <SearchableSelect
+                                        options={assets.map(a => ({ value: a.id, label: `${a.area} - ${a.name}` }))}
                                         value={issueForm.relatedStationId}
-                                        onValueChange={v => setIssueForm({ ...issueForm, relatedStationId: v })}
-                                    >
-                                        <SelectTrigger><SelectValue placeholder="Selecione quem causou..." /></SelectTrigger>
-                                        <SelectContent>
-                                            {assets.map(a => (
-                                                <SelectItem key={a.id} value={a.id}>{a.area} - {a.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                        onChange={v => setIssueForm({ ...issueForm, relatedStationId: v })}
+                                        placeholder="Selecione quem causou..."
+                                    />
                                 </div>
                             )}
 
