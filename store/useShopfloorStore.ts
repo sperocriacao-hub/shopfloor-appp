@@ -808,7 +808,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     description: qCase.description, type: qCase.type, severity: qCase.severity,
                     status: qCase.status, methodology: qCase.methodology, methodology_data: qCase.methodologyData
                 });
-                if (error) console.error("Error adding quality case:", error);
+                if (error) {
+                    console.error("Error adding quality case:", error);
+                    // Revert state if needed, or just let UI handle
+                }
+                return { error };
             },
 
             updateQualityCase: async (id, updates) => {
