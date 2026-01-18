@@ -36,7 +36,7 @@ export function ConsumablesList({ type, title }: ConsumablesListProps) {
 
         const matchesArea = areaFilter === "all" || tx.mappedAssetId === areaFilter;
 
-        const matchesArea = areaFilter === "all" || tx.mappedAssetId === areaFilter;
+
 
         const txDate = new Date(tx.date);
         const start = startDate ? new Date(startDate) : null;

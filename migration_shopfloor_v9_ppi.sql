@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS ppe_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Request Details
-    employee_id UUID REFERENCES employees(id), -- Who needs it?
+    employee_id TEXT REFERENCES employees(id), -- Who needs it? (TEXT to match ID type)
     asset_id TEXT REFERENCES assets(id), -- For which area? (Using TEXT to match asset_id type)
     
     -- Item Details
