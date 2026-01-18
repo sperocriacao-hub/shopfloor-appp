@@ -399,6 +399,18 @@ const mapDbToQualityAction = (db: any): QualityAction => ({
     completedAt: db.completed_at
 });
 
+const mapDbToToolMaintenance = (db: any): ToolMaintenance => ({
+    id: db.id,
+    toolId: db.tool_id,
+    description: db.description,
+    status: db.status,
+    cost: db.cost,
+    replacementRequested: db.replacement_requested,
+    technicianNotes: db.technician_notes,
+    createdAt: db.created_at,
+    completedAt: db.completed_at
+});
+
 const mapDbToScrapReport = (db: any): ScrapReport => ({
     id: db.id,
     orderId: db.order_id,
