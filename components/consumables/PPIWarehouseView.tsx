@@ -15,7 +15,7 @@ export function PPIWarehouseView() {
     // Show Pending first, then Processed
     const sortedRequests = [...ppeRequests].sort((a, b) => {
         // Sort by Status Priority: Pending > Processed > Delivered > Rejected
-        const statusPriority = { pending: 0, processed: 1, delivered: 2, rejected: 3 };
+        const statusPriority: Record<PpeRequest['status'], number> = { pending: 0, processed: 1, delivered: 2, rejected: 3 };
         if (statusPriority[a.status] !== statusPriority[b.status]) {
             return statusPriority[a.status] - statusPriority[b.status];
         }
