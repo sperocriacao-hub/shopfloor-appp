@@ -441,7 +441,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
             // Shopfloor V7 (Tools)
             tools: [],
             toolTransactions: [],
-            toolTransactions: [],
+
             toolMaintenances: [],
 
             // Shopfloor V8
