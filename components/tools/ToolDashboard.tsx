@@ -8,7 +8,7 @@ import { Wrench, CheckCircle, AlertTriangle, LayoutDashboard } from "lucide-reac
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export function ToolDashboard() {
-    const { tools, toolMaintenances } = useShopfloorStore();
+    const { tools, toolMaintenances, toolTransactions, employees } = useShopfloorStore();
 
     // 1. Tool Status Distribution
     const statusCounts = tools.reduce((acc, tool) => {
@@ -49,6 +49,48 @@ export function ToolDashboard() {
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
+
+    // 4. Tools by Area & Station (In Use only, as available tools are in Ferramentaria)
+    const toolsInUse = tools.filter(t => t.currentHolderId && t.status === 'in_use');
+
+    const areaCounts = toolsInUse.reduce((acc, tool) => {
+        const holder = employees.find(e => e.id === tool.currentHolderId);
+        if (holder && holder.area) {
+            acc[holder.area] = (acc[holder.area] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    const areaData = Object.entries(areaCounts).map(([name, value]) => ({ name, value }));
+
+    const stationCounts = toolsInUse.reduce((acc, tool) => {
+        const holder = employees.find(e => e.id === tool.currentHolderId);
+        if (holder && holder.workstation) {
+            acc[holder.workstation] = (acc[holder.workstation] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    const stationData = Object.entries(stationCounts).map(([name, value]) => ({ name, value }));
+
+    // 5. Top Employees Sending to Maintenance (Damage)
+    // Filter transactions where action is 'maintenance_out' (sending to maintenance)
+    // Note: 'maintenance_out' implies the tool came from an employee or was checked out.
+    // Ideally, we track who had it last.
+    // If 'maintenance_out' is logged, check if it has an employeeId.
+    const damageCounts = toolTransactions
+        .filter(tx => tx.action === 'maintenance_out' && tx.employeeId)
+        .reduce((acc, tx) => {
+            const empName = employees.find(e => e.id === tx.employeeId)?.name || "Desconhecido";
+            acc[empName] = (acc[empName] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+    const employeeDamageData = Object.entries(damageCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
 
     return (
         <div className="space-y-6">
@@ -136,6 +178,48 @@ export function ToolDashboard() {
                         ) : (
                             <div className="flex items-center justify-center h-full text-slate-400">
                                 Sem histórico suficiente.
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="h-[350px]">
+                    <CardHeader>
+                        <CardTitle>Ferramentas por Área (Em Uso)</CardTitle>
+                        <CardDescription>Onde as ferramentas estão agora.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={areaData}>
+                                <XAxis dataKey="name" fontSize={12} />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                <Card className="h-[350px]">
+                    <CardHeader>
+                        <CardTitle>Envios p/ Manutenção por Funcionário</CardTitle>
+                        <CardDescription>Quem mais envia ferramentas para conserto.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[250px]">
+                        {employeeDamageData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={employeeDamageData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                                    <Tooltip />
+                                    <Bar dataKey="count" fill="#f43f5e" radius={[0, 4, 4, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-slate-400">
+                                Sem dados de danos por funcionário.
                             </div>
                         )}
                     </CardContent>

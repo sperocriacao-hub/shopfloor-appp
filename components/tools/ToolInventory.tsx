@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
-import { Wrench, User, AlertTriangle, Search, Trash2, Pencil } from "lucide-react";
+import { Wrench, User, AlertTriangle, Search, Trash2, Pencil, Printer } from "lucide-react";
 import { useState } from "react";
 import { Tool } from "@/types";
 
@@ -21,17 +21,57 @@ export function ToolInventory() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [conditionFilter, setConditionFilter] = useState("all");
 
+    const [areaFilter, setAreaFilter] = useState("all");
+    const [stationFilter, setStationFilter] = useState("all");
+
+    // Extract unique areas and stations from employees for filters
+    const uniqueAreas = Array.from(new Set(employees.map(e => e.area).filter(Boolean)));
+    // For station, we might want to filter based on selected area, but global unique list is fine for now
+    const uniqueStations = Array.from(new Set(employees.map(e => e.workstation).filter(Boolean)));
+
     const filteredTools = tools.filter(tool => {
+        const holder = employees.find(e => e.id === tool.currentHolderId);
+        
         const matchesSearch =
             tool.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
             tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (employees.find(e => e.id === tool.currentHolderId)?.name || "").toLowerCase().includes(searchTerm.toLowerCase());
+            (holder?.name || "").toLowerCase().includes(searchTerm.toLowerCase());
+            
         const matchesCategory = categoryFilter === "all" || tool.category === categoryFilter;
         const matchesStatus = statusFilter === "all" || tool.status === statusFilter;
         const matchesCondition = conditionFilter === "all" || tool.condition === conditionFilter;
+        
+        // Location Filters (Automatic link to Employee Data)
+        const matchesArea = areaFilter === "all" || (holder && holder.area === areaFilter);
+        const matchesStation = stationFilter === "all" || (holder && holder.workstation === stationFilter);
 
-        return matchesSearch && matchesCategory && matchesStatus && matchesCondition;
+        return matchesSearch && matchesCategory && matchesStatus && matchesCondition && matchesArea && matchesStation;
     });
+
+    const handlePrint = () => {
+        const printContent = document.getElementById("tool-inventory-table");
+        if (printContent) {
+            const win = window.open("", "", "height=700,width=1000");
+            if (win) {
+                win.document.write("<html><head><title>Inventário de Ferramentas</title>");
+                // Minimal CSS for print
+                win.document.write(`<style>
+                    body { font-family: sans-serif; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+                    th { background-color: #f2f2f2; }
+                    .no-print { display: none; }
+                </style>`);
+                win.document.write("</head><body>");
+                win.document.write("<h1>Inventário de Ferramentas</h1>");
+                win.document.write(`<p>Filtros: Categoria=${categoryFilter}, Status=${statusFilter}, Área=${areaFilter}</p>`);
+                win.document.write(printContent.outerHTML);
+                win.document.write("</body></html>");
+                win.document.close();
+                win.print();
+            }
+        }
+    };
 
     const getHolderName = (id?: string) => {
         if (!id) return "-";
@@ -100,6 +140,31 @@ export function ToolInventory() {
                         <SelectItem value="poor">Ruim</SelectItem>
                     </SelectContent>
                 </Select>
+
+                <Select value={areaFilter} onValueChange={setAreaFilter}>
+                    <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Área (RH)" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas Áreas</SelectItem>
+                        {uniqueAreas.map(area => (
+                            <SelectItem key={area} value={area}>{area}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                <Select value={stationFilter} onValueChange={setStationFilter}>
+                    <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Estação (RH)" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas Estações</SelectItem>
+                        {uniqueStations.map(st => (
+                            <SelectItem key={st} value={st}>{st}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                <Button variant="outline" onClick={handlePrint}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Imprimir
+                </Button>
             </div>
 
             <div className="border rounded-md">
@@ -110,7 +175,7 @@ export function ToolInventory() {
                             <TableHead>Ferramenta</TableHead>
                             <TableHead>Categoria</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>Local / Responsável</TableHead>
+                            <TableHead>Responsável & Localização (RH)</TableHead>
                             <TableHead>Condição</TableHead>
                             <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
