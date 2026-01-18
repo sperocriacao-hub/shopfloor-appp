@@ -31,16 +31,16 @@ export function ToolInventory() {
 
     const filteredTools = tools.filter(tool => {
         const holder = employees.find(e => e.id === tool.currentHolderId);
-        
+
         const matchesSearch =
             tool.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
             tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (holder?.name || "").toLowerCase().includes(searchTerm.toLowerCase());
-            
+
         const matchesCategory = categoryFilter === "all" || tool.category === categoryFilter;
         const matchesStatus = statusFilter === "all" || tool.status === statusFilter;
         const matchesCondition = conditionFilter === "all" || tool.condition === conditionFilter;
-        
+
         // Location Filters (Automatic link to Employee Data)
         const matchesArea = areaFilter === "all" || (holder && holder.area === areaFilter);
         const matchesStation = stationFilter === "all" || (holder && holder.workstation === stationFilter);
@@ -113,7 +113,7 @@ export function ToolInventory() {
                 </div>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Categoria" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                         <SelectItem value="all">Todas Cat.</SelectItem>
                         <SelectItem value="Manual">Manual</SelectItem>
                         <SelectItem value="Elétrica">Elétrica</SelectItem>
@@ -123,7 +123,7 @@ export function ToolInventory() {
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Status" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                         <SelectItem value="all">Todos Status</SelectItem>
                         <SelectItem value="available">Disponível</SelectItem>
                         <SelectItem value="in_use">Em Uso</SelectItem>
@@ -132,7 +132,7 @@ export function ToolInventory() {
                 </Select>
                 <Select value={conditionFilter} onValueChange={setConditionFilter}>
                     <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Condição" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                         <SelectItem value="all">Todas Cond.</SelectItem>
                         <SelectItem value="new">Nova</SelectItem>
                         <SelectItem value="good">Boa</SelectItem>
@@ -143,7 +143,7 @@ export function ToolInventory() {
 
                 <Select value={areaFilter} onValueChange={setAreaFilter}>
                     <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Área (RH)" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                         <SelectItem value="all">Todas Áreas</SelectItem>
                         {uniqueAreas.map(area => (
                             <SelectItem key={area} value={area}>{area}</SelectItem>
@@ -153,7 +153,7 @@ export function ToolInventory() {
 
                 <Select value={stationFilter} onValueChange={setStationFilter}>
                     <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Estação (RH)" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                         <SelectItem value="all">Todas Estações</SelectItem>
                         {uniqueStations.map(st => (
                             <SelectItem key={st} value={st}>{st}</SelectItem>
@@ -168,7 +168,7 @@ export function ToolInventory() {
             </div>
 
             <div className="border rounded-md">
-                <Table>
+                <Table id="tool-inventory-table">
                     <TableHeader>
                         <TableRow>
                             <TableHead>Código</TableHead>
@@ -229,7 +229,7 @@ export function ToolInventory() {
                                                         <Label>Categoria</Label>
                                                         <Select value={editForm.category} onValueChange={v => setEditForm({ ...editForm, category: v })}>
                                                             <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                                                            <SelectContent>
+                                                            <SelectContent className="bg-white">
                                                                 <SelectItem value="Manual">Manual</SelectItem>
                                                                 <SelectItem value="Elétrica">Elétrica</SelectItem>
                                                                 <SelectItem value="Bateria">Bateria</SelectItem>
@@ -241,7 +241,7 @@ export function ToolInventory() {
                                                         <Label>Condição</Label>
                                                         <Select value={editForm.condition} onValueChange={v => setEditForm({ ...editForm, condition: v as any })}>
                                                             <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                                                            <SelectContent>
+                                                            <SelectContent className="bg-white">
                                                                 <SelectItem value="new">Nova</SelectItem>
                                                                 <SelectItem value="good">Boa</SelectItem>
                                                                 <SelectItem value="fair">Razoável</SelectItem>
