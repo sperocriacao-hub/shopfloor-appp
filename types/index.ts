@@ -278,3 +278,33 @@ export interface ToolMaintenance {
     createdAt: string;
     completedAt?: string;
 }
+
+// --- Consumables Management (AS400 Integration) ---
+export interface CostCenterMapping {
+    id: string;
+    customerCode: string;
+    description: string;
+    assetId?: string; // Mapped Shopfloor Area
+}
+
+export interface ConsumableTransaction {
+    id: string;
+    importId: string;
+    date: string; // YYYY-MM-DD
+    week?: number;
+    orderNumber?: string;
+    imsNumber?: string;
+    customerCode: string; // From AS400 "Customer"
+    areaSource: string;   // From AS400 "Area"
+    prodLine: 'INT' | 'PCS' | 'PPI' | 'PST' | string;
+    partNumber?: string;
+    partDescription?: string;
+    quantity: number;
+    unitCost: number;
+    extensionCost: number;
+    userAs400?: string;
+
+    // Computed / Mapped
+    mappedAssetId?: string;
+    mappedEmployeeId?: string;
+}

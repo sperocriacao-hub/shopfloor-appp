@@ -6,7 +6,8 @@ import {
     OrderStatus, AssetStatus, AbsenteeismRecord,
     ProductOption, OptionTask, OrderIssue, TaskExecution,
     QualityCase, QualityAction, ScrapReport,
-    Tool, ToolTransaction, ToolMaintenance
+    Tool, ToolTransaction, ToolMaintenance,
+    ConsumableTransaction, CostCenterMapping
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -223,6 +224,13 @@ interface ShopfloorState {
     updateToolMaintenance: (id: string, updates: Partial<ToolMaintenance>) => Promise<void>;
 
     syncData: () => Promise<void>;
+
+    // Shopfloor V8 (Consumables)
+    consumableTransactions: ConsumableTransaction[];
+    costCenterMappings: CostCenterMapping[];
+    addCostCenterMapping: (mapping: CostCenterMapping) => Promise<void>;
+    updateCostCenterMapping: (id: string, updates: Partial<CostCenterMapping>) => Promise<void>;
+    importConsumablesBatch: (transactions: ConsumableTransaction[]) => Promise<void>;
 }
 
 const mapDbToEmployee = (dbEmp: any): Employee => ({
@@ -339,6 +347,33 @@ const mapDbToEvent = (db: any): ProductionEvent => ({
     reason: db.reason
 });
 
+const mapDbToCostCenter = (db: any): CostCenterMapping => ({
+    id: db.id,
+    customerCode: db.customer_code,
+    description: db.description,
+    assetId: db.asset_id
+});
+
+const mapDbToConsumable = (db: any): ConsumableTransaction => ({
+    id: db.id,
+    importId: db.import_id,
+    date: db.date,
+    week: db.week,
+    orderNumber: db.order_number,
+    imsNumber: db.ims_number,
+    customerCode: db.customer_code,
+    areaSource: db.area_source,
+    prodLine: db.prod_line,
+    partNumber: db.part_number,
+    partDescription: db.part_description,
+    quantity: db.quantity,
+    unitCost: db.unit_cost,
+    extensionCost: db.extension_cost,
+    userAs400: db.user_as400,
+    mappedAssetId: db.mapped_asset_id,
+    mappedEmployeeId: db.mapped_employee_id
+});
+
 // V5 Helpers
 const mapDbToQualityCase = (db: any): QualityCase => ({
     id: db.id,
@@ -406,7 +441,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
             // Shopfloor V7 (Tools)
             tools: [],
             toolTransactions: [],
+            toolTransactions: [],
             toolMaintenances: [],
+
+            // Shopfloor V8
+            consumableTransactions: [],
+            costCenterMappings: [],
 
             // Actions
             addAsset: async (asset) => {
@@ -800,6 +840,58 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     .eq('id', issueId);
             },
 
+            // --- Consumables Actions ---
+            addCostCenterMapping: async (mapping) => {
+                set(s => ({ costCenterMappings: [...s.costCenterMappings, mapping] }));
+                const { error } = await supabase.from('cost_center_mappings').insert({
+                    id: mapping.id, customer_code: mapping.customerCode, description: mapping.description, asset_id: mapping.assetId
+                });
+                if (error) console.error("Error adding CC mapping:", error);
+            },
+
+            updateCostCenterMapping: async (id, updates) => {
+                set(s => ({
+                    costCenterMappings: s.costCenterMappings.map(m => m.id === id ? { ...m, ...updates } : m)
+                }));
+                const toUpdate: any = {};
+                if (updates.description) toUpdate.description = updates.description;
+                if (updates.assetId) toUpdate.asset_id = updates.assetId;
+
+                if (Object.keys(toUpdate).length > 0) {
+                    const { error } = await supabase.from('cost_center_mappings').update(toUpdate).eq('id', id);
+                    if (error) console.error("Error updating CC mapping:", error);
+                }
+            },
+
+            importConsumablesBatch: async (transactions) => {
+                // Optimistic UI update might be too heavy for large batches, so we might skip it or just append
+                set(s => ({ consumableTransactions: [...s.consumableTransactions, ...transactions] }));
+
+                const dbTransactions = transactions.map(t => ({
+                    id: t.id,
+                    import_id: t.importId,
+                    date: t.date,
+                    week: t.week,
+                    order_number: t.orderNumber,
+                    ims_number: t.imsNumber,
+                    customer_code: t.customerCode,
+                    area_source: t.areaSource,
+                    prod_line: t.prodLine,
+                    part_number: t.partNumber,
+                    part_description: t.partDescription,
+                    quantity: t.quantity,
+                    unit_cost: t.unitCost,
+                    extension_cost: t.extensionCost,
+                    user_as400: t.userAs400,
+                    mapped_asset_id: t.mappedAssetId,
+                    mapped_employee_id: t.mappedEmployeeId
+                }));
+
+                const { error } = await supabase.from('consumable_transactions').insert(dbTransactions);
+                if (error) console.error("Error importing consumables:", error);
+            },
+
+
             // --- Shopfloor V5 Actions ---
             addQualityCase: async (qCase) => {
                 set(s => ({ qualityCases: [...s.qualityCases, qCase] }));
@@ -996,15 +1088,17 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     }))
                 });
 
+                // Tool Maintenance
                 const { data: toolMaint } = await supabase.from('tool_maintenance').select('*');
-                if (toolMaint) set({
-                    toolMaintenances: toolMaint.map((t: any) => ({
-                        id: t.id, toolId: t.tool_id, description: t.description, status: t.status,
-                        cost: t.cost, replacementRequested: t.replacement_requested,
-                        technicianNotes: t.technician_notes, createdAt: t.created_at, completedAt: t.completed_at
-                    }))
-                });
-                if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
+                if (toolMaint) set({ toolMaintenances: toolMaint.map(mapDbToToolMaintenance) });
+
+                // Consumables (Limit to recent? For now all)
+                const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
+                if (ccMap) set({ costCenterMappings: ccMap.map(mapDbToCostCenter) });
+
+                // Check performance here later - maybe only fetch last 3 months
+                const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
+                if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
 
                 // Fetch Order Options Pivot and Map to Orders
                 // Fetch Order Options Pivot and Map to Orders

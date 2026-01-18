@@ -32,6 +32,7 @@ export function Sidebar() {
         { name: 'Ordens de Produção', href: '/orders', icon: Activity },
         { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes },
         { name: 'Engenharia', href: '/products', icon: Settings },
+        { name: 'Materiais (AS400)', href: '/consumables', icon: Package },
         { name: 'Recursos Humanos', href: '/staff', icon: Users },
         { name: 'Qualidade', href: '/quality', icon: Microscope },
         { name: 'Ferramentaria', href: '/tools', icon: Wrench },
