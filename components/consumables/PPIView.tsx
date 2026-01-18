@@ -8,6 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Search, User, Eye } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PPIRequestModal } from "./PPIRequestModal";
+import { PPIWarehouseView } from "./PPIWarehouseView";
+import { PPIReports } from "./PPIReports";
 
 export function PPIView() {
     const { consumableTransactions, employees } = useShopfloorStore();
@@ -58,87 +62,107 @@ export function PPIView() {
         .filter(emp => emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || String(emp.workerNumber).includes(searchTerm));
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-4">
-                <Input
-                    placeholder="Buscar funcionário..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="max-w-md bg-white"
-                />
+        <Tabs defaultValue="analytics" className="w-full space-y-4">
+            <div className="flex justify-between items-center">
+                <TabsList>
+                    <TabsTrigger value="analytics">Análise de Consumo</TabsTrigger>
+                    <TabsTrigger value="requests">Gestão de Pedidos</TabsTrigger>
+                    <TabsTrigger value="reports">Relatórios</TabsTrigger>
+                </TabsList>
+                <PPIRequestModal />
+            </div>
 
-                <div className="flex items-center gap-2">
+            <TabsContent value="analytics" className="space-y-4">
+                {/* Search & Date Filter Bar */}
+                <div className="flex items-center gap-4">
                     <Input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-[140px] bg-white"
+                        placeholder="Buscar funcionário..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="max-w-md bg-white"
                     />
-                    <span className="text-slate-400">-</span>
-                    <Input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-[140px] bg-white"
-                    />
+                    
+                    <div className="flex items-center gap-2">
+                        <Input 
+                            type="date" 
+                            value={startDate} 
+                            onChange={(e) => setStartDate(e.target.value)} 
+                            className="w-[140px] bg-white"
+                        />
+                        <span className="text-slate-400">-</span>
+                        <Input 
+                            type="date" 
+                            value={endDate} 
+                            onChange={(e) => setEndDate(e.target.value)} 
+                            className="w-[140px] bg-white"
+                        />
+                    </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {employeeList.map((emp) => (
-                    <Card key={emp.id} className="hover:shadow-md transition-shadow">
-                        <CardHeader className="py-4 pb-2">
-                            <CardTitle className="text-base flex justify-between items-start">
-                                <div className="flex gap-2 items-center">
-                                    <User className="h-4 w-4 text-blue-500" />
-                                    <span className="truncate max-w-[180px]" title={emp.name}>{emp.name}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {employeeList.map((emp) => (
+                        <Card key={emp.id} className="hover:shadow-md transition-shadow">
+                            <CardHeader className="py-4 pb-2">
+                                <CardTitle className="text-base flex justify-between items-start">
+                                    <div className="flex gap-2 items-center">
+                                        <User className="h-4 w-4 text-blue-500" />
+                                        <span className="truncate max-w-[180px]" title={emp.name}>{emp.name}</span>
+                                    </div>
+                                    <span className="text-green-600 font-bold">€ {emp.totalCost.toFixed(2)}</span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pb-4">
+                                <div className="text-sm text-slate-500 mb-2">
+                                    {emp.jobTitle} • {emp.itemCount} itens
                                 </div>
-                                <span className="text-green-600 font-bold">€ {emp.totalCost.toFixed(2)}</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pb-4">
-                            <div className="text-sm text-slate-500 mb-2">
-                                {emp.jobTitle} • {emp.itemCount} itens
-                            </div>
 
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="w-full">
-                                        <Eye className="mr-2 h-3 w-3" /> Ver Detalhes
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                                    <DialogHeader>
-                                        <DialogTitle>Consumo de EPIs: {emp.name}</DialogTitle>
-                                    </DialogHeader>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Data</TableHead>
-                                                <TableHead>Item</TableHead>
-                                                <TableHead>Descrição</TableHead>
-                                                <TableHead className="text-right">Qtd</TableHead>
-                                                <TableHead className="text-right">Custo</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {emp.transactions.map((tx: any) => (
-                                                <TableRow key={tx.id}>
-                                                    <TableCell>{tx.date}</TableCell>
-                                                    <TableCell className="font-mono text-xs">{tx.partNumber}</TableCell>
-                                                    <TableCell>{tx.partDescription}</TableCell>
-                                                    <TableCell className="text-right">{tx.quantity}</TableCell>
-                                                    <TableCell className="text-right">€ {tx.extensionCost.toFixed(2)}</TableCell>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm" className="w-full">
+                                            <Eye className="mr-2 h-3 w-3" /> Ver Detalhes
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                                        <DialogHeader>
+                                            <DialogTitle>Consumo de EPIs: {emp.name}</DialogTitle>
+                                        </DialogHeader>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Data</TableHead>
+                                                    <TableHead>Item</TableHead>
+                                                    <TableHead>Descrição</TableHead>
+                                                    <TableHead className="text-right">Qtd</TableHead>
+                                                    <TableHead className="text-right">Custo</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </DialogContent>
-                            </Dialog>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        </div>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {emp.transactions.map((tx: any) => (
+                                                    <TableRow key={tx.id}>
+                                                        <TableCell>{tx.date}</TableCell>
+                                                        <TableCell className="font-mono text-xs">{tx.partNumber}</TableCell>
+                                                        <TableCell>{tx.partDescription}</TableCell>
+                                                        <TableCell className="text-right">{tx.quantity}</TableCell>
+                                                        <TableCell className="text-right">€ {tx.extensionCost.toFixed(2)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </TabsContent>
+
+            <TabsContent value="requests">
+                <PPIWarehouseView />
+            </TabsContent>
+
+            <TabsContent value="reports">
+                <PPIReports />
+            </TabsContent>
+        </Tabs>
     );
 }
