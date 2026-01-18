@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS consumable_transactions (
     
     -- Mapped Fields (Filled by logic)
     mapped_asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
-    mapped_employee_id UUID REFERENCES employees(id) ON DELETE SET NULL,
+    mapped_employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
