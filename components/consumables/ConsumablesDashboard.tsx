@@ -93,7 +93,7 @@ export function ConsumablesDashboard() {
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip formatter={(value: number) => `€ ${value.toFixed(2)}`} />
+                                <Tooltip formatter={(value: any) => `€ ${Number(value).toFixed(2)}`} />
                             </PieChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -109,7 +109,7 @@ export function ConsumablesDashboard() {
                             <BarChart data={assetData} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 11 }} />
-                                <Tooltip formatter={(value: number) => `€ ${value.toFixed(2)}`} />
+                                <Tooltip formatter={(value: any) => `€ ${Number(value).toFixed(2)}`} />
                                 <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
