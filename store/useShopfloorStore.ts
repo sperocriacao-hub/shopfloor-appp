@@ -363,7 +363,7 @@ const mapDbToConsumable = (db: any): ConsumableTransaction => ({
     imsNumber: db.ims_number,
     customerCode: db.customer_code,
     areaSource: db.area_source,
-    prodLine: db.prod_line,
+    prodLine: db.prod_line ? db.prod_line.trim().toUpperCase() : '',
     partNumber: db.part_number,
     partDescription: db.part_description,
     quantity: db.quantity,

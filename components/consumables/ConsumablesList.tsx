@@ -18,6 +18,8 @@ export function ConsumablesList({ type, title }: ConsumablesListProps) {
     const { consumableTransactions, assets, costCenterMappings } = useShopfloorStore();
     const [searchTerm, setSearchTerm] = useState("");
     const [areaFilter, setAreaFilter] = useState("all");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     // Filter by Type
     const baseData = consumableTransactions.filter(tx => tx.prodLine === type);
@@ -34,7 +36,15 @@ export function ConsumablesList({ type, title }: ConsumablesListProps) {
 
         const matchesArea = areaFilter === "all" || tx.mappedAssetId === areaFilter;
 
-        return matchesSearch && matchesArea;
+        const matchesArea = areaFilter === "all" || tx.mappedAssetId === areaFilter;
+
+        const txDate = new Date(tx.date);
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
+        const matchesDate = (!start || txDate >= start) && (!end || txDate <= end);
+
+        return matchesSearch && matchesArea && matchesDate;
     });
 
     const totalCost = filteredData.reduce((sum, tx) => sum + tx.extensionCost, 0);
@@ -87,6 +97,22 @@ export function ConsumablesList({ type, title }: ConsumablesListProps) {
                             ))}
                         </SelectContent>
                     </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-[140px] bg-white"
+                    />
+                    <span className="text-slate-400">-</span>
+                    <Input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-[140px] bg-white"
+                    />
                 </div>
 
                 <div className="flex items-center gap-4">

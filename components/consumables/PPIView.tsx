@@ -12,9 +12,21 @@ import { Search, User, Eye } from "lucide-react";
 export function PPIView() {
     const { consumableTransactions, employees } = useShopfloorStore();
     const [searchTerm, setSearchTerm] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     // Filter only PPI transactions
-    const ppiTransactions = consumableTransactions.filter(tx => tx.prodLine === 'PPI');
+    const ppiTransactions = consumableTransactions.filter(tx => {
+        const isPPI = tx.prodLine === 'PPI';
+        if (!isPPI) return false;
+
+        const txDate = new Date(tx.date);
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
+        const matchesDate = (!start || txDate >= start) && (!end || txDate <= end);
+        return matchesDate;
+    });
 
     // Group by Employee (mappedEmployeeId or areaSource fallback)
     const groupedData = ppiTransactions.reduce((acc, tx) => {
@@ -54,6 +66,22 @@ export function PPIView() {
                     onChange={e => setSearchTerm(e.target.value)}
                     className="max-w-md bg-white"
                 />
+
+                <div className="flex items-center gap-2">
+                    <Input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-[140px] bg-white"
+                    />
+                    <span className="text-slate-400">-</span>
+                    <Input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-[140px] bg-white"
+                    />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
