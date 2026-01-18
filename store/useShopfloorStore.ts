@@ -228,9 +228,12 @@ interface ShopfloorState {
     // Shopfloor V8 (Consumables)
     consumableTransactions: ConsumableTransaction[];
     costCenterMappings: CostCenterMapping[];
+    ppeRequests: PpeRequest[];
     addCostCenterMapping: (mapping: CostCenterMapping) => Promise<void>;
     updateCostCenterMapping: (id: string, updates: Partial<CostCenterMapping>) => Promise<void>;
     importConsumablesBatch: (transactions: ConsumableTransaction[]) => Promise<void>;
+    addPpeRequest: (req: PpeRequest) => Promise<void>;
+    updatePpeRequest: (id: string, updates: Partial<PpeRequest>) => Promise<void>;
 }
 
 const mapDbToEmployee = (dbEmp: any): Employee => ({
