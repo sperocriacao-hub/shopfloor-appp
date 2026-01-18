@@ -425,6 +425,21 @@ const mapDbToScrapReport = (db: any): ScrapReport => ({
     createdAt: db.created_at
 });
 
+const mapDbToPpeRequest = (db: any): PpeRequest => ({
+    id: db.id,
+    employeeId: db.employee_id,
+    assetId: db.asset_id,
+    itemName: db.item_name,
+    partNumber: db.part_number,
+    quantity: db.quantity,
+    unitCost: db.unit_cost,
+    status: db.status,
+    requestDate: db.request_date,
+    processedAt: db.processed_at,
+    processedBy: db.processed_by,
+    notes: db.notes
+});
+
 export const useShopfloorStore = create<ShopfloorState>()(
     persist(
         (set, get) => ({
@@ -458,7 +473,9 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
             // Shopfloor V8
             consumableTransactions: [],
+            consumableTransactions: [],
             costCenterMappings: [],
+            ppeRequests: [],
 
             // Actions
             addAsset: async (asset) => {
@@ -867,7 +884,9 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 }));
                 const toUpdate: any = {};
                 if (updates.description) toUpdate.description = updates.description;
-                if (updates.assetId) toUpdate.asset_id = updates.assetId;
+                if (updates.assetId !== undefined) {
+                    toUpdate.asset_id = updates.assetId === "" ? null : updates.assetId;
+                }
 
                 if (Object.keys(toUpdate).length > 0) {
                     const { error } = await supabase.from('cost_center_mappings').update(toUpdate).eq('id', id);
@@ -901,6 +920,34 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
                 const { error } = await supabase.from('consumable_transactions').insert(dbTransactions);
                 if (error) console.error("Error importing consumables:", error);
+                const { error } = await supabase.from('consumable_transactions').insert(dbTransactions);
+                if (error) console.error("Error importing consumables:", error);
+            },
+
+            addPpeRequest: async (req) => {
+                set(s => ({ ppeRequests: [...s.ppeRequests, req] }));
+                const { error } = await supabase.from('ppe_requests').insert({
+                    id: req.id, employee_id: req.employeeId, asset_id: req.assetId,
+                    item_name: req.itemName, part_number: req.partNumber, quantity: req.quantity,
+                    unit_cost: req.unitCost, status: req.status, request_date: req.requestDate, notes: req.notes
+                });
+                if (error) console.error("Error adding PPI request:", error);
+            },
+
+            updatePpeRequest: async (id, updates) => {
+                set(s => ({
+                    ppeRequests: s.ppeRequests.map(r => r.id === id ? { ...r, ...updates } : r)
+                }));
+                const toUpdate: any = {};
+                if (updates.status) toUpdate.status = updates.status;
+                if (updates.processedBy) {
+                    toUpdate.processed_by = updates.processedBy;
+                    toUpdate.processed_at = new Date().toISOString();
+                }
+
+                if (Object.keys(toUpdate).length > 0) {
+                    await supabase.from('ppe_requests').update(toUpdate).eq('id', id);
+                }
             },
 
 
@@ -1106,7 +1153,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
                 // Consumables (Limit to recent? For now all)
                 const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
+                const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
                 if (ccMap) set({ costCenterMappings: ccMap.map(mapDbToCostCenter) });
+
+                // PPI Requests
+                const { data: ppiReqs } = await supabase.from('ppe_requests').select('*');
+                if (ppiReqs) set({ ppeRequests: ppiReqs.map(mapDbToPpeRequest) });
 
                 // Check performance here later - maybe only fetch last 3 months
                 const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);

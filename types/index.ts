@@ -287,6 +287,21 @@ export interface CostCenterMapping {
     assetId?: string; // Mapped Shopfloor Area
 }
 
+export interface PpeRequest {
+    id: string;
+    employeeId?: string;
+    assetId?: string; // Area needing the item
+    itemName: string;
+    partNumber?: string;
+    quantity: number;
+    unitCost?: number;
+    status: 'pending' | 'processed' | 'delivered' | 'rejected';
+    requestDate: string; // ISO Date
+    processedAt?: string;
+    processedBy?: string;
+    notes?: string;
+}
+
 export interface ConsumableTransaction {
     id: string;
     importId: string;
