@@ -152,11 +152,18 @@ export function ConsumablesList({ type, title }: ConsumablesListProps) {
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    {row.mappedAssetId ? (
-                                        assets.find(a => a.id === row.mappedAssetId)?.name
-                                    ) : (
-                                        <span className="text-orange-400 text-xs italic">Não Mapeado</span>
-                                    )}
+                                    {(() => {
+                                        // Resolve dynamic mapping first, then fallback to stored
+                                        const mappingConfig = costCenterMappings.find(m => m.customerCode === row.customerCode);
+                                        const resolvedAssetId = mappingConfig?.assetId || row.mappedAssetId;
+                                        const assetName = resolvedAssetId ? assets.find(a => a.id === resolvedAssetId)?.name : null;
+
+                                        return assetName ? (
+                                            <span className="font-medium text-slate-700">{assetName}</span>
+                                        ) : (
+                                            <span className="text-orange-400 text-xs italic">Não Mapeado</span>
+                                        );
+                                    })()}
                                 </TableCell>
                                 <TableCell className="font-mono text-xs">{row.partNumber}</TableCell>
                                 <TableCell className="max-w-[300px] truncate" title={row.partDescription}>{row.partDescription}</TableCell>
