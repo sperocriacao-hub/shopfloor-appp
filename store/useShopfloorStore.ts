@@ -1155,7 +1155,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
                 // Consumables (Limit to recent? For now all)
                 const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
-                const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
+
                 if (ccMap) set({ costCenterMappings: ccMap.map(mapDbToCostCenter) });
 
                 // PPI Requests
