@@ -7,7 +7,7 @@ import {
     ProductOption, OptionTask, OrderIssue, TaskExecution,
     QualityCase, QualityAction, ScrapReport,
     Tool, ToolTransaction, ToolMaintenance,
-    ConsumableTransaction, CostCenterMapping
+    ConsumableTransaction, CostCenterMapping, PpeRequest
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
