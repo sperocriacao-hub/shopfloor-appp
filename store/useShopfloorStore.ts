@@ -476,7 +476,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
             // Shopfloor V8
             consumableTransactions: [],
-            consumableTransactions: [],
+
             costCenterMappings: [],
             ppeRequests: [],
 
