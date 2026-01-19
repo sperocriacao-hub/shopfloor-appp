@@ -13,7 +13,7 @@ export function PPIWarehouseView() {
     const { ppeRequests, updatePpeRequest, employees, assets } = useShopfloorStore();
 
     // Show Pending first, then Processed
-    const sortedRequests = [...ppeRequests].sort((a, b) => {
+    const sortedRequests = [...ppeRequests].sort((a: PpeRequest, b: PpeRequest) => {
         // Sort by Status Priority: Pending > Processed > Delivered > Rejected
         const statusPriority: Record<PpeRequest['status'], number> = { pending: 0, processed: 1, delivered: 2, rejected: 3 };
         if (statusPriority[a.status] !== statusPriority[b.status]) {
