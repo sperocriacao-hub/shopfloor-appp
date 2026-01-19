@@ -923,8 +923,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
                 const { error } = await supabase.from('consumable_transactions').insert(dbTransactions);
                 if (error) console.error("Error importing consumables:", error);
-                const { error } = await supabase.from('consumable_transactions').insert(dbTransactions);
-                if (error) console.error("Error importing consumables:", error);
+
             },
 
             addPpeRequest: async (req) => {
