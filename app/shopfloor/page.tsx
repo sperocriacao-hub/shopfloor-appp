@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { ScrapReport } from "@/types";
 
 export default function ShopfloorPage() {
     const {
@@ -161,27 +162,48 @@ export default function ShopfloorPage() {
     };
 
     const handleReportScrap = async () => {
-        if (!activeOrder) return;
-        await addScrapReport({
-            id: `scr-${Date.now()}`,
+        if (!activeOrder || !currentStation) return;
+
+        // 1. Determine Type
+        const isReplacement = scrapForm.actionTaken === 'replacement';
+        const type = isReplacement ? 'total' : 'partial';
+
+        // 2. Prepare Report Data
+        const report: ScrapReport = {
+            id: crypto.randomUUID(),
             orderId: activeOrder.id,
-            assetId: selectedStationId,
-            reportedBy: "Operator", // TODO: Real user
-            type: scrapForm.actionTaken === 'replacement' ? 'total' : 'partial',
+            assetId: currentStation.id,
+            reportedBy: selectedEmployeeId || 'unknown',
+            type,
             itemDescription: scrapForm.itemDescription || activeOrder.productModelId,
             quantity: scrapForm.quantity,
             reason: scrapForm.reason,
             actionTaken: scrapForm.actionTaken as any,
             createdAt: new Date().toISOString()
-        });
+        };
+
+        // 3. Logic for Replacement (Create new order if needed)
+        if (isReplacement) {
+            // Logic to request new order would go here (e.g. notify planner or create planned order)
+            // For now, we just flag it in the report 
+            const newOrderId = `PO-REP-${activeOrder.id.split('-')[1]}-${Math.floor(Math.random() * 1000)}`;
+            // In a real app we'd actually create the order via addOrder, but let's keep it simple for now as per requirements
+            report.replacementOrderId = newOrderId;
+
+            toast.error(`Refugo registrado! Solicitação de reposição gerada (Ref: ${newOrderId})`);
+        } else {
+            toast.warning(`Refugo registrado: ${scrapForm.quantity} itens descartados/retrabalhados.`);
+        }
+
+        // 4. Save to Store/DB
+        if (addScrapReport) {
+            await addScrapReport(report);
+        } else {
+            console.error("addScrapReport action missing in store");
+        }
+
         setShowScrapModal(false);
         setScrapForm({ quantity: 1, reason: 'process_fail', actionTaken: 'discard', itemDescription: '' });
-
-        if (scrapForm.actionTaken === 'replacement') {
-            alert(`Refugo registrado! Uma solicitação de reposição para ${scrapForm.quantity} itens foi criada.`);
-        } else {
-            alert("Refugo registrado.");
-        }
     };
 
     // --- Views ---

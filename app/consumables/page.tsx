@@ -6,6 +6,7 @@ import { ConsumableImporter } from "@/components/consumables/ConsumableImporter"
 import { ConsumablesDashboard } from "@/components/consumables/ConsumablesDashboard";
 import { ConsumablesList } from "@/components/consumables/ConsumablesList";
 import { PPIView } from "@/components/consumables/PPIView";
+import { ScrapView } from "@/components/consumables/ScrapView";
 import { CostCenterManager } from "@/components/consumables/CostCenterManager";
 import { Package } from "lucide-react";
 import { useEffect } from "react";
@@ -38,6 +39,7 @@ export default function ConsumablesPage() {
                     <TabsTrigger value="pcs">PCS (Consumíveis)</TabsTrigger>
                     <TabsTrigger value="pst">PST (Ferramentaria)</TabsTrigger>
                     <TabsTrigger value="ppi">PPI (EPIs)</TabsTrigger>
+                    <TabsTrigger value="scrap">Refugo</TabsTrigger>
                     <TabsTrigger value="import">Importar Dados</TabsTrigger>
                     <TabsTrigger value="config">Config. Centros</TabsTrigger>
                 </TabsList>
@@ -60,6 +62,10 @@ export default function ConsumablesPage() {
 
                 <TabsContent value="ppi">
                     <PPIView />
+                </TabsContent>
+
+                <TabsContent value="scrap">
+                    <ScrapView />
                 </TabsContent>
 
                 <TabsContent value="import">
