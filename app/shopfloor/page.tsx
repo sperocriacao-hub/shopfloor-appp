@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ScrapReport } from "@/types";
+import { toast } from "sonner";
 
 export default function ShopfloorPage() {
     const {
@@ -23,6 +24,7 @@ export default function ShopfloorPage() {
 
     // Session State
     const [selectedStationId, setSelectedStationId] = useState<string>("");
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(""); // Added for reporting
     const [view, setView] = useState<'select' | 'panel'>('select');
 
     // UI State
