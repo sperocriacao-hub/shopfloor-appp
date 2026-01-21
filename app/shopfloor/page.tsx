@@ -83,23 +83,70 @@ export default function ShopfloorPage() {
         return { isCompleted, isLocked };
     };
 
-    // Employees Logic (Refined: Match Area AND (Station OR Generic))
+    // Employees Logic (Strict: Match Station Name OR Fallback to Area if strictly assigned is empty?)
+    // Requirement is strict filtering for V2
     const stationEmployees = employees.filter(e =>
-        e.area === currentStation?.area &&
-        (!e.workstation || e.workstation === currentStation?.name)
+        e.workstation === currentStation?.name
     );
 
     // Timer Logic
     const startTime = activeOrderEvent ? new Date(activeOrderEvent.timestamp) : null;
     const elapsedMinutes = startTime ? Math.floor((new Date().getTime() - startTime.getTime()) / 60000) : 0;
-    // Mock estimated time (sum of task times or default) - in real app comes from routing
-    const estimatedMinutes = activeTasks.length * 15; // 15 min per task assumption
+
+    // Estimated time based on Asset Cycle Time or fallback
+    const estimatedMinutes = currentStation?.defaultCycleTime || (activeTasks.length > 0 ? activeTasks.length * 15 : 60);
     const timeColor = elapsedMinutes > estimatedMinutes ? 'text-red-600' : 'text-slate-600';
+
+    const estimatedFinishTime = startTime
+        ? new Date(startTime.getTime() + estimatedMinutes * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '--:--';
 
     // --- Handlers ---
 
     const handleStart = async (orderId: string) => {
-        if (!selectedStationId) return;
+        if (!selectedStationId || !currentStation) return;
+
+        // Strict Sequencing Logic
+        const order = orders.find(o => o.id === orderId);
+        if (order && order.activeOperations && order.activeOperations.length > 0) {
+            // 1. Find my operation based on Asset Type (Primitive matching)
+            // Ideally we should have exact operation mapping, but for now we rely on Type or Sequence
+            const myOp = order.activeOperations.find(op => op.requiredAssetType === currentStation.type)
+                || order.activeOperations.find(op => op.name.includes(currentStation.type) || op.name.includes(currentStation.name)); // Fallback fuzzy match
+
+            if (myOp) {
+                // 2. Find previous operations
+                // Sort by sequence to be sure
+                const sortedOps = [...order.activeOperations].sort((a, b) => a.sequence - b.sequence);
+                const myIndex = sortedOps.findIndex(op => op.id === myOp.id);
+
+                if (myIndex > 0) {
+                    const prevOp = sortedOps[myIndex - 1];
+                    // 3. Check if previous op is complete
+                    const isPrevComplete = events.some(e =>
+                        e.orderId === orderId &&
+                        e.type === 'COMPLETE' &&
+                        (e.operationId === prevOp.id || !e.operationId) // Fallback if opId missing, assume sequential COMPLETE means something? No, stick to tight check if possible.
+                        // Actually, legacy events might miss operationId. 
+                        // Let's check if there is ANY 'COMPLETE' event that is NOT this operation? 
+                        // Safe bet: Check if specific previous Op is complete.
+                    );
+
+                    // We need to be careful. If we can't find the event, we block.
+                    // But if legacy data, we might block incorrectly. 
+                    // Let's check for specific event with operationId.
+                    const prevEvent = events.find(e => e.orderId === orderId && e.operationId === prevOp.id && e.type === 'COMPLETE');
+
+                    if (!prevEvent) {
+                        const password = prompt(`SEQUENCIAMENTO: Operação anterior "${prevOp.name}" pendente.\nSenha de Supervisor para liberar (1234):`);
+                        if (password !== process.env.NEXT_PUBLIC_SUPERVISOR_PWD && password !== "1234") {
+                            return alert("Início bloqueado por sequenciamento.");
+                        }
+                    }
+                }
+            }
+        }
+
         await startOperation(orderId, selectedStationId);
     };
 
@@ -312,7 +359,7 @@ export default function ShopfloorPage() {
                                         <span className="text-slate-600">PO: {activeOrder?.po}</span>
                                         <span className={`flex items-center font-mono font-medium ${timeColor}`}>
                                             <Clock className="h-4 w-4 mr-1" />
-                                            {elapsedMinutes}m / {estimatedMinutes}m (Est.)
+                                            {elapsedMinutes}m / {estimatedMinutes}m (Est.) • Fim: {estimatedFinishTime}
                                         </span>
                                     </div>
                                 </div>
