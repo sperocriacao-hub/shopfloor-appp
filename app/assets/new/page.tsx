@@ -130,6 +130,17 @@ export default function NewAssetPage() {
                             />
                         </div>
 
+                        <div className="flex items-center space-x-2 pt-2 border-t">
+                            <input
+                                type="checkbox"
+                                id="enableQuality"
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                checked={formData.enableQualityModule || false}
+                                onChange={(e) => setFormData(prev => ({ ...prev, enableQualityModule: e.target.checked }))}
+                            />
+                            <label htmlFor="enableQuality" className="text-sm font-medium text-slate-700">Ativar Módulo de Qualidade?</label>
+                        </div>
+
                     </CardContent>
                 </Card>
 
