@@ -93,7 +93,8 @@ export default function QualityPage() {
         });
 
         if (error) {
-            alert("Erro ao salvar no banco de dados. Verifique sua conexão.");
+            console.error(error);
+            alert(`Erro ao salvar no banco de dados: ${error.message || JSON.stringify(error)}`);
             return;
         }
 
