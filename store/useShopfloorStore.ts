@@ -388,6 +388,8 @@ const mapDbToQualityCase = (db: any): QualityCase => ({
     status: db.status,
     methodology: db.methodology,
     methodologyData: db.methodology_data,
+    images: db.images || [],
+    dueDate: db.due_date,
     createdAt: db.created_at,
     createdBy: db.created_by
 });
@@ -957,9 +959,18 @@ export const useShopfloorStore = create<ShopfloorState>()(
             addQualityCase: async (qCase) => {
                 set(s => ({ qualityCases: [...s.qualityCases, qCase] }));
                 const { error } = await supabase.from('quality_cases').insert({
-                    id: qCase.id, order_id: qCase.orderId, asset_id: qCase.assetId,
-                    description: qCase.description, type: qCase.type, severity: qCase.severity,
-                    status: qCase.status, methodology: qCase.methodology, methodology_data: qCase.methodologyData
+                    id: qCase.id,
+                    order_id: qCase.orderId,
+                    asset_id: qCase.assetId,
+                    description: qCase.description,
+                    type: qCase.type,
+                    severity: qCase.severity,
+                    status: qCase.status,
+                    methodology: qCase.methodology,
+                    methodology_data: qCase.methodologyData,
+                    images: qCase.images,
+                    due_date: qCase.dueDate,
+                    created_by: qCase.createdBy
                 });
                 if (error) {
                     console.error("Error adding quality case:", error);
@@ -974,6 +985,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.status) toUpdate.status = updates.status;
                 if (updates.methodology) toUpdate.methodology = updates.methodology;
                 if (updates.methodologyData) toUpdate.methodology_data = updates.methodologyData;
+                if (updates.images) toUpdate.images = updates.images;
+                if (updates.dueDate) toUpdate.due_date = updates.dueDate;
 
                 if (Object.keys(toUpdate).length > 0) {
                     await supabase.from('quality_cases').update(toUpdate).eq('id', id);
