@@ -178,7 +178,7 @@ export default function ShopfloorPage() {
     const handleReportIssue = async () => {
         if (!activeOrder || !issueForm.description) return;
         await reportIssue({
-            id: `iss-${Date.now()}`,
+            id: crypto.randomUUID(),
             orderId: activeOrder.id,
             stationId: selectedStationId,
             relatedStationId: issueForm.relatedStationId || selectedStationId, // Default to self if not specified, or allow empty
@@ -194,7 +194,7 @@ export default function ShopfloorPage() {
     const handleReportQuality = async () => {
         if (!activeOrder || !qualityForm.description) return;
         await addQualityCase({
-            id: `qc-${Date.now()}`,
+            id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
             description: qualityForm.description,
             type: 'internal', // Default for shopfloor

@@ -77,7 +77,7 @@ export default function QualityPage() {
         if (!newCase.description || !newCase.assetId) return alert("Preencha os campos obrigatórios.");
 
         const { error } = await addQualityCase({
-            id: `qc-${Date.now()}`,
+            id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
             description: newCase.description || '',
             type: newCase.type as any,
