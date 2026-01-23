@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertOctagon, Microscope, Plus, Search, FileText } from "lucide-react";
 import { useState } from "react";
-import { QualityCase, QualityStatus, QualityMethodology } from "@/types";
+import { QualityCase, QualityStatus, QualityMethodology, EightDData, QualityAction } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,12 +48,23 @@ const METHODOLOGY_TEMPLATES = {
 7. **Follow-up**: `
 };
 
+const DEFAULT_8D_DATA: EightDData = {
+    team: "",
+    problemDetails: { what: "", where: "", when: "", who: "", how: "", metrics: "" },
+    containmentActions: "",
+    ishikawa: { machine: "", method: "", material: "", manpower: "", measurement: "", environment: "" },
+    fiveWhys: ["", "", "", "", ""],
+    rootCause: ""
+};
+
 export default function QualityPage() {
-    const { qualityCases, qualityActions, assets, orders, addQualityCase, updateQualityCase } = useShopfloorStore();
+    const { qualityCases, qualityActions, assets, orders, addQualityCase, updateQualityCase, addQualityAction, updateQualityAction } = useShopfloorStore();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState<QualityStatus | 'all'>('all');
     const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState<QualityCase | null>(null);
+    const [isAddingAction, setIsAddingAction] = useState(false);
+    const [actionForm, setActionForm] = useState<Partial<QualityAction>>({ description: '', responsible: '', status: 'pending' });
 
     // Form State
     const [newCase, setNewCase] = useState<Partial<QualityCase>>({
@@ -398,101 +409,241 @@ export default function QualityPage() {
                 </Tabs>
 
                 <Dialog open={!!selectedSubject} onOpenChange={(open) => !open && setSelectedSubject(null)}>
-                    <DialogContent className="max-w-3xl">
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Gerenciar Caso de Qualidade: {selectedSubject?.id}</DialogTitle>
+                            <DialogTitle>Gerenciar Caso 8D: {selectedSubject?.id}</DialogTitle>
                         </DialogHeader>
                         {selectedSubject && (
-                            <div className="grid gap-6 py-4">
-                                <div className="py-4">
-                                    <Tabs defaultValue="overview" className="w-full">
-                                        <TabsList className="grid w-full grid-cols-2">
-                                            <TabsTrigger value="overview">Visão Geral & Evidências</TabsTrigger>
-                                            <TabsTrigger value="analysis">Análise & Metodologia</TabsTrigger>
-                                        </TabsList>
-                                        <TabsContent value="overview" className="space-y-4 mt-4">
-                                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg">
-                                                <div>
-                                                    <h4 className="font-semibold text-sm text-slate-500">Resumo</h4>
-                                                    <p className="text-slate-900 line-clamp-3">{selectedSubject.description}</p>
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-sm text-slate-500">Detalhes</h4>
-                                                    <ul className="text-sm text-slate-600 space-y-1">
-                                                        <li><strong>Asset:</strong> {assets.find(a => a.id === selectedSubject.assetId)?.name}</li>
-                                                        <li><strong>Tipo:</strong> {selectedSubject.type}</li>
-                                                        <li><strong>Severidade:</strong> {selectedSubject.severity}</li>
-                                                        <li><strong>Metodologia:</strong> {selectedSubject.methodology}</li>
-                                                        {selectedSubject.dueDate && (
-                                                            <li><strong className="text-red-600">Prazo:</strong> {new Date(selectedSubject.dueDate).toLocaleDateString()}</li>
-                                                        )}
-                                                    </ul>
-                                                </div>
-                                            </div>
+                            <div className="py-4">
+                                <Tabs defaultValue="verify" className="w-full">
+                                    <TabsList className="grid w-full grid-cols-3 mb-4">
+                                        <TabsTrigger value="verify">1. VERIFICAR (D1-D3)</TabsTrigger>
+                                        <TabsTrigger value="plan">2. PLANEAR (D4)</TabsTrigger>
+                                        <TabsTrigger value="realize">3. REALIZAR (D5-D8)</TabsTrigger>
+                                    </TabsList>
 
-                                            {selectedSubject.images && selectedSubject.images.length > 0 && (
-                                                <div>
-                                                    <h4 className="font-semibold text-sm text-slate-500 mb-2">Evidências (Imagens)</h4>
-                                                    <div className="flex gap-2 overflow-x-auto pb-2">
-                                                        {selectedSubject.images.map((img, i) => (
-                                                            <div key={i} className="h-32 w-32 shrink-0 border rounded-lg overflow-hidden bg-slate-100 relative group">
-                                                                <img src={img} alt={`evidencia-${i}`} className="object-cover w-full h-full" />
-                                                                <a href={img} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
-                                                                    Abrir
-                                                                </a>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="space-y-4">
-                                                <h3 className="font-semibold flex items-center gap-2">
-                                                    <CheckCircle2 className="h-5 w-5 text-blue-600" />
-                                                    Mudar Status do Processo
-                                                </h3>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {(['open', 'investigating', 'action_plan', 'monitoring', 'resolved'] as const).map(status => (
-                                                        <Button
-                                                            key={status}
-                                                            variant={selectedSubject.status === status ? "default" : "outline"}
-                                                            className={selectedSubject.status === status ? "bg-blue-600" : ""}
-                                                            onClick={async () => {
-                                                                await updateQualityCase(selectedSubject.id, { status });
-                                                                setSelectedSubject(prev => prev ? ({ ...prev, status }) : null);
-                                                            }}
-                                                        >
-                                                            {status.toUpperCase()}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </TabsContent>
-                                        <TabsContent value="analysis" className="mt-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">Análise de Causa Raiz ({selectedSubject.methodology.toUpperCase()})</label>
-                                                <textarea
-                                                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[300px] font-mono"
-                                                    value={selectedSubject.description}
+                                    {/* --- TAB 1: VERIFICAR --- */}
+                                    <TabsContent value="verify" className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border">
+                                            <div>
+                                                <h4 className="font-semibold text-sm text-slate-700 mb-2">D1: Equipe</h4>
+                                                <Input
+                                                    placeholder="Nomes dos membros da equipe..."
+                                                    value={(selectedSubject.methodologyData as EightDData)?.team || ""}
                                                     onChange={(e) => {
-                                                        // Live update local state for editing
-                                                        setSelectedSubject({ ...selectedSubject, description: e.target.value });
-                                                    }}
-                                                    onBlur={async () => {
-                                                        // Save on blur
-                                                        await updateQualityCase(selectedSubject.id, { description: selectedSubject.description });
-                                                        toast("Análise atualizada!");
+                                                        const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                        setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, team: e.target.value } });
                                                     }}
                                                 />
-                                                <p className="text-xs text-slate-500">As alterações são salvas automaticamente ao sair do campo.</p>
                                             </div>
-                                        </TabsContent>
-                                    </Tabs>
+                                            <div>
+                                                <h4 className="font-semibold text-sm text-slate-700 mb-2">D3: Ações de Contenção</h4>
+                                                <Input
+                                                    placeholder="Ações imediatas para conter o problema..."
+                                                    value={(selectedSubject.methodologyData as EightDData)?.containmentActions || ""}
+                                                    onChange={(e) => {
+                                                        const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                        setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, containmentActions: e.target.value } });
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
 
-                                    <DialogFooter className="mt-4">
-                                        <Button onClick={() => setSelectedSubject(null)}>Fechar</Button>
-                                    </DialogFooter>
-                                </div>
+                                        <div className="border rounded-lg p-4">
+                                            <h4 className="font-semibold text-sm text-slate-700 mb-3">D2: Descrição do Problema (5W1H)</h4>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {['what', 'where', 'when', 'who', 'how', 'metrics'].map((field) => (
+                                                    <div key={field}>
+                                                        <label className="text-xs font-medium text-slate-500 uppercase">{field === 'metrics' ? 'Quais Métricas?' : `O que / ${field}?`}</label>
+                                                        <Input
+                                                            className="h-8 text-sm"
+                                                            value={((selectedSubject.methodologyData as EightDData)?.problemDetails as any)?.[field] || ""}
+                                                            onChange={(e) => {
+                                                                const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                                const details = current.problemDetails || DEFAULT_8D_DATA.problemDetails;
+                                                                setSelectedSubject({
+                                                                    ...selectedSubject,
+                                                                    methodologyData: {
+                                                                        ...current,
+                                                                        problemDetails: { ...details, [field]: e.target.value }
+                                                                    }
+                                                                });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <Button className="w-full" onClick={() => updateQualityCase(selectedSubject.id, { methodologyData: selectedSubject.methodologyData })}>Salvar Etapa Verificar</Button>
+                                    </TabsContent>
+
+                                    {/* --- TAB 2: PLANEAR --- */}
+                                    <TabsContent value="plan" className="space-y-4">
+                                        <div className="border rounded-lg p-4">
+                                            <h4 className="font-semibold text-sm text-slate-700 mb-3">D4: Ishikawa (6M)</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {['machine', 'method', 'material', 'manpower', 'measurement', 'environment'].map((m) => (
+                                                    <div key={m}>
+                                                        <label className="text-xs font-medium text-slate-500 uppercase">{m}</label>
+                                                        <Input
+                                                            className="h-8 text-sm"
+                                                            value={((selectedSubject.methodologyData as EightDData)?.ishikawa as any)?.[m] || ""}
+                                                            onChange={(e) => {
+                                                                const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                                const ishikawa = current.ishikawa || DEFAULT_8D_DATA.ishikawa;
+                                                                setSelectedSubject({
+                                                                    ...selectedSubject,
+                                                                    methodologyData: {
+                                                                        ...current,
+                                                                        ishikawa: { ...ishikawa, [m]: e.target.value }
+                                                                    }
+                                                                });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="border rounded-lg p-4 bg-slate-50">
+                                            <h4 className="font-semibold text-sm text-slate-700 mb-3">D4: 5 Porquês</h4>
+                                            <div className="space-y-2">
+                                                {[0, 1, 2, 3, 4].map((i) => (
+                                                    <div key={i} className="flex gap-2 items-center">
+                                                        <span className="text-xs font-bold text-slate-400 w-6">{i + 1}.</span>
+                                                        <Input
+                                                            className="h-8 text-sm bg-white"
+                                                            placeholder={`Por que? ${i === 4 ? '(Causa Raiz)' : ''}`}
+                                                            value={((selectedSubject.methodologyData as EightDData)?.fiveWhys)?.[i] || ""}
+                                                            onChange={(e) => {
+                                                                const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                                const whys = [...(current.fiveWhys || DEFAULT_8D_DATA.fiveWhys)];
+                                                                whys[i] = e.target.value;
+                                                                setSelectedSubject({
+                                                                    ...selectedSubject,
+                                                                    methodologyData: { ...current, fiveWhys: whys }
+                                                                });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium">Declaração da Causa Raiz</label>
+                                            <textarea
+                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                                                value={(selectedSubject.methodologyData as EightDData)?.rootCause || ""}
+                                                onChange={(e) => {
+                                                    const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                    setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, rootCause: e.target.value } });
+                                                }}
+                                            />
+                                        </div>
+                                        <Button className="w-full" onClick={() => updateQualityCase(selectedSubject.id, { methodologyData: selectedSubject.methodologyData })}>Salvar Etapa Planejar</Button>
+                                    </TabsContent>
+
+                                    {/* --- TAB 3: REALIZAR --- */}
+                                    <TabsContent value="realize" className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <h4 className="font-semibold text-sm text-slate-700">D5-D6: Plano de Ação</h4>
+                                            <Button size="sm" variant="outline" onClick={() => setIsAddingAction(!isAddingAction)}>
+                                                {isAddingAction ? "Cancelar" : "Adicionar Ação"}
+                                            </Button>
+                                        </div>
+
+                                        {isAddingAction && (
+                                            <div className="bg-slate-50 p-4 rounded-lg border space-y-3">
+                                                <h5 className="text-sm font-semibold">Nova Ação</h5>
+                                                <Input
+                                                    placeholder="Descrição da ação..."
+                                                    value={actionForm.description}
+                                                    onChange={e => setActionForm({ ...actionForm, description: e.target.value })}
+                                                />
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        placeholder="Responsável"
+                                                        value={actionForm.responsible}
+                                                        onChange={e => setActionForm({ ...actionForm, responsible: e.target.value })}
+                                                    />
+                                                    <Input
+                                                        type="date"
+                                                        value={actionForm.deadline ? actionForm.deadline.split('T')[0] : ''}
+                                                        onChange={e => setActionForm({ ...actionForm, deadline: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                                                    />
+                                                </div>
+                                                <Button size="sm" onClick={async () => {
+                                                    if (!selectedSubject || !actionForm.description) return;
+                                                    await addQualityAction({
+                                                        id: crypto.randomUUID(),
+                                                        caseId: selectedSubject.id,
+                                                        description: actionForm.description!,
+                                                        responsible: actionForm.responsible,
+                                                        deadline: actionForm.deadline,
+                                                        status: 'pending'
+                                                    });
+                                                    setIsAddingAction(false);
+                                                    setActionForm({ description: '', responsible: '', status: 'pending' });
+                                                }}>Salvar Ação</Button>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            {qualityActions.filter(a => a.caseId === selectedSubject.id).map(action => (
+                                                <div key={action.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={action.status === 'completed'}
+                                                            onChange={async (e) => {
+                                                                await updateQualityAction(action.id, { status: e.target.checked ? 'completed' : 'pending' });
+                                                            }}
+                                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <div>
+                                                            <p className={`text-sm font-medium ${action.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                                                                {action.description}
+                                                            </p>
+                                                            <p className="text-xs text-slate-500">
+                                                                Resp: {action.responsible || 'N/A'} • Prazo: {action.deadline ? new Date(action.deadline).toLocaleDateString() : 'N/A'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <Badge variant={action.status === 'completed' ? 'secondary' : 'outline'}>
+                                                        {action.status === 'completed' ? 'Concluído' : 'Pendente'}
+                                                    </Badge>
+                                                </div>
+                                            ))}
+                                            {qualityActions.filter(a => a.caseId === selectedSubject.id).length === 0 && !isAddingAction && (
+                                                <p className="text-sm text-slate-500 italic text-center py-4">Nenhuma ação registrada.</p>
+                                            )}
+                                        </div>
+
+                                        {/* Status Management */}
+                                        <div className="border-t pt-4 mt-4">
+                                            <h4 className="font-semibold text-sm text-slate-700 mb-2">Status do Caso</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {(['open', 'investigating', 'action_plan', 'monitoring', 'resolved'] as const).map(status => (
+                                                    <Button
+                                                        key={status}
+                                                        variant={selectedSubject.status === status ? "default" : "outline"}
+                                                        size="sm"
+                                                        className={selectedSubject.status === status ? "bg-blue-600" : ""}
+                                                        onClick={async () => {
+                                                            await updateQualityCase(selectedSubject.id, { status });
+                                                            setSelectedSubject(prev => prev ? ({ ...prev, status }) : null);
+                                                        }}
+                                                    >
+                                                        {status.toUpperCase()}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </TabsContent>
+                                </Tabs>
+                                <DialogFooter className="mt-6">
+                                    <Button variant="ghost" onClick={() => setSelectedSubject(null)}>Fechar</Button>
+                                </DialogFooter>
                             </div>
                         )}
                     </DialogContent>

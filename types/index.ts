@@ -194,6 +194,29 @@ export type QualitySeverity = 'low' | 'medium' | 'high' | 'critical';
 export type QualityStatus = 'open' | 'investigating' | 'action_plan' | 'monitoring' | 'resolved';
 export type QualityMethodology = 'ishikawa' | '5whys' | 'a3' | '8d' | 'none';
 
+export interface EightDData {
+    team: string; // Comma separated names or formatted text
+    problemDetails: {
+        what: string;
+        where: string;
+        when: string;
+        who: string;
+        how: string;
+        metrics: string;
+    };
+    containmentActions: string;
+    ishikawa: {
+        machine: string;
+        method: string;
+        material: string;
+        manpower: string;
+        measurement: string;
+        environment: string;
+    };
+    fiveWhys: string[]; // Array of 5 strings
+    rootCause: string;
+}
+
 export interface QualityCase {
     id: string;
     orderId?: string;
@@ -203,7 +226,7 @@ export interface QualityCase {
     severity: QualitySeverity;
     status: QualityStatus;
     methodology: QualityMethodology;
-    methodologyData?: any; // JSONB
+    methodologyData?: EightDData | any; // JSONB
     images?: string[]; // Array of base64/url
     dueDate?: string; // ISO Date for deadline
     createdAt: string; // ISO
