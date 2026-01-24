@@ -159,7 +159,7 @@ export function PrintableEightD({ data }: PrintableEightDProps) {
                     <h3 className="bg-slate-200 font-bold p-1 px-2 border-b border-black text-xs uppercase">D7: Prevenção de Recorrência</h3>
                     <div className="p-2 min-h-[50px] text-xs">
                         {/* Placeholder as we don't have a specific field for this in store yet, using Lesson Learned or generic */}
-                        {methodologyData.lessonLearned || "Standardização e atualização de documentação necessária."}
+                        {(methodologyData as any).lessonLearned || "Standardização e atualização de documentação necessária."}
                     </div>
                 </section>
                 <section className="border border-black flex-1">
