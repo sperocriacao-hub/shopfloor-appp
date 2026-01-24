@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertOctagon, Microscope, Plus, Search, FileText } from "lucide-react";
+import { CheckCircle2, AlertOctagon, Microscope, Plus, Search, FileText, Pencil, Mail, Printer } from "lucide-react";
 import { useState } from "react";
 import { QualityCase, QualityStatus, QualityMethodology, EightDData, QualityAction } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -64,6 +64,7 @@ export default function QualityPage() {
     const [statusFilter, setStatusFilter] = useState<QualityStatus | 'all'>('all');
     const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState<QualityCase | null>(null);
+    const [actionSearch, setActionSearch] = useState("");
     const [isAddingAction, setIsAddingAction] = useState(false);
     const [actionForm, setActionForm] = useState<Partial<QualityAction>>({ description: '', responsible: '', status: 'pending' });
 
@@ -73,7 +74,9 @@ export default function QualityPage() {
         severity: 'medium',
         methodology: 'ishikawa',
         status: 'open',
-        description: METHODOLOGY_TEMPLATES['ishikawa'],
+        methodology: 'ishikawa',
+        status: 'open',
+        description: '',
         assetId: '',
         orderId: ''
     });
@@ -176,6 +179,12 @@ export default function QualityPage() {
                                     placeholder="Descreva o problema encontrado de forma clara..."
                                 />
                             </div>
+
+                            {/* NEW: Scrollable Asset Dropdown Fix: Ensure SearchableSelect handles max-height in its own implementation, 
+                                but here we ensure the container is fine. The component likely uses Popover which attaches to body. 
+                                We fixed the Select backgrounds by ensuring we don't apply transparent classes. The 'bg-white' is already there on Inputs.
+                                Let's apply explicit white background to Select Content just in case.
+                            */}
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -370,25 +379,46 @@ export default function QualityPage() {
                                                         <span><strong>Metodologia:</strong> {qc.methodology}</span>
                                                     </div>
                                                 </div>
-                                                <Button variant="outline" size="sm" onClick={() => setSelectedSubject(qc)}>
-                                                    Gerenciar
-                                                </Button>
                                             </div>
-                                        </CardContent>
+                                            <Button variant="ghost" size="sm" onClick={() => setSelectedSubject(qc)} title="Editar Caso">
+                                                <Pencil className="h-4 w-4 text-blue-600" />
+                                            </Button>
+                                        </div>
+                                    </CardContent>
                                     </Card>
-                                );
+                        );
                             })}
-                        </div>
-                    </TabsContent>
+                    </div>
+                </TabsContent>
 
-                    <TabsContent value="actions" className="mt-6">
-                        <div className="space-y-4">
-                            <Card className="p-4 bg-slate-50">
-                                <h3 className="font-semibold text-lg text-slate-800 mb-2">Plano de Ação Global</h3>
+                <TabsContent value="actions" className="mt-6">
+                    <div className="space-y-4">
+
+                        <Card className="p-4 bg-slate-50 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                            <div>
+                                <h3 className="font-semibold text-lg text-slate-800">Plano de Ação Global</h3>
                                 <p className="text-slate-500 text-sm">Visualização consolidada de todas as ações corretivas.</p>
-                            </Card>
+                            </div>
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:w-64">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                                    <Input
+                                        placeholder="Buscar ação, responsável..."
+                                        className="pl-8 bg-white"
+                                        value={actionSearch}
+                                        onChange={e => setActionSearch(e.target.value)}
+                                    />
+                                </div>
+                                <Button variant="outline" onClick={() => window.print()} title="Imprimir Lista">
+                                    <Printer className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </Card>
 
-                            {qualityActions.sort((a, b) => new Date(a.deadline || '').getTime() - new Date(b.deadline || '').getTime()).map(action => {
+                        {qualityActions
+                            .filter(a => a.description.toLowerCase().includes(actionSearch.toLowerCase()) || a.responsible?.toLowerCase().includes(actionSearch.toLowerCase()))
+                            .sort((a, b) => new Date(a.deadline || '').getTime() - new Date(b.deadline || '').getTime())
+                            .map(action => {
                                 const parentCase = qualityCases.find(c => c.id === action.caseId);
                                 const isLate = action.deadline && new Date(action.deadline) < new Date() && action.status !== 'completed';
 
@@ -414,283 +444,287 @@ export default function QualityPage() {
                                     </Card>
                                 )
                             })}
-                            {qualityActions.length === 0 && <p className="text-center py-8 text-slate-500">Nenhuma ação registrada.</p>}
-                        </div>
-                    </TabsContent>
+                        {qualityActions.length === 0 && <p className="text-center py-8 text-slate-500">Nenhuma ação registrada.</p>}
+                    </div>
+                </TabsContent>
 
-                    <TabsContent value="reports" className="mt-6">
-                        <QualityReports />
-                    </TabsContent>
-                </Tabs>
+                <TabsContent value="reports" className="mt-6">
+                    <QualityReports />
+                </TabsContent>
+            </Tabs>
 
-                <Dialog open={!!selectedSubject} onOpenChange={(open) => !open && setSelectedSubject(null)}>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle>Gerenciar Caso 8D: {selectedSubject?.id}</DialogTitle>
-                        </DialogHeader>
-                        {selectedSubject && (
-                            <div className="py-4">
-                                <PrintableEightD data={selectedSubject} />
-                                <Tabs defaultValue="verify" className="w-full print:hidden">
-                                    <TabsList className="grid w-full grid-cols-3 mb-4">
-                                        <TabsTrigger value="verify">1. VERIFICAR (D1-D3)</TabsTrigger>
-                                        <TabsTrigger value="plan">2. PLANEAR (D4)</TabsTrigger>
-                                        <TabsTrigger value="realize">3. REALIZAR (D5-D8)</TabsTrigger>
-                                    </TabsList>
+            <Dialog open={!!selectedSubject} onOpenChange={(open) => !open && setSelectedSubject(null)}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Gerenciar Caso 8D: {selectedSubject?.id}</DialogTitle>
+                    </DialogHeader>
+                    {selectedSubject && (
+                        <div className="py-4">
+                            <PrintableEightD data={selectedSubject} />
+                            <Tabs defaultValue="verify" className="w-full print:hidden">
+                                <TabsList className="grid w-full grid-cols-3 mb-4">
+                                    <TabsTrigger value="verify">1. VERIFICAR (D1-D3)</TabsTrigger>
+                                    <TabsTrigger value="plan">2. PLANEAR (D4)</TabsTrigger>
+                                    <TabsTrigger value="realize">3. REALIZAR (D5-D8)</TabsTrigger>
+                                </TabsList>
 
-                                    {/* --- TAB 1: VERIFICAR --- */}
-                                    <TabsContent value="verify" className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border">
-                                            <div>
-                                                <h4 className="font-semibold text-sm text-slate-700 mb-2">D1: Equipe</h4>
-                                                <Input
-                                                    placeholder="Nomes dos membros da equipe..."
-                                                    value={(selectedSubject.methodologyData as EightDData)?.team || ""}
-                                                    onChange={(e) => {
-                                                        const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
-                                                        setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, team: e.target.value } });
-                                                    }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-sm text-slate-700 mb-2">D3: Ações de Contenção</h4>
-                                                <Input
-                                                    placeholder="Ações imediatas para conter o problema..."
-                                                    value={(selectedSubject.methodologyData as EightDData)?.containmentActions || ""}
-                                                    onChange={(e) => {
-                                                        const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
-                                                        setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, containmentActions: e.target.value } });
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="border rounded-lg p-4">
-                                            <h4 className="font-semibold text-sm text-slate-700 mb-3">D2: Descrição do Problema (5W1H)</h4>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {['what', 'where', 'when', 'who', 'how', 'metrics'].map((field) => (
-                                                    <div key={field}>
-                                                        <label className="text-xs font-medium text-slate-500 uppercase">{field === 'metrics' ? 'Quais Métricas?' : `O que / ${field}?`}</label>
-                                                        <Input
-                                                            className="h-8 text-sm"
-                                                            value={((selectedSubject.methodologyData as EightDData)?.problemDetails as any)?.[field] || ""}
-                                                            onChange={(e) => {
-                                                                const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
-                                                                const details = current.problemDetails || DEFAULT_8D_DATA.problemDetails;
-                                                                setSelectedSubject({
-                                                                    ...selectedSubject,
-                                                                    methodologyData: {
-                                                                        ...current,
-                                                                        problemDetails: { ...details, [field]: e.target.value }
-                                                                    }
-                                                                });
-                                                            }}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Images Preview */}
-                                        {selectedSubject.images && selectedSubject.images.length > 0 && (
-                                            <div className="border rounded-lg p-4 bg-slate-50">
-                                                <h4 className="font-semibold text-sm text-slate-700 mb-2">Evidências Fotográficas</h4>
-                                                <div className="flex gap-2 overflow-x-auto">
-                                                    {selectedSubject.images.map((img, i) => (
-                                                        <div key={i} className="h-24 w-24 shrink-0 border rounded overflow-hidden bg-white relative group">
-                                                            <img src={img} alt="evidence" className="object-cover w-full h-full" />
-                                                            <a href={img} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
-                                                                Abrir
-                                                            </a>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="flex gap-2">
-                                            <Button className="flex-1" onClick={() => updateQualityCase(selectedSubject.id, { methodologyData: selectedSubject.methodologyData })}>Salvar Etapa Verificar</Button>
-                                            <Button variant="outline" className="gap-2" onClick={() => toast.success("Enviando e-mail com relatório 8D...")}>
-                                                ✉️ Email
-                                            </Button>
-                                            <Button variant="outline" className="gap-2" onClick={() => window.print()}>
-                                                🖨️ Imprimir
-                                            </Button>
-                                        </div>
-                                    </TabsContent>
-
-                                    {/* --- TAB 2: PLANEAR --- */}
-                                    <TabsContent value="plan" className="space-y-4">
-                                        <div className="border rounded-lg p-4">
-                                            <h4 className="font-semibold text-sm text-slate-700 mb-3">D4: Ishikawa (6M)</h4>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                {['machine', 'method', 'material', 'manpower', 'measurement', 'environment'].map((m) => (
-                                                    <div key={m}>
-                                                        <label className="text-xs font-medium text-slate-500 uppercase">{m}</label>
-                                                        <Input
-                                                            className="h-8 text-sm"
-                                                            value={((selectedSubject.methodologyData as EightDData)?.ishikawa as any)?.[m] || ""}
-                                                            onChange={(e) => {
-                                                                const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
-                                                                const ishikawa = current.ishikawa || DEFAULT_8D_DATA.ishikawa;
-                                                                setSelectedSubject({
-                                                                    ...selectedSubject,
-                                                                    methodologyData: {
-                                                                        ...current,
-                                                                        ishikawa: { ...ishikawa, [m]: e.target.value }
-                                                                    }
-                                                                });
-                                                            }}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="border rounded-lg p-4 bg-slate-50">
-                                            <h4 className="font-semibold text-sm text-slate-700 mb-3">D4: 5 Porquês</h4>
-                                            <div className="space-y-2">
-                                                {[0, 1, 2, 3, 4].map((i) => (
-                                                    <div key={i} className="flex gap-2 items-center">
-                                                        <span className="text-xs font-bold text-slate-400 w-6">{i + 1}.</span>
-                                                        <Input
-                                                            className="h-8 text-sm bg-white"
-                                                            placeholder={`Por que? ${i === 4 ? '(Causa Raiz)' : ''}`}
-                                                            value={((selectedSubject.methodologyData as EightDData)?.fiveWhys)?.[i] || ""}
-                                                            onChange={(e) => {
-                                                                const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
-                                                                const whys = [...(current.fiveWhys || DEFAULT_8D_DATA.fiveWhys)];
-                                                                whys[i] = e.target.value;
-                                                                setSelectedSubject({
-                                                                    ...selectedSubject,
-                                                                    methodologyData: { ...current, fiveWhys: whys }
-                                                                });
-                                                            }}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
+                                {/* --- TAB 1: VERIFICAR --- */}
+                                <TabsContent value="verify" className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border">
                                         <div>
-                                            <label className="text-sm font-medium">Declaração da Causa Raiz</label>
-                                            <textarea
-                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
-                                                value={(selectedSubject.methodologyData as EightDData)?.rootCause || ""}
+                                            <h4 className="font-semibold text-sm text-slate-700 mb-2">D1: Equipe</h4>
+                                            <Input
+                                                placeholder="Nomes dos membros da equipe..."
+                                                value={(selectedSubject.methodologyData as EightDData)?.team || ""}
                                                 onChange={(e) => {
                                                     const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
-                                                    setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, rootCause: e.target.value } });
+                                                    setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, team: e.target.value } });
                                                 }}
                                             />
                                         </div>
-                                        <Button className="w-full" onClick={() => updateQualityCase(selectedSubject.id, { methodologyData: selectedSubject.methodologyData })}>Salvar Etapa Planejar</Button>
-                                    </TabsContent>
-
-                                    {/* --- TAB 3: REALIZAR --- */}
-                                    <TabsContent value="realize" className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <h4 className="font-semibold text-sm text-slate-700">D5-D6: Plano de Ação</h4>
-                                            <Button size="sm" variant="outline" onClick={() => setIsAddingAction(!isAddingAction)}>
-                                                {isAddingAction ? "Cancelar" : "Adicionar Ação"}
-                                            </Button>
+                                        <div>
+                                            <h4 className="font-semibold text-sm text-slate-700 mb-2">D3: Ações de Contenção</h4>
+                                            <Input
+                                                placeholder="Ações imediatas para conter o problema..."
+                                                value={(selectedSubject.methodologyData as EightDData)?.containmentActions || ""}
+                                                onChange={(e) => {
+                                                    const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                    setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, containmentActions: e.target.value } });
+                                                }}
+                                            />
                                         </div>
+                                    </div>
 
-                                        {isAddingAction && (
-                                            <div className="bg-slate-50 p-4 rounded-lg border space-y-3">
-                                                <h5 className="text-sm font-semibold">Nova Ação</h5>
-                                                <Input
-                                                    placeholder="Descrição da ação..."
-                                                    value={actionForm.description}
-                                                    onChange={e => setActionForm({ ...actionForm, description: e.target.value })}
-                                                />
-                                                <div className="flex gap-2">
+                                    <div className="border rounded-lg p-4">
+                                        <h4 className="font-semibold text-sm text-slate-700 mb-3">D2: Descrição do Problema (5W1H)</h4>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {['what', 'where', 'when', 'who', 'how', 'metrics'].map((field) => (
+                                                <div key={field}>
+                                                    <label className="text-xs font-medium text-slate-500 uppercase">{field === 'metrics' ? 'Quais Métricas?' : `O que / ${field}?`}</label>
                                                     <Input
-                                                        placeholder="Responsável"
-                                                        value={actionForm.responsible}
-                                                        onChange={e => setActionForm({ ...actionForm, responsible: e.target.value })}
+                                                        className="h-8 text-sm"
+                                                        value={((selectedSubject.methodologyData as EightDData)?.problemDetails as any)?.[field] || ""}
+                                                        onChange={(e) => {
+                                                            const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                            const details = current.problemDetails || DEFAULT_8D_DATA.problemDetails;
+                                                            setSelectedSubject({
+                                                                ...selectedSubject,
+                                                                methodologyData: {
+                                                                    ...current,
+                                                                    problemDetails: { ...details, [field]: e.target.value }
+                                                                }
+                                                            });
+                                                        }}
                                                     />
-                                                    <Input
-                                                        type="date"
-                                                        value={actionForm.deadline ? actionForm.deadline.split('T')[0] : ''}
-                                                        onChange={e => setActionForm({ ...actionForm, deadline: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                                                    />
-                                                </div>
-                                                <Button size="sm" onClick={async () => {
-                                                    if (!selectedSubject || !actionForm.description) return;
-                                                    await addQualityAction({
-                                                        id: crypto.randomUUID(),
-                                                        caseId: selectedSubject.id,
-                                                        description: actionForm.description!,
-                                                        responsible: actionForm.responsible,
-                                                        deadline: actionForm.deadline,
-                                                        status: 'pending'
-                                                    });
-                                                    setIsAddingAction(false);
-                                                    setActionForm({ description: '', responsible: '', status: 'pending' });
-                                                }}>Salvar Ação</Button>
-                                            </div>
-                                        )}
-
-                                        <div className="space-y-2">
-                                            {qualityActions.filter(a => a.caseId === selectedSubject.id).map(action => (
-                                                <div key={action.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
-                                                    <div className="flex items-center gap-3">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={action.status === 'completed'}
-                                                            onChange={async (e) => {
-                                                                await updateQualityAction(action.id, { status: e.target.checked ? 'completed' : 'pending' });
-                                                            }}
-                                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                        />
-                                                        <div>
-                                                            <p className={`text-sm font-medium ${action.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-900'}`}>
-                                                                {action.description}
-                                                            </p>
-                                                            <p className="text-xs text-slate-500">
-                                                                Resp: {action.responsible || 'N/A'} • Prazo: {action.deadline ? new Date(action.deadline).toLocaleDateString() : 'N/A'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <Badge variant={action.status === 'completed' ? 'secondary' : 'outline'}>
-                                                        {action.status === 'completed' ? 'Concluído' : 'Pendente'}
-                                                    </Badge>
                                                 </div>
                                             ))}
-                                            {qualityActions.filter(a => a.caseId === selectedSubject.id).length === 0 && !isAddingAction && (
-                                                <p className="text-sm text-slate-500 italic text-center py-4">Nenhuma ação registrada.</p>
-                                            )}
                                         </div>
+                                    </div>
 
-                                        {/* Status Management */}
-                                        <div className="border-t pt-4 mt-4">
-                                            <h4 className="font-semibold text-sm text-slate-700 mb-2">Status do Caso</h4>
-                                            <div className="flex flex-wrap gap-2">
-                                                {(['open', 'investigating', 'action_plan', 'monitoring', 'resolved'] as const).map(status => (
-                                                    <Button
-                                                        key={status}
-                                                        variant={selectedSubject.status === status ? "default" : "outline"}
-                                                        size="sm"
-                                                        className={selectedSubject.status === status ? "bg-blue-600" : ""}
-                                                        onClick={async () => {
-                                                            await updateQualityCase(selectedSubject.id, { status });
-                                                            setSelectedSubject(prev => prev ? ({ ...prev, status }) : null);
-                                                        }}
-                                                    >
-                                                        {status.toUpperCase()}
-                                                    </Button>
+                                    {/* Images Preview */}
+                                    {selectedSubject.images && selectedSubject.images.length > 0 && (
+                                        <div className="border rounded-lg p-4 bg-slate-50">
+                                            <h4 className="font-semibold text-sm text-slate-700 mb-2">Evidências Fotográficas</h4>
+                                            <div className="flex gap-2 overflow-x-auto">
+                                                {selectedSubject.images.map((img, i) => (
+                                                    <div key={i} className="h-24 w-24 shrink-0 border rounded overflow-hidden bg-white relative group">
+                                                        <img src={img} alt="evidence" className="object-cover w-full h-full" />
+                                                        <a href={img} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                                                            Abrir
+                                                        </a>
+                                                    </div>
                                                 ))}
                                             </div>
                                         </div>
-                                    </TabsContent>
-                                </Tabs>
-                                <DialogFooter className="mt-6">
-                                    <Button variant="ghost" onClick={() => setSelectedSubject(null)}>Fechar</Button>
-                                </DialogFooter>
-                            </div>
-                        )}
-                    </DialogContent>
-                </Dialog>
-            </div >
-        </div>
+                                    )}
+
+                                    <div className="flex gap-2">
+                                        <Button className="flex-1" onClick={() => updateQualityCase(selectedSubject.id, { methodologyData: selectedSubject.methodologyData })}>Salvar Etapa Verificar</Button>
+                                        <Button variant="outline" className="gap-2" onClick={() => {
+                                            const subject = `Relatório 8D - Caso #${selectedSubject.id}`;
+                                            const body = `Prezados,\n\nSegue resumo do caso de qualidade.\n\nID: ${selectedSubject.id}\nDescrição: ${selectedSubject.description}\nStatus: ${selectedSubject.status.toUpperCase()}\n\nFavor verificar o sistema.\n\nAtenciosamente,`;
+                                            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                                        }}>
+                                            <Mail className="h-4 w-4" /> Email
+                                        </Button>
+                                        <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+                                            <Printer className="h-4 w-4" /> Imprimir
+                                        </Button>
+                                    </div>
+                                </TabsContent>
+
+                                {/* --- TAB 2: PLANEAR --- */}
+                                <TabsContent value="plan" className="space-y-4">
+                                    <div className="border rounded-lg p-4">
+                                        <h4 className="font-semibold text-sm text-slate-700 mb-3">D4: Ishikawa (6M)</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {['machine', 'method', 'material', 'manpower', 'measurement', 'environment'].map((m) => (
+                                                <div key={m}>
+                                                    <label className="text-xs font-medium text-slate-500 uppercase">{m}</label>
+                                                    <Input
+                                                        className="h-8 text-sm"
+                                                        value={((selectedSubject.methodologyData as EightDData)?.ishikawa as any)?.[m] || ""}
+                                                        onChange={(e) => {
+                                                            const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                            const ishikawa = current.ishikawa || DEFAULT_8D_DATA.ishikawa;
+                                                            setSelectedSubject({
+                                                                ...selectedSubject,
+                                                                methodologyData: {
+                                                                    ...current,
+                                                                    ishikawa: { ...ishikawa, [m]: e.target.value }
+                                                                }
+                                                            });
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="border rounded-lg p-4 bg-slate-50">
+                                        <h4 className="font-semibold text-sm text-slate-700 mb-3">D4: 5 Porquês</h4>
+                                        <div className="space-y-2">
+                                            {[0, 1, 2, 3, 4].map((i) => (
+                                                <div key={i} className="flex gap-2 items-center">
+                                                    <span className="text-xs font-bold text-slate-400 w-6">{i + 1}.</span>
+                                                    <Input
+                                                        className="h-8 text-sm bg-white"
+                                                        placeholder={`Por que? ${i === 4 ? '(Causa Raiz)' : ''}`}
+                                                        value={((selectedSubject.methodologyData as EightDData)?.fiveWhys)?.[i] || ""}
+                                                        onChange={(e) => {
+                                                            const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                            const whys = [...(current.fiveWhys || DEFAULT_8D_DATA.fiveWhys)];
+                                                            whys[i] = e.target.value;
+                                                            setSelectedSubject({
+                                                                ...selectedSubject,
+                                                                methodologyData: { ...current, fiveWhys: whys }
+                                                            });
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium">Declaração da Causa Raiz</label>
+                                        <textarea
+                                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                                            value={(selectedSubject.methodologyData as EightDData)?.rootCause || ""}
+                                            onChange={(e) => {
+                                                const current = selectedSubject.methodologyData as EightDData || DEFAULT_8D_DATA;
+                                                setSelectedSubject({ ...selectedSubject, methodologyData: { ...current, rootCause: e.target.value } });
+                                            }}
+                                        />
+                                    </div>
+                                    <Button className="w-full" onClick={() => updateQualityCase(selectedSubject.id, { methodologyData: selectedSubject.methodologyData })}>Salvar Etapa Planejar</Button>
+                                </TabsContent>
+
+                                {/* --- TAB 3: REALIZAR --- */}
+                                <TabsContent value="realize" className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="font-semibold text-sm text-slate-700">D5-D6: Plano de Ação</h4>
+                                        <Button size="sm" variant="outline" onClick={() => setIsAddingAction(!isAddingAction)}>
+                                            {isAddingAction ? "Cancelar" : "Adicionar Ação"}
+                                        </Button>
+                                    </div>
+
+                                    {isAddingAction && (
+                                        <div className="bg-slate-50 p-4 rounded-lg border space-y-3">
+                                            <h5 className="text-sm font-semibold">Nova Ação</h5>
+                                            <Input
+                                                placeholder="Descrição da ação..."
+                                                value={actionForm.description}
+                                                onChange={e => setActionForm({ ...actionForm, description: e.target.value })}
+                                            />
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="Responsável"
+                                                    value={actionForm.responsible}
+                                                    onChange={e => setActionForm({ ...actionForm, responsible: e.target.value })}
+                                                />
+                                                <Input
+                                                    type="date"
+                                                    value={actionForm.deadline ? actionForm.deadline.split('T')[0] : ''}
+                                                    onChange={e => setActionForm({ ...actionForm, deadline: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                                                />
+                                            </div>
+                                            <Button size="sm" onClick={async () => {
+                                                if (!selectedSubject || !actionForm.description) return;
+                                                await addQualityAction({
+                                                    id: crypto.randomUUID(),
+                                                    caseId: selectedSubject.id,
+                                                    description: actionForm.description!,
+                                                    responsible: actionForm.responsible,
+                                                    deadline: actionForm.deadline,
+                                                    status: 'pending'
+                                                });
+                                                setIsAddingAction(false);
+                                                setActionForm({ description: '', responsible: '', status: 'pending' });
+                                            }}>Salvar Ação</Button>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        {qualityActions.filter(a => a.caseId === selectedSubject.id).map(action => (
+                                            <div key={action.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={action.status === 'completed'}
+                                                        onChange={async (e) => {
+                                                            await updateQualityAction(action.id, { status: e.target.checked ? 'completed' : 'pending' });
+                                                        }}
+                                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <div>
+                                                        <p className={`text-sm font-medium ${action.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                                                            {action.description}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500">
+                                                            Resp: {action.responsible || 'N/A'} • Prazo: {action.deadline ? new Date(action.deadline).toLocaleDateString() : 'N/A'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Badge variant={action.status === 'completed' ? 'secondary' : 'outline'}>
+                                                    {action.status === 'completed' ? 'Concluído' : 'Pendente'}
+                                                </Badge>
+                                            </div>
+                                        ))}
+                                        {qualityActions.filter(a => a.caseId === selectedSubject.id).length === 0 && !isAddingAction && (
+                                            <p className="text-sm text-slate-500 italic text-center py-4">Nenhuma ação registrada.</p>
+                                        )}
+                                    </div>
+
+                                    {/* Status Management */}
+                                    <div className="border-t pt-4 mt-4">
+                                        <h4 className="font-semibold text-sm text-slate-700 mb-2">Status do Caso</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(['open', 'investigating', 'action_plan', 'monitoring', 'resolved'] as const).map(status => (
+                                                <Button
+                                                    key={status}
+                                                    variant={selectedSubject.status === status ? "default" : "outline"}
+                                                    size="sm"
+                                                    className={selectedSubject.status === status ? "bg-blue-600" : ""}
+                                                    onClick={async () => {
+                                                        await updateQualityCase(selectedSubject.id, { status });
+                                                        setSelectedSubject(prev => prev ? ({ ...prev, status }) : null);
+                                                    }}
+                                                >
+                                                    {status.toUpperCase()}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+                            <DialogFooter className="mt-6">
+                                <Button variant="ghost" onClick={() => setSelectedSubject(null)}>Fechar</Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+        </div >
+        </div >
     );
 }

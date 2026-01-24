@@ -53,7 +53,7 @@ export function SearchableSelect({ options, value, onChange, placeholder = "Sele
             <PopoverContent className="w-full p-0 bg-white" align="start">
                 <Command>
                     <CommandInput placeholder="Localizar..." />
-                    <CommandList>
+                    <CommandList className="max-h-[200px] overflow-y-auto">
                         <CommandEmpty>Nenhum item encontrado.</CommandEmpty>
                         <CommandGroup>
                             {options.map((option) => (
