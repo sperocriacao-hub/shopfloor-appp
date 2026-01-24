@@ -116,20 +116,19 @@ export function Sidebar() {
                     )}
                 </div>
             </div>
-            </div>
-            
+
             <SystemConfigModal open={isConfigOpen} onOpenChange={setIsConfigOpen} />
             {
-        !isCollapsed && (
-            <button
-                onClick={() => setIsConfigOpen(true)}
-                className="absolute bottom-2 left-2 text-blue-400 hover:text-white transition-colors"
-                title="Configurações do Sistema"
-            >
-                <Settings className="h-4 w-4 opacity-50 hover:opacity-100" />
-            </button>
-        )
-    }
+                !isCollapsed && (
+                    <button
+                        onClick={() => setIsConfigOpen(true)}
+                        className="absolute bottom-2 left-2 text-blue-400 hover:text-white transition-colors"
+                        title="Configurações do Sistema"
+                    >
+                        <Settings className="h-4 w-4 opacity-50 hover:opacity-100" />
+                    </button>
+                )
+            }
         </div >
     );
 }
