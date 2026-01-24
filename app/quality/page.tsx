@@ -14,6 +14,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { QualityReports } from "@/components/quality/QualityReports";
+import { PrintableEightD } from "@/components/quality/PrintableEightD";
 
 const METHODOLOGY_TEMPLATES = {
     ishikawa: `### Ishikawa (Espinha de Peixe)
@@ -149,7 +150,7 @@ export default function QualityPage() {
                                 <div>
                                     <label className="text-sm font-medium mb-1 block">Origem (Asset)</label>
                                     <SearchableSelect
-                                        options={assets.map(a => ({ value: a.id, label: a.name }))}
+                                        options={assets.map(a => ({ value: a.id, label: `${a.area} - ${a.name}` }))}
                                         value={newCase.assetId || ""}
                                         onChange={(v) => setNewCase({ ...newCase, assetId: v })}
                                         placeholder="Buscar Asset..."
@@ -167,37 +168,23 @@ export default function QualityPage() {
                             </div>
 
                             <div>
-                                <div className="flex justify-between items-center mb-1">
-                                    <label className="text-sm font-medium">Descrição do Problema / Análise</label>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 text-xs text-blue-600"
-                                        onClick={() => {
-                                            const template = METHODOLOGY_TEMPLATES[newCase.methodology as keyof typeof METHODOLOGY_TEMPLATES];
-                                            setNewCase({ ...newCase, description: template });
-                                        }}
-                                    >
-                                        Carregar Modelo
-                                    </Button>
-                                </div>
+                                <label className="text-sm font-medium mb-1 block">Descrição do Problema</label>
                                 <textarea
-                                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[150px] font-mono"
+                                    className="flex w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[150px]"
                                     value={newCase.description}
                                     onChange={(e) => setNewCase({ ...newCase, description: e.target.value })}
-                                    placeholder="Descreva o defeito ou preencha o modelo..."
+                                    placeholder="Descreva o problema encontrado de forma clara..."
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium mb-1 block">Tipo</label>
                                     <Select
                                         value={newCase.type}
                                         onValueChange={(v: any) => setNewCase({ ...newCase, type: v })}
                                     >
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="internal">Falha Interna</SelectItem>
                                             <SelectItem value="supplier">Reclamação Fornecedor</SelectItem>
@@ -212,7 +199,7 @@ export default function QualityPage() {
                                         value={newCase.severity}
                                         onValueChange={(v: any) => setNewCase({ ...newCase, severity: v })}
                                     >
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="low">Baixa</SelectItem>
                                             <SelectItem value="medium">Média</SelectItem>
@@ -221,42 +208,17 @@ export default function QualityPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div>
-                                    <label className="text-sm font-medium mb-1 block">Metodologia</label>
-                                    <Select
-                                        value={newCase.methodology}
-                                        onValueChange={(v: any) => {
-                                            const template = METHODOLOGY_TEMPLATES[v as keyof typeof METHODOLOGY_TEMPLATES];
-                                            setNewCase({
-                                                ...newCase,
-                                                methodology: v,
-                                                // Only inject if description is empty or looks like a different template
-                                                description: (!newCase.description || newCase.description.length < 10) ? template : newCase.description
-                                            });
-                                        }}
-                                    >
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="ishikawa">Ishikawa (Espinha Peixe)</SelectItem>
-                                            <SelectItem value="5whys">5 Porquês</SelectItem>
-                                            <SelectItem value="8d">8D Report</SelectItem>
-                                            <SelectItem value="a3">A3 Problem Solving</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
                             </div>
 
-
-
-                            <div className="grid grid-cols-2 gap-4 mt-4">
+                            <div className="grid grid-cols-2 gap-4 mt-2">
                                 <div>
-                                    <label className="text-sm font-medium mb-1 block">Data Limite (Fechamento)</label>
+                                    <label className="text-sm font-medium mb-1 block">Data Limite (Estimada)</label>
                                     <Input
                                         type="date"
+                                        className="bg-white"
                                         value={newCase.dueDate ? newCase.dueDate.split('T')[0] : ''}
                                         onChange={(e) => setNewCase({ ...newCase, dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
                                     />
-                                    <p className="text-xs text-slate-500 mt-1">Estimativa de resolução.</p>
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium mb-1 block">Imagens (Max 4)</label>
@@ -264,7 +226,7 @@ export default function QualityPage() {
                                         type="file"
                                         accept="image/*"
                                         multiple
-                                        className="h-9 text-xs"
+                                        className="h-9 text-xs bg-white"
                                         onChange={async (e) => {
                                             const files = Array.from(e.target.files || []).slice(0, 4);
                                             const promises = files.map(file => new Promise<string>((resolve) => {
@@ -286,7 +248,7 @@ export default function QualityPage() {
                                 </div>
                             </div>
 
-                            <Button onClick={handleCreateCase} className="w-full mt-2">Registrar Caso</Button>
+                            <Button onClick={handleCreateCase} className="w-full mt-4 bg-blue-600 hover:bg-blue-700">Registrar Caso</Button>
                         </div>
                     </DialogContent>
                 </Dialog>
@@ -300,6 +262,12 @@ export default function QualityPage() {
                             className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-4 py-2"
                         >
                             Gestão (Kanban)
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="actions"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-4 py-2"
+                        >
+                            Plano de Ação
                         </TabsTrigger>
                         <TabsTrigger
                             value="reports"
@@ -374,32 +342,79 @@ export default function QualityPage() {
 
                         {/* List */}
                         <div className="space-y-4">
-                            {filteredCases.map(qc => (
-                                <Card key={qc.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                                    <div className={`h-2 w-full ${getStatusColor(qc.status)}`} />
-                                    <CardContent className="p-6">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Badge variant="outline" className="font-mono">{qc.id}</Badge>
-                                                    <Badge className={getStatusColor(qc.status)}>{qc.status.toUpperCase()}</Badge>
-                                                    <span className="text-sm text-slate-500">{new Date(qc.createdAt || '').toLocaleDateString()}</span>
+                            {filteredCases.map(qc => {
+                                const isLate = qc.dueDate && new Date(qc.dueDate) < new Date() && qc.status !== 'resolved';
+                                const daysRemaining = qc.dueDate ? Math.ceil((new Date(qc.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+
+                                return (
+                                    <Card key={qc.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                                        <div className={`h-2 w-full ${getStatusColor(qc.status)}`} />
+                                        <CardContent className="p-6">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Badge variant="outline" className="font-mono">{qc.id}</Badge>
+                                                        <Badge className={getStatusColor(qc.status)}>{qc.status.toUpperCase()}</Badge>
+                                                        <span className="text-sm text-slate-500">{new Date(qc.createdAt || '').toLocaleDateString()}</span>
+                                                        {qc.dueDate && (
+                                                            <Badge variant={isLate ? "destructive" : "secondary"} className={isLate ? "bg-red-500 hover:bg-red-600" : "bg-green-100 text-green-800 hover:bg-green-200"}>
+                                                                {isLate ? `Atrasado ${Math.abs(daysRemaining || 0)} dias` : `${daysRemaining} dias restantes`}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <h3 className="text-lg font-semibold text-slate-800">{qc.description}</h3>
+                                                    <div className="flex gap-4 mt-2 text-sm text-slate-600">
+                                                        <span><strong>Asset:</strong> {assets.find(a => a.id === qc.assetId)?.name || qc.assetId}</span>
+                                                        <span><strong>Tipo:</strong> {qc.type}</span>
+                                                        <span><strong>Severidade:</strong> {qc.severity}</span>
+                                                        <span><strong>Metodologia:</strong> {qc.methodology}</span>
+                                                    </div>
                                                 </div>
-                                                <h3 className="text-lg font-semibold text-slate-800">{qc.description}</h3>
-                                                <div className="flex gap-4 mt-2 text-sm text-slate-600">
-                                                    <span><strong>Asset:</strong> {assets.find(a => a.id === qc.assetId)?.name || qc.assetId}</span>
-                                                    <span><strong>Tipo:</strong> {qc.type}</span>
-                                                    <span><strong>Severidade:</strong> {qc.severity}</span>
-                                                    <span><strong>Metodologia:</strong> {qc.methodology}</span>
-                                                </div>
+                                                <Button variant="outline" size="sm" onClick={() => setSelectedSubject(qc)}>
+                                                    Gerenciar
+                                                </Button>
                                             </div>
-                                            <Button variant="outline" size="sm" onClick={() => setSelectedSubject(qc)}>
-                                                Gerenciar
-                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="actions" className="mt-6">
+                        <div className="space-y-4">
+                            <Card className="p-4 bg-slate-50">
+                                <h3 className="font-semibold text-lg text-slate-800 mb-2">Plano de Ação Global</h3>
+                                <p className="text-slate-500 text-sm">Visualização consolidada de todas as ações corretivas.</p>
+                            </Card>
+
+                            {qualityActions.sort((a, b) => new Date(a.deadline || '').getTime() - new Date(b.deadline || '').getTime()).map(action => {
+                                const parentCase = qualityCases.find(c => c.id === action.caseId);
+                                const isLate = action.deadline && new Date(action.deadline) < new Date() && action.status !== 'completed';
+
+                                return (
+                                    <Card key={action.id} className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => parentCase && setSelectedSubject(parentCase)}>
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant={action.status === 'completed' ? 'secondary' : 'outline'}>
+                                                    {action.status === 'completed' ? 'CONCLUÍDO' : 'PENDENTE'}
+                                                </Badge>
+                                                {isLate && <Badge variant="destructive" className="text-[10px] h-5">ATRASADO</Badge>}
+                                                <span className="font-semibold text-slate-900">{action.description}</span>
+                                            </div>
+                                            <div className="text-xs text-slate-500 flex gap-3">
+                                                <span>Caso: {parentCase?.id}</span>
+                                                <span>Resp: {action.responsible}</span>
+                                                <span>Prazo: {action.deadline ? new Date(action.deadline).toLocaleDateString() : 'N/A'}</span>
+                                            </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                                        <div className="text-right">
+                                            <Button size="sm" variant="ghost" className="text-blue-600">Ver Caso &rarr;</Button>
+                                        </div>
+                                    </Card>
+                                )
+                            })}
+                            {qualityActions.length === 0 && <p className="text-center py-8 text-slate-500">Nenhuma ação registrada.</p>}
                         </div>
                     </TabsContent>
 
@@ -415,7 +430,8 @@ export default function QualityPage() {
                         </DialogHeader>
                         {selectedSubject && (
                             <div className="py-4">
-                                <Tabs defaultValue="verify" className="w-full">
+                                <PrintableEightD data={selectedSubject} />
+                                <Tabs defaultValue="verify" className="w-full print:hidden">
                                     <TabsList className="grid w-full grid-cols-3 mb-4">
                                         <TabsTrigger value="verify">1. VERIFICAR (D1-D3)</TabsTrigger>
                                         <TabsTrigger value="plan">2. PLANEAR (D4)</TabsTrigger>
@@ -474,7 +490,33 @@ export default function QualityPage() {
                                                 ))}
                                             </div>
                                         </div>
-                                        <Button className="w-full" onClick={() => updateQualityCase(selectedSubject.id, { methodologyData: selectedSubject.methodologyData })}>Salvar Etapa Verificar</Button>
+
+                                        {/* Images Preview */}
+                                        {selectedSubject.images && selectedSubject.images.length > 0 && (
+                                            <div className="border rounded-lg p-4 bg-slate-50">
+                                                <h4 className="font-semibold text-sm text-slate-700 mb-2">Evidências Fotográficas</h4>
+                                                <div className="flex gap-2 overflow-x-auto">
+                                                    {selectedSubject.images.map((img, i) => (
+                                                        <div key={i} className="h-24 w-24 shrink-0 border rounded overflow-hidden bg-white relative group">
+                                                            <img src={img} alt="evidence" className="object-cover w-full h-full" />
+                                                            <a href={img} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                                                                Abrir
+                                                            </a>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-2">
+                                            <Button className="flex-1" onClick={() => updateQualityCase(selectedSubject.id, { methodologyData: selectedSubject.methodologyData })}>Salvar Etapa Verificar</Button>
+                                            <Button variant="outline" className="gap-2" onClick={() => toast.success("Enviando e-mail com relatório 8D...")}>
+                                                ✉️ Email
+                                            </Button>
+                                            <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+                                                🖨️ Imprimir
+                                            </Button>
+                                        </div>
                                     </TabsContent>
 
                                     {/* --- TAB 2: PLANEAR --- */}

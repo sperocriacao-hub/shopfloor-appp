@@ -6,11 +6,13 @@ import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, Chevro
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { SystemConfigModal } from '@/components/config/SystemConfigModal';
 
 export function Sidebar() {
     const pathname = usePathname();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [isConfigOpen, setIsConfigOpen] = useState(false);
 
     // Auto-collapse on mobile/tablet on mount and resize
     useEffect(() => {
@@ -114,6 +116,20 @@ export function Sidebar() {
                     )}
                 </div>
             </div>
+            </div>
+            
+            <SystemConfigModal open={isConfigOpen} onOpenChange={setIsConfigOpen} />
+            {
+        !isCollapsed && (
+            <button
+                onClick={() => setIsConfigOpen(true)}
+                className="absolute bottom-2 left-2 text-blue-400 hover:text-white transition-colors"
+                title="Configurações do Sistema"
+            >
+                <Settings className="h-4 w-4 opacity-50 hover:opacity-100" />
+            </button>
+        )
+    }
         </div >
     );
 }
