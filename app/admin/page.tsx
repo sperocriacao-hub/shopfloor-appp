@@ -121,7 +121,7 @@ export default function AdminPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
                                     <h3 className="text-sm font-semibold mb-2">Simulador de Leitura (Eventos)</h3>
-                                    <RFIDSimulator />
+                                    <RFIDSimulator onScan={(tag) => toast.info(`Tag Escaneada: ${tag}`)} />
                                 </div>
                                 <div className="space-y-4 border-l pl-4">
                                     <h3 className="text-sm font-semibold mb-2">Gravador de Tags (Mock)</h3>

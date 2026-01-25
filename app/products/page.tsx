@@ -284,7 +284,7 @@ export default function ProductsPage() {
 
                             {/* TAB: OPTIONS */}
                             <TabsContent value="options" className="space-y-4 py-4">
-                                <OptionsManager productModelId={editingProduct.id} />
+                                <OptionsManager productModelId={editingProduct.id} onClose={() => { }} />
                             </TabsContent>
                         </Tabs>
                     ) : (
