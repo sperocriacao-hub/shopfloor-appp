@@ -140,6 +140,24 @@ export interface Routing {
 // --- Execution (O que está acontecendo) ---
 export type OrderStatus = 'planned' | 'in_progress' | 'completed' | 'hold';
 
+// --- Shopfloor V7: Parts Tracking ---
+export interface ProductPart {
+    id: string;
+    productModelId: string;
+    name: string;
+    category: 'Big' | 'Medium' | 'Small';
+    rfidRequired: boolean;
+}
+
+export interface OrderPart {
+    id: string;
+    orderId: string;
+    partDefinitionId: string;
+    rfidTag?: string;
+    status: 'pending' | 'produced' | 'assembled';
+    producedAt?: string;
+}
+
 export interface ProductionOrder {
     id: string; // ex: "PO-2024-001"
     productModelId: string;

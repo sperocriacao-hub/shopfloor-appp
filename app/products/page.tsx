@@ -16,7 +16,9 @@ import { RoutingEditor } from "@/components/engineering/RoutingEditor";
 
 import { ProductOrdersList } from "@/components/engineering/ProductOrdersList";
 import { OptionsManager } from "@/components/engineering/OptionsManager";
-import { Layers } from "lucide-react";
+import { ProductPartsManager } from "@/components/engineering/ProductPartsManager"; // New
+import { Layers, Cuboid } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // New
 
 export default function ProductsPage() {
     const router = useRouter();
@@ -234,38 +236,73 @@ export default function ProductsPage() {
 
             {/* Edit/Create Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{editingProduct ? 'Editar Modelo' : 'Novo Modelo'}</DialogTitle>
+                        <DialogTitle>{editingProduct ? `Editar ${editingProduct.name}` : "Novo Modelo"}</DialogTitle>
                         <DialogDescription>
-                            Defina as informações básicas do produto.
+                            Configure os detalhes, composição e opcionais.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">Modelo</Label>
-                            <Input
-                                id="name"
-                                value={editForm.name || ''}
-                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                className="col-span-3"
-                                placeholder="Ex: Interceptor 40"
-                            />
+
+                    {editingProduct ? (
+                        <Tabs defaultValue="general" className="w-full">
+                            <TabsList className="grid w-full grid-cols-3">
+                                <TabsTrigger value="general">Geral</TabsTrigger>
+                                <TabsTrigger value="parts">Composição (Partes)</TabsTrigger>
+                                <TabsTrigger value="options">Opcionais</TabsTrigger>
+                            </TabsList>
+
+                            {/* TAB: GENERAL */}
+                            <TabsContent value="general" className="space-y-4 py-4">
+                                <div className="space-y-4">
+                                    <div className="grid w-full items-center gap-1.5">
+                                        <Label htmlFor="editName">Nome do Modelo</Label>
+                                        <Input
+                                            id="editName"
+                                            value={editForm.name || ''}
+                                            onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div className="grid w-full items-center gap-1.5">
+                                        <Label htmlFor="editDesc">Descrição</Label>
+                                        <Input
+                                            id="editDesc"
+                                            value={editForm.description || ''}
+                                            onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button onClick={handleSaveEdit}>Salvar Alterações</Button>
+                                </DialogFooter>
+                            </TabsContent>
+
+                            {/* TAB: PARTS */}
+                            <TabsContent value="parts" className="space-y-4 py-4">
+                                <ProductPartsManager productModelId={editingProduct.id} />
+                            </TabsContent>
+
+                            {/* TAB: OPTIONS */}
+                            <TabsContent value="options" className="space-y-4 py-4">
+                                <OptionsManager productModelId={editingProduct.id} />
+                            </TabsContent>
+                        </Tabs>
+                    ) : (
+                        // Create Mode (Simple)
+                        <div className="space-y-4 py-4">
+                            <div className="grid w-full items-center gap-1.5">
+                                <Label htmlFor="newName">Nome do Modelo</Label>
+                                <Input
+                                    id="newName"
+                                    value={editForm.name || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={handleSaveEdit}>Criar Modelo</Button>
+                            </DialogFooter>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="desc" className="text-right">Descrição</Label>
-                            <Input
-                                id="desc"
-                                value={editForm.description || ''}
-                                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                className="col-span-3"
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSaveEdit}>Salvar</Button>
-                    </DialogFooter>
+                    )}
                 </DialogContent>
             </Dialog>
 

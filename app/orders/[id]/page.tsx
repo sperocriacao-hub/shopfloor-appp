@@ -185,6 +185,66 @@ export default function OrderDashboardPage() {
 
                 {/* Right Column: Configuration */}
                 <div className="space-y-6">
+
+                    {/* V7 Parts Tracking */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-sm font-medium">Rastreamento de Partes (RFID)</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {products.find(p => p.id === order.productModelId) && useShopfloorStore.getState().productParts
+                                .filter(pp => pp.productModelId === order.productModelId).length === 0 ? (
+                                <p className="text-xs text-slate-400">Nenhuma parte definida para este modelo.</p>
+                            ) : (
+                                useShopfloorStore.getState().productParts
+                                    .filter(pp => pp.productModelId === order.productModelId)
+                                    .map(part => {
+                                        const orderPart = useShopfloorStore.getState().orderParts
+                                            .find(op => op.orderId === order.id && op.partDefinitionId === part.id);
+
+                                        return (
+                                            <div key={part.id} className="p-3 bg-slate-50 rounded border border-slate-200">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="font-semibold text-sm text-slate-700">{part.name}</span>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${part.category === 'Big' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'
+                                                        }`}>{part.category}</span>
+                                                </div>
+
+                                                {orderPart ? (
+                                                    <div className="flex items-center gap-2 text-xs bg-green-50 p-2 rounded border border-green-200 text-green-800">
+                                                        <CheckSquare className="h-3 w-3" />
+                                                        <span>RFID: <strong>{orderPart.rfidTag}</strong></span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Scan RFID/Digitar ID"
+                                                            className="flex-1 text-xs border rounded px-2 py-1"
+                                                            onKeyDown={async (e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    const val = e.currentTarget.value;
+                                                                    if (!val) return;
+                                                                    await useShopfloorStore.getState().addOrderPart({
+                                                                        id: crypto.randomUUID(),
+                                                                        orderId: order.id,
+                                                                        partDefinitionId: part.id,
+                                                                        rfidTag: val,
+                                                                        status: 'produced',
+                                                                        producedAt: new Date().toISOString()
+                                                                    });
+                                                                    e.currentTarget.value = "";
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                            )}
+                        </CardContent>
+                    </Card>
                     <Card className="h-full">
                         <CardHeader>
                             <CardTitle>Opcionais & Kits Instalados</CardTitle>

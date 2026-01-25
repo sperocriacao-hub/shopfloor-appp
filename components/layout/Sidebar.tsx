@@ -39,7 +39,10 @@ export function Sidebar() {
         { name: 'Recursos Humanos', href: '/staff', icon: Users },
         { name: 'Qualidade', href: '/quality', icon: Microscope },
         { name: 'Ferramentaria', href: '/tools', icon: Settings },
-        { name: 'Modo Operador', href: '/shopfloor', icon: Ship },
+        { name: 'Supervisor', href: '/supervisor', icon: Users }, // Visibility Fix
+        { name: 'App Mobile', href: '/mobile', icon: Ship }, // Visibility Fix
+        { name: 'Admin / Suporte', href: '/admin', icon: Wrench }, // New Admin Module
+        { name: 'Modo Shopfloor (Legacy)', href: '/shopfloor', icon: Ship },
     ];
 
     return (

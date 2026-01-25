@@ -9,7 +9,8 @@ import {
     Tool, ToolTransaction, ToolMaintenance,
     ConsumableTransaction, CostCenterMapping, PpeRequest,
     ProductionLine, SequencingRule, Alert,
-    MoldCompatibility, MoldMaintenanceLog
+    MoldCompatibility, MoldMaintenanceLog,
+    ProductPart, OrderPart
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -179,6 +180,13 @@ interface ShopfloorState {
     removeMoldCompatibility: (id: string) => Promise<void>;
     addMoldMaintenanceLog: (log: MoldMaintenanceLog) => Promise<void>;
     updateMoldMaintenanceLog: (id: string, updates: Partial<MoldMaintenanceLog>) => Promise<void>;
+
+    // Shopfloor V7 (Parts)
+    productParts: ProductPart[];
+    orderParts: OrderPart[];
+    addProductPart: (part: ProductPart) => Promise<void>;
+    addOrderPart: (part: OrderPart) => Promise<void>;
+    updateOrderPart: (id: string, updates: Partial<OrderPart>) => Promise<void>;
 
     // Shopfloor IoT - Andon
     alerts: Alert[];
@@ -568,6 +576,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
             // Shopfloor V6
             productionLines: [],
             sequencingRules: [],
+            productParts: [],
+            orderParts: [],
             moldCompatibility: [],
             moldMaintenanceLogs: [],
             alerts: [],
@@ -1194,6 +1204,34 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 return get().assets.find(a => a.locationFixedId?.toUpperCase() === fixedId.toUpperCase());
             },
 
+            // --- Shopfloor V7 Parts Actions ---
+            addProductPart: async (part) => {
+                set(s => ({ productParts: [...s.productParts, part] }));
+                const { error } = await supabase.from('product_parts').insert({
+                    id: part.id, product_model_id: part.productModelId, name: part.name, category: part.category, rfid_required: part.rfidRequired
+                });
+                if (error) console.error("Error adding product part", error);
+            },
+
+            addOrderPart: async (part) => {
+                set(s => ({ orderParts: [...s.orderParts, part] }));
+                const { error } = await supabase.from('order_parts').insert({
+                    id: part.id, order_id: part.orderId, part_definition_id: part.partDefinitionId,
+                    rfid_tag: part.rfidTag, status: part.status
+                });
+                if (error) console.error("Error adding order part", error);
+            },
+
+            updateOrderPart: async (id, updates) => {
+                set(s => ({ orderParts: s.orderParts.map(p => p.id === id ? { ...p, ...updates } : p) }));
+                const toUpdate: any = {};
+                if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
+                if (updates.status) toUpdate.status = updates.status;
+                if (updates.producedAt) toUpdate.produced_at = updates.producedAt;
+
+                await supabase.from('order_parts').update(toUpdate).eq('id', id);
+            },
+
             // --- Mold Management Actions ---
             addMoldCompatibility: async (pair) => {
                 set(s => ({ moldCompatibility: [...s.moldCompatibility, pair] }));
@@ -1420,6 +1458,23 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // Check performance here later - maybe only fetch last 3 months
                 const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
                 if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
+
+                // V7 Parts Sync
+                const { data: pParts } = await supabase.from('product_parts').select('*');
+                if (pParts) set({
+                    productParts: pParts.map(p => ({
+                        id: p.id, productModelId: p.product_model_id, name: p.name,
+                        category: p.category, rfidRequired: p.rfid_required
+                    }))
+                });
+
+                const { data: oParts } = await supabase.from('order_parts').select('*');
+                if (oParts) set({
+                    orderParts: oParts.map(p => ({
+                        id: p.id, orderId: p.order_id, partDefinitionId: p.part_definition_id,
+                        rfidTag: p.rfid_tag, status: p.status, producedAt: p.produced_at
+                    }))
+                });
 
                 // Shopfloor V6 Sync
                 const { data: lines } = await supabase.from('production_lines').select('*');
