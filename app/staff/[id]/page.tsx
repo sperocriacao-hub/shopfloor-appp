@@ -40,6 +40,7 @@ export default function EditStaffPage() {
         hasSystemAccess: false,
         systemRole: "operator",
         username: "",
+        rfidTag: "",
         password: ""
     });
 
@@ -80,6 +81,7 @@ export default function EditStaffPage() {
                     hasSystemAccess: emp.hasSystemAccess || false,
                     systemRole: emp.systemAccess?.role || "operator",
                     username: emp.systemAccess?.username || "",
+                    rfidTag: emp.rfidTag || "",
                     password: "" // Don't show password
                 });
             } else {
@@ -148,6 +150,16 @@ export default function EditStaffPage() {
                                 onChange={handleChange}
                                 className="input-field bg-slate-50"
                                 readOnly // Usually ID shouldn't change easily
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Tag RFID / NFC</label>
+                            <input
+                                name="rfidTag"
+                                value={(formData as any).rfidTag || ""}
+                                onChange={handleChange}
+                                className="input-field font-mono"
+                                placeholder="ID do Cartão"
                             />
                         </div>
                         <div className="md:col-span-2 space-y-2">

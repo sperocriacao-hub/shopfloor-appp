@@ -13,19 +13,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ScrapReport } from "@/types";
 import { toast } from "sonner";
+import { RFIDSimulator } from "@/components/iot/RFIDSimulator";
+import { Employee, Asset } from "@/types";
 
 export default function ShopfloorPage() {
     const {
         assets, orders, events, employees,
         productOptions, optionTasks, taskExecutions, orderIssues,
         startOperation, stopOperation, toggleTask, reportIssue,
-        addQualityCase, addScrapReport
+        addQualityCase, addScrapReport,
+        findAssetByRfid, findEmployeeByRfid, findStationByFixedId
     } = useShopfloorStore();
 
     // Session State
     const [selectedStationId, setSelectedStationId] = useState<string>("");
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(""); // Added for reporting
     const [view, setView] = useState<'select' | 'panel'>('select');
+    const [lastScannedTag, setLastScannedTag] = useState<string | null>(null);
+    const [scannedAsset, setScannedAsset] = useState<Asset | null>(null);
 
     // UI State
     const [showIssueModal, setShowIssueModal] = useState(false);
@@ -100,6 +105,55 @@ export default function ShopfloorPage() {
     const estimatedFinishTime = startTime
         ? new Date(startTime.getTime() + estimatedMinutes * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : '--:--';
+
+    // --- RFID Handler ---
+    const handleRfidScan = (tag: string) => {
+        setLastScannedTag(tag);
+        console.log("Scanned:", tag);
+
+        // 1. Check for Station (Login Station)
+        // If we are in selection mode, scanning a station tag should select it.
+        const station = findStationByFixedId(tag);
+        if (station) {
+            setSelectedStationId(station.id);
+            if (view === 'select') setView('panel');
+            toast.success(`Estação Logada: ${station.name}`);
+            return;
+        }
+
+        // 2. Check for Employee (Operator Login/Switch)
+        const emp = findEmployeeByRfid(tag);
+        if (emp) {
+            setSelectedEmployeeId(emp.id);
+            toast.success(`Operador Identificado: ${emp.name}`);
+            return;
+        }
+
+        // 3. Check for Asset (Mold/Machine Validation)
+        const asset = findAssetByRfid(tag);
+        if (asset) {
+            setScannedAsset(asset);
+
+            // Validation Logic: Does this asset match the current Order's requirement?
+            if (activeOrder) {
+                // Check if this Asset is assigned to the order
+                // The order has 'assetId' (legacy) or 'assetIds' (multi).
+                // Or check operations.
+                const isMatch = activeOrder.assetIds?.includes(asset.id) || activeOrder.assetId === asset.id;
+
+                if (isMatch) {
+                    toast.success(`Molde Confirmado: ${asset.name}`);
+                } else {
+                    toast.warning(`Molde Incorreto: ${asset.name} não pertence à Ordem atual!`);
+                }
+            } else {
+                toast.info(`Ativo Escaneado: ${asset.name}`);
+            }
+            return;
+        }
+
+        toast.error(`Tag Desconhecida: ${tag}`);
+    };
 
     // --- Handlers ---
 
@@ -701,6 +755,11 @@ export default function ShopfloorPage() {
                     </Card>
                 </div>
             )}
+
+            {/* RFID Simulator Overlay/Footer */}
+            <div className="fixed bottom-4 right-4 z-50">
+                <RFIDSimulator onScan={handleRfidScan} lastScanned={lastScannedTag || undefined} />
+            </div>
         </div>
     );
 }

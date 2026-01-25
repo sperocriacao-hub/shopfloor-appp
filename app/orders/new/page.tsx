@@ -10,29 +10,61 @@ import { cn } from "@/lib/utils";
 
 export default function NewOrderPage() {
     const router = useRouter();
-    const { products, assets, productOptions, createOrder } = useShopfloorStore();
+    const { products, assets, productOptions, createOrder, productionLines, sequencingRules } = useShopfloorStore();
 
     const [formData, setFormData] = useState({
         productModelId: "",
-        // quantity removed as per V4 request (Single Unit Flow)
+        productionLineId: "", // Shopfloor V6
+        // ...
         po: "",
         pp: "",
         hin: "",
         partn: "",
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: "", // Empty by default now
         finishDate: "",
         br: "",
         country: "",
         customer: "",
-        assetIds: [] as string[] // Target Stations (Shopfloor 4.0 Multi-select)
+        assetIds: [] as string[]
     });
+
+    // Helper: Calculate Start Date based on Finish Date and Sequencing Rules
+    // Logic: Start Date = Finish Date - Max(Offset Days for this Model)
+    // NOTE: In a real system we would consider weekends (business days). For V1, simple subtraction.
+    const calculateStartDate = (finish: string, modelId: string): string => {
+        if (!finish || !modelId) return "";
+
+        // Find rules for this model
+        const rules = sequencingRules.filter(r => r.productModelId === modelId);
+
+        if (rules.length === 0) return finish; // No rules, start = finish (JIT)
+
+        // Find the maximum offset (Earliest start)
+        const maxOffset = Math.max(...rules.map(r => r.offsetDays));
+
+        const date = new Date(finish);
+        date.setDate(date.getDate() - maxOffset);
+        return date.toISOString().split('T')[0];
+    };
 
     const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+
+        setFormData(prev => {
+            const next = { ...prev, [name]: value };
+
+            // Auto-schedule if Finish Date or Model changes
+            if ((name === 'finishDate' || name === 'productModelId') && next.finishDate && next.productModelId) {
+                const suggStart = calculateStartDate(next.finishDate, next.productModelId);
+                console.log("Auto-scheduling:", { finish: next.finishDate, model: next.productModelId, suggStart });
+                if (suggStart) next.startDate = suggStart;
+            }
+
+            return next;
+        });
     };
 
     const toggleOption = (optId: string) => {
@@ -97,6 +129,7 @@ export default function NewOrderPage() {
                 br: formData.br,
                 country: formData.country,
                 customer: formData.customer,
+                productionLineId: formData.productionLineId,
 
                 // Shopfloor 3.0
                 selectedOptions: selectedOptions
@@ -151,6 +184,23 @@ export default function NewOrderPage() {
                                             </option>
                                         ))}
                                         <option value="NEW" className="font-bold text-blue-600 bg-blue-50">+ Adicionar Novo Modelo</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Linha de Produção</label>
+                                    <select
+                                        name="productionLineId"
+                                        className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                        value={formData.productionLineId}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="" disabled>Selecione a linha...</option>
+                                        {productionLines.filter(l => l.active).map((line) => (
+                                            <option key={line.id} value={line.id}>
+                                                Linha {line.id} ({line.dailyCapacity}/dia)
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 

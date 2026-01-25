@@ -32,7 +32,7 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
         name: string;
         productModelId: string;
         description: string;
-        tasks: { tempId: string; description: string; pdfUrl: string; sequence: number; stationId: string }[];
+        tasks: { tempId: string; description: string; pdfUrl: string; sequence: number; stationId: string; standardTimeMinutes: number }[];
     }>({
         name: "",
         productModelId: "",
@@ -52,7 +52,8 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                 description: t.description,
                 pdfUrl: t.pdfUrl || "",
                 sequence: t.sequence,
-                stationId: t.stationId || ""
+                stationId: t.stationId || "",
+                standardTimeMinutes: t.standardTimeMinutes || 0
             }));
 
         setFormData({
@@ -74,7 +75,7 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
             ...prev,
             tasks: [
                 ...prev.tasks,
-                { tempId: `temp-${Date.now()}`, description: "", pdfUrl: "", sequence: prev.tasks.length * 10 + 10, stationId: "" }
+                { tempId: `temp-${Date.now()}`, description: "", pdfUrl: "", sequence: prev.tasks.length * 10 + 10, stationId: "", standardTimeMinutes: 0 }
             ]
         }));
     };
@@ -152,8 +153,9 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                     optionId: optionId,
                     description: t.description,
                     sequence: t.sequence,
+                    stationId: t.stationId,
                     pdfUrl: t.pdfUrl,
-                    stationId: t.stationId
+                    standardTimeMinutes: t.standardTimeMinutes
                 });
             } else {
                 // Update Existing
@@ -161,7 +163,8 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                     description: t.description,
                     sequence: t.sequence,
                     pdfUrl: t.pdfUrl,
-                    stationId: t.stationId
+                    stationId: t.stationId,
+                    standardTimeMinutes: t.standardTimeMinutes
                 });
             }
         }
@@ -325,21 +328,30 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                     {filteredOptions.length === 0 && (
                         <p className="text-sm text-slate-400 text-center py-4">Nenhuma opção cadastrada.</p>
                     )}
-                    {filteredOptions.map(opt => (
-                        <Card
-                            key={opt.id}
-                            onClick={() => handleSelectOption(opt)}
-                            className={cn(
-                                "cursor-pointer hover:bg-slate-50 transition-colors",
-                                selectedOptionId === opt.id ? "border-blue-500 bg-blue-50" : ""
-                            )}
-                        >
-                            <CardContent className="p-3">
-                                <p className="font-semibold">{opt.name}</p>
-                                <p className="text-xs text-slate-500 truncate">{opt.description}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    {filteredOptions.map(opt => {
+                        const totalTime = optionTasks
+                            .filter(t => t.optionId === opt.id)
+                            .reduce((acc, curr) => acc + (curr.standardTimeMinutes || 0), 0);
+
+                        return (
+                            <Card
+                                key={opt.id}
+                                onClick={() => handleSelectOption(opt)}
+                                className={cn(
+                                    "cursor-pointer hover:bg-slate-50 transition-colors",
+                                    selectedOptionId === opt.id ? "border-blue-500 bg-blue-50" : ""
+                                )}
+                            >
+                                <CardContent className="p-3">
+                                    <div className="flex justify-between items-start">
+                                        <p className="font-semibold">{opt.name}</p>
+                                        {totalTime > 0 && <span className="text-xs bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-mono">{totalTime} min</span>}
+                                    </div>
+                                    <p className="text-xs text-slate-500 truncate">{opt.description}</p>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -539,6 +551,16 @@ export function OptionsManager({ productModelId, onClose }: OptionsManagerProps)
                                                         onChange={e => handleUpdateTask(idx, 'pdfUrl', e.target.value)}
                                                         className="h-7 text-xs text-blue-600 bg-blue-50/50 border-blue-100"
                                                         placeholder="URL do PDF (Instrução)"
+                                                    />
+                                                </div>
+                                                <div className="w-20">
+                                                    <Input
+                                                        type="number"
+                                                        value={task.standardTimeMinutes}
+                                                        onChange={e => handleUpdateTask(idx, 'standardTimeMinutes', parseInt(e.target.value))}
+                                                        className="h-7 text-xs text-center font-mono"
+                                                        placeholder="Min"
+                                                        title="Tempo Padrão (Minutos)"
                                                     />
                                                 </div>
                                             </div>

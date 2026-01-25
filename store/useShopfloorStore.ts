@@ -7,7 +7,9 @@ import {
     ProductOption, OptionTask, OrderIssue, TaskExecution,
     QualityCase, QualityAction, ScrapReport,
     Tool, ToolTransaction, ToolMaintenance,
-    ConsumableTransaction, CostCenterMapping, PpeRequest
+    ConsumableTransaction, CostCenterMapping, PpeRequest,
+    ProductionLine, SequencingRule, Alert,
+    MoldCompatibility, MoldMaintenanceLog
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -156,7 +158,7 @@ interface ShopfloorState {
     employees: Employee[];
     absenteeismRecords: AbsenteeismRecord[];
 
-    // Shopfloor 3.0 Data
+    // Shopfloor 3.0
     productOptions: ProductOption[];
     optionTasks: OptionTask[];
     taskExecutions: TaskExecution[];
@@ -166,6 +168,22 @@ interface ShopfloorState {
     qualityCases: QualityCase[];
     qualityActions: QualityAction[];
     scrapReports: ScrapReport[];
+
+    // Shopfloor V6 (Engineering)
+    productionLines: ProductionLine[];
+    sequencingRules: SequencingRule[];
+    moldCompatibility: MoldCompatibility[]; // Shopfloor V6
+    moldMaintenanceLogs: MoldMaintenanceLog[]; // Shopfloor V6
+
+    addMoldCompatibility: (pair: MoldCompatibility) => Promise<void>;
+    removeMoldCompatibility: (id: string) => Promise<void>;
+    addMoldMaintenanceLog: (log: MoldMaintenanceLog) => Promise<void>;
+    updateMoldMaintenanceLog: (id: string, updates: Partial<MoldMaintenanceLog>) => Promise<void>;
+
+    // Shopfloor IoT - Andon
+    alerts: Alert[];
+    triggerAndon: (alert: Alert) => Promise<void>;
+    resolveAndon: (id: string, resolvedBy: string) => Promise<void>;
 
     addAsset: (asset: Asset) => void;
     updateAsset: (id: string, updates: Partial<Asset>) => Promise<void>;
@@ -234,6 +252,18 @@ interface ShopfloorState {
     importConsumablesBatch: (transactions: ConsumableTransaction[]) => Promise<void>;
     addPpeRequest: (req: PpeRequest) => Promise<void>;
     updatePpeRequest: (id: string, updates: Partial<PpeRequest>) => Promise<void>;
+
+    // Shopfloor V6 Actions
+    addProductionLine: (line: ProductionLine) => Promise<void>;
+    updateProductionLine: (id: string, updates: Partial<ProductionLine>) => Promise<void>;
+    addSequencingRule: (rule: SequencingRule) => Promise<void>;
+    updateSequencingRule: (id: string, updates: Partial<SequencingRule>) => Promise<void>;
+    deleteSequencingRule: (id: string) => Promise<void>;
+
+    // Shopfloor V6 IoT Actions
+    findAssetByRfid: (tag: string) => Asset | undefined; // Synchronous lookups from loaded state preferred for speed
+    findEmployeeByRfid: (tag: string) => Employee | undefined;
+    findStationByFixedId: (fixedId: string) => Asset | undefined;
 }
 
 const mapDbToEmployee = (dbEmp: any): Employee => ({
@@ -257,6 +287,7 @@ const mapDbToEmployee = (dbEmp: any): Employee => ({
     iluo: 'I',
     hrStatus: dbEmp.status || 'active',
     hrNotes: '',
+    rfidTag: dbEmp.rfid_tag,
     hasSystemAccess: !!dbEmp.system_access,
     systemAccess: dbEmp.system_access || undefined
 });
@@ -279,7 +310,9 @@ const mapDbToAsset = (db: any): Asset => ({
     status: db.status as any,
     capabilities: db.capabilities || [],
     defaultCycleTime: db.default_cycle_time,
-    sequence: db.sequence
+    sequence: db.sequence,
+    rfidTag: db.rfid_tag,
+    locationFixedId: db.location_fixed_id
 });
 
 const mapDbToProduct = (db: any): ProductModel => ({
@@ -316,8 +349,9 @@ const mapDbToTask = (db: any): OptionTask => ({
     optionId: db.option_id,
     description: db.description,
     sequence: db.sequence,
+    stationId: db.station_id,
     pdfUrl: db.pdf_url,
-    stationId: db.station_id
+    standardTimeMinutes: db.standard_time_minutes
 });
 
 const mapDbToExecution = (db: any): TaskExecution => ({
@@ -390,8 +424,40 @@ const mapDbToQualityCase = (db: any): QualityCase => ({
     methodologyData: db.methodology_data,
     images: db.images || [],
     dueDate: db.due_date,
+    notes: db.notes,
     createdAt: db.created_at,
     createdBy: db.created_by
+});
+
+const mapDbToMoldCompatibility = (db: any): MoldCompatibility => ({
+    id: db.id,
+    hullMoldId: db.hull_mold_id,
+    deckMoldId: db.deck_mold_id,
+    compatibilityScore: db.compatibility_score,
+    notes: db.notes
+});
+
+const mapDbToMoldMaintenanceLog = (db: any): MoldMaintenanceLog => ({
+    id: db.id,
+    moldId: db.mold_id,
+    description: db.description,
+    severity: db.severity,
+    status: db.status,
+    images: db.images,
+    technicianId: db.technician_id,
+    createdAt: db.created_at,
+    resolvedAt: db.resolved_at
+});
+
+const mapDbToAlert = (db: any): Alert => ({
+    id: db.id,
+    stationId: db.station_id,
+    type: db.type,
+    description: db.description,
+    status: db.status,
+    createdAt: db.created_at,
+    resolvedAt: db.resolved_at,
+    resolvedBy: db.resolved_by
 });
 
 const mapDbToQualityAction = (db: any): QualityAction => ({
@@ -445,6 +511,23 @@ const mapDbToPpeRequest = (db: any): PpeRequest => ({
     notes: db.notes
 });
 
+const mapDbToLine = (db: any): ProductionLine => ({
+    id: db.id,
+    description: db.description,
+    dailyCapacity: db.daily_capacity,
+    allowedModels: db.allowed_models || [],
+    active: db.active
+});
+
+const mapDbToRule = (db: any): SequencingRule => ({
+    id: db.id,
+    productModelId: db.product_model_id,
+    areaId: db.area_id,
+    offsetDays: db.offset_days,
+    durationDays: db.duration_days,
+    dependencyAreaId: db.dependency_area_id
+});
+
 export const useShopfloorStore = create<ShopfloorState>()(
     persist(
         (set, get) => ({
@@ -482,6 +565,13 @@ export const useShopfloorStore = create<ShopfloorState>()(
             costCenterMappings: [],
             ppeRequests: [],
 
+            // Shopfloor V6
+            productionLines: [],
+            sequencingRules: [],
+            moldCompatibility: [],
+            moldMaintenanceLogs: [],
+            alerts: [],
+
             // Actions
             addAsset: async (asset) => {
                 set((state) => ({ assets: [...state.assets, asset] }));
@@ -494,7 +584,9 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     status: asset.status,
                     capabilities: asset.capabilities,
                     default_cycle_time: asset.defaultCycleTime,
-                    sequence: asset.sequence
+                    sequence: asset.sequence,
+                    rfid_tag: asset.rfidTag,
+                    location_fixed_id: asset.locationFixedId
                 });
                 if (error) console.error("Error adding asset DB:", error);
             },
@@ -510,6 +602,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.subarea) toUpdate.subarea = updates.subarea;
                 if (updates.status) toUpdate.status = updates.status;
                 if (updates.defaultCycleTime !== undefined) toUpdate.default_cycle_time = updates.defaultCycleTime;
+                if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
+                if (updates.locationFixedId) toUpdate.location_fixed_id = updates.locationFixedId;
 
                 if (Object.keys(toUpdate).length > 0) {
                     const { error } = await supabase.from('assets').update(toUpdate).eq('id', id);
@@ -577,6 +671,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     po: order.po,
                     customer: order.customer,
                     area: order.area, // Legacy
+                    production_line_id: order.productionLineId,
                     asset_id: order.assetId, // New
                     start_date: order.startDate || null,
                     finish_date: order.finishDate || null,
@@ -720,7 +815,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     status: employee.hrStatus,
                     contract_start_date: employee.contractStartDate || null,
                     talent_matrix: employee.talentMatrix,
-                    system_access: employee.systemAccess
+                    system_access: employee.systemAccess,
+                    rfid_tag: employee.rfidTag
                 });
                 if (error) console.error("Error adding employee to DB:", error);
             },
@@ -740,7 +836,9 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.hrStatus) toUpdate.status = updates.hrStatus;
                 if (updates.contractStartDate) toUpdate.contract_start_date = updates.contractStartDate;
                 if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
+                if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
                 if (updates.systemAccess) toUpdate.system_access = updates.systemAccess;
+                if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
 
                 if (Object.keys(toUpdate).length > 0) {
                     const { error } = await supabase.from('employees').update(toUpdate).eq('id', id);
@@ -779,22 +877,29 @@ export const useShopfloorStore = create<ShopfloorState>()(
             },
 
             addTask: async (task) => {
-                set(s => ({ optionTasks: [...s.optionTasks, task] }));
+                set((state) => ({ optionTasks: [...state.optionTasks, task] }));
                 const { error } = await supabase.from('option_tasks').insert({
-                    id: task.id, option_id: task.optionId, description: task.description, sequence: task.sequence, pdf_url: task.pdfUrl, station_id: task.stationId
+                    id: task.id,
+                    option_id: task.optionId,
+                    description: task.description,
+                    sequence: task.sequence,
+                    station_id: task.stationId,
+                    pdf_url: task.pdfUrl,
+                    standard_time_minutes: task.standardTimeMinutes || 0
                 });
-                if (error) console.error("Error adding task:", error);
+                if (error) console.error("Error adding option task:", error);
             },
 
             updateTask: async (id, updates) => {
-                set(s => ({
-                    optionTasks: s.optionTasks.map(t => t.id === id ? { ...t, ...updates } : t)
+                set((state) => ({
+                    optionTasks: state.optionTasks.map(t => t.id === id ? { ...t, ...updates } : t)
                 }));
                 const toUpdate: any = {};
                 if (updates.description) toUpdate.description = updates.description;
                 if (updates.sequence) toUpdate.sequence = updates.sequence;
                 if (updates.pdfUrl) toUpdate.pdf_url = updates.pdfUrl;
                 if (updates.stationId) toUpdate.station_id = updates.stationId;
+                if (updates.standardTimeMinutes !== undefined) toUpdate.standard_time_minutes = updates.standardTimeMinutes;
 
                 if (Object.keys(toUpdate).length > 0) {
                     const { error } = await supabase.from('option_tasks').update(toUpdate).eq('id', id);
@@ -1027,6 +1132,131 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 await supabase.from('absenteeism_records').delete().eq('id', id);
             },
 
+            // --- Shopfloor V6 Actions ---
+            addProductionLine: async (line) => {
+                set(s => ({ productionLines: [...s.productionLines, line] }));
+                const { error } = await supabase.from('production_lines').insert({
+                    id: line.id, description: line.description,
+                    daily_capacity: line.dailyCapacity, allowed_models: line.allowedModels,
+                    active: line.active
+                });
+                if (error) console.error("Error adding production line:", error);
+            },
+
+            updateProductionLine: async (id, updates) => {
+                set(s => ({ productionLines: s.productionLines.map(l => l.id === id ? { ...l, ...updates } : l) }));
+                const toUpdate: any = {};
+                if (updates.description) toUpdate.description = updates.description;
+                if (updates.dailyCapacity) toUpdate.daily_capacity = updates.dailyCapacity;
+                if (updates.allowedModels) toUpdate.allowed_models = updates.allowedModels;
+                if (updates.active !== undefined) toUpdate.active = updates.active;
+
+                await supabase.from('production_lines').update(toUpdate).eq('id', id);
+            },
+
+            addSequencingRule: async (rule) => {
+                set(s => ({ sequencingRules: [...s.sequencingRules, rule] }));
+                const { error } = await supabase.from('sequencing_rules').insert({
+                    id: rule.id, product_model_id: rule.productModelId, area_id: rule.areaId,
+                    offset_days: rule.offsetDays, duration_days: rule.durationDays,
+                    dependency_area_id: rule.dependencyAreaId
+                });
+                if (error) console.error("Error adding sequencing rule:", error);
+            },
+
+            updateSequencingRule: async (id, updates) => {
+                set(s => ({ sequencingRules: s.sequencingRules.map(r => r.id === id ? { ...r, ...updates } : r) }));
+                const toUpdate: any = {};
+                if (updates.offsetDays !== undefined) toUpdate.offset_days = updates.offsetDays;
+                if (updates.durationDays !== undefined) toUpdate.duration_days = updates.durationDays;
+                if (updates.dependencyAreaId !== undefined) toUpdate.dependency_area_id = updates.dependencyAreaId;
+                await supabase.from('sequencing_rules').update(toUpdate).eq('id', id);
+            },
+
+            deleteSequencingRule: async (id) => {
+                set(s => ({ sequencingRules: s.sequencingRules.filter(r => r.id !== id) }));
+                await supabase.from('sequencing_rules').delete().eq('id', id);
+            },
+
+            // --- Shopfloor V6 IoT Actions ---
+            findAssetByRfid: (tag) => {
+                return get().assets.find(a => a.rfidTag?.toUpperCase() === tag.toUpperCase());
+            },
+
+            findEmployeeByRfid: (tag) => {
+                return get().employees.find(e => e.rfidTag?.toUpperCase() === tag.toUpperCase());
+            },
+
+            findStationByFixedId: (fixedId) => {
+                // Stations are Assets (Workstations) or defined Stations? 
+                // Currently looking at Assets with type='Workstation' or similar, 
+                // but checking all assets is safer if we attach fixedId to them.
+                return get().assets.find(a => a.locationFixedId?.toUpperCase() === fixedId.toUpperCase());
+            },
+
+            // --- Mold Management Actions ---
+            addMoldCompatibility: async (pair) => {
+                set(s => ({ moldCompatibility: [...s.moldCompatibility, pair] }));
+                const { error } = await supabase.from('mold_compatibility').insert({
+                    id: pair.id, hull_mold_id: pair.hullMoldId, deck_mold_id: pair.deckMoldId,
+                    compatibility_score: pair.compatibilityScore, notes: pair.notes
+                });
+                if (error) console.error("Error adding mold compatibility:", error);
+            },
+
+            removeMoldCompatibility: async (id) => {
+                set(s => ({ moldCompatibility: s.moldCompatibility.filter(c => c.id !== id) }));
+                await supabase.from('mold_compatibility').delete().eq('id', id);
+            },
+
+            // --- Andon Actions ---
+            triggerAndon: async (alert) => {
+                set(s => ({ alerts: [...s.alerts, alert] }));
+                const { error } = await supabase.from('alerts').insert({
+                    id: alert.id, station_id: alert.stationId, type: alert.type,
+                    status: alert.status, description: alert.description,
+                    created_at: alert.createdAt
+                });
+                if (error) console.error("Error triggering andon:", error);
+            },
+
+            resolveAndon: async (id, resolvedBy) => {
+                const now = new Date().toISOString();
+                set(s => ({
+                    alerts: s.alerts.map(a => a.id === id ? { ...a, status: 'resolved', resolvedAt: now, resolvedBy } : a)
+                }));
+                await supabase.from('alerts').update({
+                    status: 'resolved', resolved_at: now, resolved_by: resolvedBy
+                }).eq('id', id);
+            },
+
+            addMoldMaintenanceLog: async (log) => {
+                set(s => ({ moldMaintenanceLogs: [...s.moldMaintenanceLogs, log] }));
+                const { error } = await supabase.from('mold_maintenance_logs').insert({
+                    id: log.id, mold_id: log.moldId, description: log.description,
+                    severity: log.severity, status: log.status, images: log.images,
+                    technician_id: log.technicianId
+                });
+                if (error) console.error("Error adding mold log:", error);
+            },
+
+            updateMoldMaintenanceLog: async (id, updates) => {
+                set(s => ({
+                    moldMaintenanceLogs: s.moldMaintenanceLogs.map(l => l.id === id ? { ...l, ...updates } : l)
+                }));
+                const toUpdate: any = {};
+                if (updates.status) {
+                    toUpdate.status = updates.status;
+                    if (updates.status === 'Resolved') toUpdate.resolved_at = new Date().toISOString();
+                }
+                if (updates.description) toUpdate.description = updates.description;
+                if (updates.images) toUpdate.images = updates.images;
+
+                if (Object.keys(toUpdate).length > 0) {
+                    await supabase.from('mold_maintenance_logs').update(toUpdate).eq('id', id);
+                }
+            },
+
             // --- Tool Management Actions ---
             addTool: async (tool) => {
                 set(s => ({ tools: [...s.tools, tool] }));
@@ -1143,6 +1373,18 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 const { data: scrap } = await supabase.from('scrap_reports').select('*');
                 if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
 
+                // V8 Molds Sync (Shopfloor 3.0)
+                const { data: moldComp } = await supabase.from('mold_compatibility').select('*');
+                if (moldComp) set({ moldCompatibility: moldComp.map(mapDbToMoldCompatibility) });
+
+                const { data: moldLogs } = await supabase.from('mold_maintenance_logs').select('*');
+                if (moldLogs) set({ moldMaintenanceLogs: moldLogs.map(mapDbToMoldMaintenanceLog) });
+
+                // Andon Alerts
+                const { data: alerts } = await supabase.from('alerts').select('*').in('status', ['open', 'acknowledged']); // Only active alerts? Or all? Let's keep active for performance, or recent.
+                // For simplicity, let's fetch all relevant ones.
+                if (alerts) set({ alerts: alerts.map(mapDbToAlert) });
+
                 // V7 Tools Sync
                 const { data: tools } = await supabase.from('tools').select('*');
                 if (tools) set({
@@ -1178,6 +1420,13 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // Check performance here later - maybe only fetch last 3 months
                 const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
                 if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
+
+                // Shopfloor V6 Sync
+                const { data: lines } = await supabase.from('production_lines').select('*');
+                if (lines) set({ productionLines: lines.map(mapDbToLine) });
+
+                const { data: rules } = await supabase.from('sequencing_rules').select('*');
+                if (rules) set({ sequencingRules: rules.map(mapDbToRule) });
 
                 // Fetch Order Options Pivot and Map to Orders
                 // Fetch Order Options Pivot and Map to Orders

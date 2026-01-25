@@ -113,6 +113,16 @@ export default function NewStaffPage() {
                                 placeholder="Ex: 1050"
                             />
                         </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Tag RFID / NFC (Crachá)</label>
+                            <input
+                                name="rfidTag"
+                                value={(formData as any).rfidTag || ''}
+                                onChange={handleChange}
+                                className="input-field font-mono"
+                                placeholder="ID do Cartão"
+                            />
+                        </div>
                         <div className="md:col-span-2 space-y-2">
                             <label className="text-sm font-medium text-slate-700">Nome Completo *</label>
                             <input

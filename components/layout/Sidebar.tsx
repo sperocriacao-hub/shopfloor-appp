@@ -33,11 +33,12 @@ export function Sidebar() {
         { name: 'Dashboard', href: '/', icon: Home },
         { name: 'Ordens de Produção', href: '/orders', icon: Activity },
         { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes },
-        { name: 'Engenharia', href: '/products', icon: Settings },
+        { name: 'Produtos & Roteiros', href: '/products', icon: Settings },
+        { name: 'Engenharia Avançada', href: '/engineering', icon: Wrench },
         { name: 'Materiais (AS400)', href: '/consumables', icon: Package },
         { name: 'Recursos Humanos', href: '/staff', icon: Users },
         { name: 'Qualidade', href: '/quality', icon: Microscope },
-        { name: 'Ferramentaria', href: '/tools', icon: Wrench },
+        { name: 'Ferramentaria', href: '/tools', icon: Settings },
         { name: 'Modo Operador', href: '/shopfloor', icon: Ship },
     ];
 

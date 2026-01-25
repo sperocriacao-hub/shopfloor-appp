@@ -7,6 +7,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Wrench, PlayCircle, StopCircle, Search, Download, Upload, Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // New
+import { MoldCompatibilityManager } from "@/components/assets/MoldCompatibility"; // New
+import { MoldMaintenanceLogs } from "@/components/assets/MoldMaintenance"; // New
 import { downloadAssetsTemplate, parseAssetsExcel } from "@/lib/excel-assets";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -82,7 +85,9 @@ export default function AssetsPage() {
         setEditForm({
             name: asset.name,
             type: asset.type,
-            defaultCycleTime: asset.defaultCycleTime || 60
+            defaultCycleTime: asset.defaultCycleTime || 60,
+            rfidTag: asset.rfidTag,
+            locationFixedId: asset.locationFixedId
         });
         setIsEditOpen(true);
     };
@@ -247,79 +252,159 @@ export default function AssetsPage() {
                             Atualize as informações do ativo.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">
-                                Nome
-                            </Label>
-                            <Input
-                                id="name"
-                                value={editForm.name || ''}
-                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                className="col-span-3"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="sequence" className="text-right">
-                                Ordem (Seq)
-                            </Label>
-                            <Input
-                                id="sequence"
-                                type="number"
-                                value={editForm.sequence || ''}
-                                onChange={(e) => setEditForm({ ...editForm, sequence: parseInt(e.target.value) })}
-                                className="col-span-3"
-                                placeholder="Ex: 10, 20..."
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="type" className="text-right">
-                                Tipo
-                            </Label>
-                            <Select
-                                value={editForm.type}
-                                onValueChange={(val: string) => setEditForm({ ...editForm, type: val })}
-                            >
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Selecione o tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Workstation">Estação de Trabalho (Workstation)</SelectItem>
-                                    <SelectItem value="Machine">Máquina (Machine)</SelectItem>
-                                    <SelectItem value="Mold">Molde</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                    <div className="py-4">
+                        {editingAsset?.type === 'Mold' ? (
+                            <Tabs defaultValue="general">
+                                <TabsList className="w-full">
+                                    <TabsTrigger value="general" className="flex-1">Geral</TabsTrigger>
+                                    <TabsTrigger value="compatibility" className="flex-1">Compatibilidade</TabsTrigger>
+                                    <TabsTrigger value="maintenance" className="flex-1">Manutenção</TabsTrigger>
+                                </TabsList>
 
-                        {(editForm.type === 'Workstation' || editForm.type === 'Machine') && (
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="cycleTime" className="text-right">
-                                    Tempo Padrão (min)
-                                </Label>
-                                <Input
-                                    id="cycleTime"
-                                    type="number"
-                                    value={editForm.defaultCycleTime || ''}
-                                    onChange={(e) => setEditForm({ ...editForm, defaultCycleTime: parseInt(e.target.value) })}
-                                    className="col-span-3"
-                                />
-                                <div className="col-start-2 col-span-3 text-xs text-slate-400">
-                                    Utilizado para cálculo de OEE e Eficiência.
+                                <TabsContent value="general" className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="name" className="text-right">Nome</Label>
+                                        <Input
+                                            id="name"
+                                            value={editForm.name || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                            className="col-span-3"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="rfidTag" className="text-right">RFID Tag</Label>
+                                        <Input
+                                            id="rfidTag"
+                                            value={editForm.rfidTag || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, rfidTag: e.target.value })}
+                                            className="col-span-3 font-mono text-xs"
+                                            placeholder="Hardware ID"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="sequence" className="text-right">Ordem (Seq)</Label>
+                                        <Input
+                                            id="sequence"
+                                            type="number"
+                                            value={editForm.sequence || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, sequence: parseInt(e.target.value) })}
+                                            className="col-span-3"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="type" className="text-right">Tipo</Label>
+                                        <Select
+                                            value={editForm.type}
+                                            onValueChange={(val: string) => setEditForm({ ...editForm, type: val })}
+                                        >
+                                            <SelectTrigger className="col-span-3">
+                                                <SelectValue placeholder="Selecione o tipo" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Workstation">Estação de Trabalho</SelectItem>
+                                                <SelectItem value="Machine">Máquina</SelectItem>
+                                                <SelectItem value="Mold">Molde</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="compatibility">
+                                    <MoldCompatibilityManager asset={editingAsset} />
+                                </TabsContent>
+
+                                <TabsContent value="maintenance">
+                                    <MoldMaintenanceLogs asset={editingAsset} />
+                                </TabsContent>
+                            </Tabs>
+                        ) : (
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="name" className="text-right">Nome</Label>
+                                    <Input
+                                        id="name"
+                                        value={editForm.name || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                        className="col-span-3"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="rfidTag" className="text-right">RFID Tag</Label>
+                                    <Input
+                                        id="rfidTag"
+                                        value={editForm.rfidTag || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, rfidTag: e.target.value })}
+                                        className="col-span-3 font-mono text-xs"
+                                        placeholder="Hardware ID"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="locationFixedId" className="text-right">Leitor Fixo</Label>
+                                    <Input
+                                        id="locationFixedId"
+                                        value={editForm.locationFixedId || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, locationFixedId: e.target.value })}
+                                        className="col-span-3 font-mono text-xs"
+                                        placeholder="Reader ID"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="sequence" className="text-right">Ordem (Seq)</Label>
+                                    <Input
+                                        id="sequence"
+                                        type="number"
+                                        value={editForm.sequence || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, sequence: parseInt(e.target.value) })}
+                                        className="col-span-3"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="type" className="text-right">Tipo</Label>
+                                    <Select
+                                        value={editForm.type}
+                                        onValueChange={(val: string) => setEditForm({ ...editForm, type: val })}
+                                    >
+                                        <SelectTrigger className="col-span-3">
+                                            <SelectValue placeholder="Selecione o tipo" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Workstation">Estação de Trabalho (Workstation)</SelectItem>
+                                            <SelectItem value="Machine">Máquina (Machine)</SelectItem>
+                                            <SelectItem value="Mold">Molde</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {(editForm.type === 'Workstation' || editForm.type === 'Machine') && (
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="cycleTime" className="text-right">
+                                            Tempo Padrão (min)
+                                        </Label>
+                                        <Input
+                                            id="cycleTime"
+                                            type="number"
+                                            value={editForm.defaultCycleTime || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, defaultCycleTime: parseInt(e.target.value) })}
+                                            className="col-span-3"
+                                        />
+                                        <div className="col-start-2 col-span-3 text-xs text-slate-400">
+                                            Utilizado para cálculo de OEE e Eficiência.
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center space-x-2 pt-2 border-t">
+                                    <input
+                                        type="checkbox"
+                                        id="enableQuality"
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        checked={editForm.enableQualityModule || false}
+                                        onChange={(e) => setEditForm({ ...editForm, enableQualityModule: e.target.checked })}
+                                    />
+                                    <Label htmlFor="enableQuality">Ativar Módulo de Qualidade?</Label>
                                 </div>
                             </div>
                         )}
-
-                        <div className="flex items-center space-x-2 pt-2 border-t">
-                            {/* Ideally use a Switch component but checkbox is fine for now */}
-                            <input
-                                type="checkbox"
-                                id="enableQuality"
-                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                checked={editForm.enableQualityModule || false}
-                                onChange={(e) => setEditForm({ ...editForm, enableQualityModule: e.target.checked })}
-                            />
-                            <Label htmlFor="enableQuality">Ativar Módulo de Qualidade?</Label>
-                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>

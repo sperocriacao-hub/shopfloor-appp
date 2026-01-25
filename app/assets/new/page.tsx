@@ -19,7 +19,8 @@ export default function NewAssetPage() {
         area: "",
         subarea: "",
         status: "available",
-        capabilities: []
+        capabilities: [],
+        rfidTag: ""
     });
 
     const [capabilitiesInput, setCapabilitiesInput] = useState("");
@@ -43,7 +44,8 @@ export default function NewAssetPage() {
                 area: formData.area || "Geral",
                 subarea: formData.subarea,
                 status: formData.status as any,
-                capabilities: caps
+                capabilities: caps,
+                rfidTag: formData.rfidTag
             });
             router.push("/assets");
         }, 500);
@@ -76,6 +78,19 @@ export default function NewAssetPage() {
                                 placeholder="Ex: CNC 01"
                             />
                         </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Tag RFID / NFC (Hardware ID)</label>
+                            <input
+                                name="rfidTag"
+                                value={formData.rfidTag || ''}
+                                onChange={handleChange}
+                                className="input-field font-mono text-xs"
+                                placeholder="Ex: E280116060000207966C7C75"
+                            />
+                        </div>
+
+
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">

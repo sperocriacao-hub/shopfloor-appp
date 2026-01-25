@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 export default function Home() {
-  const { assets, employees, orders, events } = useShopfloorStore();
+  const { assets, employees, orders, events, alerts, products } = useShopfloorStore();
   const [activeTab, setActiveTab] = useState('overview');
 
   // --- KPI Calculations ---
@@ -20,8 +20,10 @@ export default function Home() {
   // 2. Orders in Process
   const activeOrders = orders.filter(o => o.status === 'in_progress');
 
-  // 3. Alerts (Stoppages)
-  const activeAlerts = events.filter(e => e.type === 'STOP');
+  // 3. Alerts (Stoppages + Andon)
+  const activeSystemsAlerts = alerts ? alerts.filter(a => a.status === 'open') : [];
+  // Optional: Merge with STOP events if needed, but Andon is explicit.
+  const displayAlerts = activeSystemsAlerts;
 
   // --- Chart Data Preparation ---
 
@@ -104,8 +106,8 @@ export default function Home() {
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{activeAlerts.length}</div>
-            <p className="text-xs text-slate-400">Paradas não resolvidas</p>
+            <div className="text-2xl font-bold text-slate-800">{displayAlerts.length}</div>
+            <p className="text-xs text-slate-400">Andons Abertos</p>
           </CardContent>
         </Card>
 
@@ -156,36 +158,14 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
-              {activeOrders.length === 0 ? (
+              {activeOrders.length === 0 && (
                 <p className="text-sm text-slate-400">Nenhuma ordem em andamento.</p>
-              ) : (
-                activeOrders.map(order => {
-                  const product = undefined; // products not destructured in hook yet? Wait, check line 10
-                  // I need to make sure products are available.
-                  // In line 10: const { assets, employees, orders, events } = useShopfloorStore();
-                  // I need to add 'products' to destructuring.
-
-                  // Let's assume I fix destructuring in another edit or include it here if possible.
-                  // Actually I can just access it via hook directly if I want to be safe in this block, but separate edit is cleaner.
-                  // I'll refer to them assuming they exist, and fix the destructuring in a separate step or try to sneak it in if I was replacing the top.
-                  // Since I am replacing the middle, I cannot change line 10 easily. 
-                  // I will use useShopfloorStore.getState().products (bad practice) or just fix line 10 in next step.
-                  // I will fix line 10 in next step.
-
-                  // Placeholder logic for now:
-                  // const pName = products.find(p => p.id === order.productModelId)?.name || 'Barco';
-                  // const assetName = assets.find(a => a.id === order.assetId)?.name || 'N/A';
-                  // return (...)
-                  return null; // Dummy return to avoid syntax error while I explain.
-                })
               )}
-              {/* Re-writing correctly */}
+              {/* Fixed List */}
               {activeOrders.map(order => {
-                // We will fix imports next.
-                // Using safe access
-                const pName = useShopfloorStore.getState().products.find(p => p.id === order.productModelId)?.name || 'Modelo Desconhecido';
-                const assetName = assets.find(a => a.id === order.assetId)?.name || 'Local Indefinido';
-                const identifier = order.hin || order.po || order.id;
+                const pName = products ? products.find(p => p.id === order.productModelId)?.name || 'Modelo Desconhecido' : '...';
+                const assetName = assets ? assets.find(a => a.id === order.assetId)?.name || 'Local Indefinido' : '...';
+                const identifier = order.po || order.id.substring(0, 8);
 
                 return (
                   <div key={order.id} className="p-3 bg-slate-50 rounded border border-slate-200">
@@ -239,12 +219,14 @@ export default function Home() {
                 </ResponsiveContainer>
               </div>
               <div className="flex-1 space-y-2">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase">Últimos Alertas</h4>
-                {activeAlerts.length === 0 ? <p className="text-sm text-slate-400">Sem alertas.</p> : activeAlerts.slice(0, 3).map(alert => (
+                <h4 className="text-xs font-semibold text-slate-500 uppercase">Últimos Andons</h4>
+                {displayAlerts.length === 0 ? <p className="text-sm text-slate-400">Sistema nominal.</p> : displayAlerts.slice(0, 3).map(alert => (
                   <div key={alert.id} className="flex gap-2 items-center p-2 bg-red-50 border border-red-100 rounded">
                     <AlertTriangle className="h-4 w-4 text-red-600" />
-                    <span className="text-sm font-medium text-red-700">{alert.reason}</span>
-                    <span className="text-xs text-slate-500">- {assets.find(a => a.id === alert.assetId)?.name}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-red-700 uppercase">{alert.type}</span>
+                      <span className="text-xs text-slate-500">{assets.find(a => a.id === alert.stationId)?.name}</span>
+                    </div>
                   </div>
                 ))}
               </div>

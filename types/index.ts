@@ -12,6 +12,8 @@ export interface Asset {
     defaultCycleTime?: number; // Minutes
     sequence?: number; // Custom sorting order
     enableQualityModule?: boolean; // V5: Feature Switch
+    rfidTag?: string; // V6: Hardware ID
+    locationFixedId?: string; // V6: Fixed Reader ID
 }
 
 // --- Product Engineering (Como fazer) ---
@@ -31,12 +33,41 @@ export interface OperationDefinition {
     instructions?: string;
 }
 
+
+export interface ProductionLine {
+    id: string; // 'A', 'B', 'C', 'D'
+    description: string;
+    dailyCapacity: number;
+    allowedModels: string[];
+    active: boolean;
+}
+
+export interface SequencingRule {
+    id: string;
+    productModelId: string;
+    areaId: string;
+    offsetDays: number; // Days before delivery (T-X)
+    durationDays: number;
+    dependencyAreaId?: string;
+}
+
 export interface Station {
     id: string;
     name: string;
     subareaId: string;
     areaId: string;
     status: 'active' | 'inactive' | 'maintenance';
+}
+
+export interface Alert {
+    id: string;
+    stationId: string;
+    type: 'material' | 'maintenance' | 'quality' | 'help';
+    status: 'open' | 'acknowledged' | 'resolved';
+    description?: string;
+    createdAt: string;
+    resolvedAt?: string;
+    resolvedBy?: string;
 }
 
 // --- HR / Staff ---
@@ -68,6 +99,7 @@ export interface Employee {
     id: string;
     workerNumber: string;
     name: string;
+    rfidTag?: string; // V6: Hardware Badge ID
 
     // Job & Contract
     contractType: string;
@@ -126,6 +158,7 @@ export interface ProductionOrder {
     country?: string;
     customer?: string;
     area?: string;
+    productionLineId?: string; // Shopfloor V6
 
     // Instance Workflow
     assetId?: string; // Target Station (Shopfloor 3.0)
@@ -157,6 +190,7 @@ export interface OptionTask {
     sequence: number;
     pdfUrl?: string;
     stationId?: string; // New: Target Station for this task
+    standardTimeMinutes?: number; // Shopfloor V6: Cost/Time
 }
 
 export interface TaskExecution {
@@ -229,6 +263,7 @@ export interface QualityCase {
     methodologyData?: EightDData | any; // JSONB
     images?: string[]; // Array of base64/url
     dueDate?: string; // ISO Date for deadline
+    notes?: string;
     createdAt: string; // ISO
     createdBy?: string;
 }
@@ -265,6 +300,26 @@ export interface ScrapReport {
 export type ToolStatus = 'available' | 'in_use' | 'maintenance' | 'scrapped' | 'lost';
 export type ToolCondition = 'new' | 'good' | 'fair' | 'poor';
 export type ToolAction = 'checkout' | 'checkin' | 'maintenance_out' | 'maintenance_return';
+// --- Shopfloor 3.0: Molds (Assets) ---
+export interface MoldCompatibility {
+    id: string;
+    hullMoldId: string;
+    deckMoldId: string;
+    compatibilityScore?: number;
+    notes?: string;
+}
+
+export interface MoldMaintenanceLog {
+    id: string;
+    moldId: string;
+    description: string;
+    severity: 'Low' | 'Medium' | 'High' | 'Critical';
+    status: 'Open' | 'In Progress' | 'Resolved';
+    images: string[]; // URLs
+    technicianId?: string;
+    createdAt: string;
+    resolvedAt?: string;
+}
 
 export interface Tool {
     id: string;
