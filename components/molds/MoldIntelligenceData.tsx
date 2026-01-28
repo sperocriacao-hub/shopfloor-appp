@@ -4,12 +4,10 @@ import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BarChart2, FileText, Printer, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { BarChart2, Printer } from "lucide-react";
 
-export default function MaintenanceIntelligencePage() {
+export function MoldIntelligenceData() {
     const { maintenanceOrders, moldGeometries, assets } = useShopfloorStore();
-    const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
     // KPI Calculations
     const totalCurrentOrders = maintenanceOrders.length;
@@ -34,14 +32,11 @@ export default function MaintenanceIntelligencePage() {
     };
 
     return (
-        <div className="p-8 bg-slate-50 min-h-screen space-y-8">
+        <div className="space-y-8">
             <div className="flex justify-between items-center print:hidden">
                 <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <BarChart2 className="h-8 w-8 text-primary" />
-                        Intelligence & KPIs
-                    </h1>
-                    <p className="text-slate-500">Análise de preservação de ativos e histórico de falhas.</p>
+                    <h2 className="text-xl font-bold">Indicadores de Manutenção (KPIs)</h2>
+                    <p className="text-slate-500">Análise de performance e recorrência de falhas.</p>
                 </div>
                 <Button variant="outline" onClick={handlePrintReport}>
                     <Printer className="mr-2 h-4 w-4" /> Imprimir Relatório

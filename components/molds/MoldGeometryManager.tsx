@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select"; // Hypothetical
 import { toast } from "sonner";
-import { Upload, FileText, Save } from "lucide-react";
+import { FileText, Save } from "lucide-react";
 
-export default function SvgMapperPage() {
+export function MoldGeometryManager() {
     const { products, setMoldGeometries, moldGeometries } = useShopfloorStore();
 
     const [selectedModel, setSelectedModel] = useState("");
@@ -40,21 +38,16 @@ export default function SvgMapperPage() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Mapeamento de Moldes (SVG)</h1>
-                <p className="text-slate-500">Upload de desenhos técnicos para Pin Mapping.</p>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Upload Form */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Novo Desenho</CardTitle>
-                        <CardDescription>Cole o código SVG ou faça upload.</CardDescription>
+                        <CardTitle>Nova Geometria</CardTitle>
+                        <CardDescription>Cole o código SVG para permitir Pin Mapping.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Modelo</label>
+                            <label className="text-sm font-medium">Modelo de Produto</label>
                             <select
                                 className="w-full h-10 rounded-md border border-slate-300 px-3 bg-white"
                                 value={selectedModel}
@@ -68,7 +61,7 @@ export default function SvgMapperPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Tipo de Parte</label>
+                            <label className="text-sm font-medium">Parte do Molde</label>
                             <select
                                 className="w-full h-10 rounded-md border border-slate-300 px-3 bg-white"
                                 value={partType}

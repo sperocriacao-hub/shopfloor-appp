@@ -39,9 +39,7 @@ export function Sidebar() {
         { name: 'Recursos Humanos', href: '/staff', icon: Users },
         { name: 'Qualidade', href: '/quality', icon: Microscope },
         { name: 'Ferramentaria', href: '/tools', icon: Settings },
-        { name: 'Moldes (Cadastro)', href: '/molds', icon: Anchor },
-        { name: 'Moldes: Manutenção', href: '/maintenance/molds', icon: Hammer }, // V8 Cockpit
-        { name: 'Moldes: Inteligência', href: '/maintenance/intelligence', icon: BarChart2 }, // V8 Intelligence
+        { name: 'Moldes', href: '/molds', icon: Anchor },
         { name: 'Supervisor', href: '/supervisor', icon: Users }, // Visibility Fix
         { name: 'App Mobile', href: '/mobile', icon: Ship }, // Visibility Fix
         { name: 'Admin / Suporte', href: '/admin', icon: Wrench }, // New Admin Module

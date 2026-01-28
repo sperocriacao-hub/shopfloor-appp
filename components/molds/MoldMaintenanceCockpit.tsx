@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Hammer, MapPin, CheckCircle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
-export default function MaintenanceCockpitPage() {
+export function MoldMaintenanceCockpit() {
     const {
         maintenanceOrders, assets, moldGeometries,
         addMaintenancePin, updateMaintenanceOrder
@@ -63,102 +63,98 @@ export default function MaintenanceCockpitPage() {
 
     // Find Logic
     const currentAsset = selectedOrder ? assets.find(a => a.id === selectedOrder.assetId) : null;
-    // Mock mapping logic: Find geometry by simple 'Hull' type or product match. 
-    // In real world, we'd traverse Asset -> ProductModel -> MoldGeometry
     const currentGeometry = moldGeometries.length > 0 ? moldGeometries[0] : null;
 
     if (selectedOrder) {
         return (
-            <div className="min-h-screen bg-slate-50 p-4">
-                <div className="max-w-6xl mx-auto space-y-4">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <Button variant="ghost" onClick={() => setSelectedOrder(null)}>
-                            <ArrowLeft className="mr-2" /> Voltar
-                        </Button>
-                        <h1 className="text-2xl font-bold">OS: {selectedOrder.id} - {currentAsset?.name}</h1>
-                        <Button variant="default" className="bg-green-600 hover:bg-green-500" onClick={closeOrder}>
-                            <CheckCircle className="mr-2" /> Encerrar OS
-                        </Button>
-                    </div>
+            <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <Button variant="ghost" onClick={() => setSelectedOrder(null)}>
+                        <ArrowLeft className="mr-2" /> Voltar
+                    </Button>
+                    <h1 className="text-2xl font-bold">OS: {selectedOrder.id} - {currentAsset?.name}</h1>
+                    <Button variant="default" className="bg-green-600 hover:bg-green-500" onClick={closeOrder}>
+                        <CheckCircle className="mr-2" /> Encerrar OS
+                    </Button>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Interactive Map */}
-                        <Card className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Interactive Map */}
+                    <Card className="md:col-span-2">
+                        <CardHeader>
+                            <CardTitle>Mapa de Danos</CardTitle>
+                            <CardDescription>Clique na imagem para adicionar um defeito (Pin).</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div
+                                className="relative w-full aspect-video bg-slate-200 rounded border border-slate-300 overflow-hidden cursor-crosshair"
+                                onClick={handleSvgClick}
+                            >
+                                {currentGeometry ? (
+                                    <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: currentGeometry.svgContent }} />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-slate-400">
+                                        Sem desenho técnico associado (Configurações &#62; SVG Mapper)
+                                    </div>
+                                )}
+
+                                {/* Render Pins */}
+                                {selectedOrder.pins?.map(pin => (
+                                    <div
+                                        key={pin.id}
+                                        className="absolute w-6 h-6 -ml-3 -mt-3 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-bold text-white z-10 hover:scale-125 transition-transform cursor-pointer"
+                                        style={{ left: `${pin.posX}%`, top: `${pin.posY}%` }}
+                                        title={pin.type}
+                                    >
+                                        !
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Order Details & Pin List */}
+                    <div className="space-y-4">
+                        <Card>
                             <CardHeader>
-                                <CardTitle>Mapa de Danos</CardTitle>
-                                <CardDescription>Clique na imagem para adicionar um defeito (Pin).</CardDescription>
+                                <CardTitle>Detalhes</CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div
-                                    className="relative w-full aspect-video bg-slate-200 rounded border border-slate-300 overflow-hidden cursor-crosshair"
-                                    onClick={handleSvgClick}
-                                >
-                                    {currentGeometry ? (
-                                        <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: currentGeometry.svgContent }} />
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full text-slate-400">
-                                            Sem desenho técnico associado (Admin &#62; SVG Mapper)
-                                        </div>
-                                    )}
-
-                                    {/* Render Pins */}
-                                    {selectedOrder.pins?.map(pin => (
-                                        <div
-                                            key={pin.id}
-                                            className="absolute w-6 h-6 -ml-3 -mt-3 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-bold text-white z-10 hover:scale-125 transition-transform cursor-pointer"
-                                            style={{ left: `${pin.posX}%`, top: `${pin.posY}%` }}
-                                            title={pin.type}
-                                        >
-                                            !
-                                        </div>
-                                    ))}
+                            <CardContent className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Prioridade:</span>
+                                    <Badge variant={selectedOrder.priority === 'critical' ? 'destructive' : 'secondary'}>
+                                        {selectedOrder.priority}
+                                    </Badge>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Reportado por:</span>
+                                    <span>{selectedOrder.reportedBy}</span>
+                                </div>
+                                <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
+                                    {selectedOrder.description}
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Order Details & Pin List */}
-                        <div className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Detalhes</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Prioridade:</span>
-                                        <Badge variant={selectedOrder.priority === 'critical' ? 'destructive' : 'secondary'}>
-                                            {selectedOrder.priority}
-                                        </Badge>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">Reportado por:</span>
-                                        <span>{selectedOrder.reportedBy}</span>
-                                    </div>
-                                    <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
-                                        {selectedOrder.description}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Pins ({selectedOrder.pins?.length || 0})</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <ul className="space-y-2">
-                                        {selectedOrder.pins?.map(pin => (
-                                            <li key={pin.id} className="flex justify-between items-center p-2 bg-white border rounded shadow-sm">
-                                                <div className="flex items-center gap-2">
-                                                    <MapPin className="h-4 w-4 text-red-500" />
-                                                    <span className="capitalize">{pin.type}</span>
-                                                </div>
-                                                <Badge variant="outline">{pin.status}</Badge>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </CardContent>
-                            </Card>
-                        </div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Pins ({selectedOrder.pins?.length || 0})</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2">
+                                    {selectedOrder.pins?.map(pin => (
+                                        <li key={pin.id} className="flex justify-between items-center p-2 bg-white border rounded shadow-sm">
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="h-4 w-4 text-red-500" />
+                                                <span className="capitalize">{pin.type}</span>
+                                            </div>
+                                            <Badge variant="outline">{pin.status}</Badge>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
 
@@ -194,12 +190,7 @@ export default function MaintenanceCockpitPage() {
     }
 
     return (
-        <div className="p-8 bg-slate-50 min-h-screen">
-            <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
-                <Hammer className="h-8 w-8 text-primary" />
-                Cockpit de Manutenção de Moldes
-            </h1>
-
+        <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {openOrders.length === 0 ? (
                     <div className="col-span-full flex flex-col items-center justify-center p-12 text-slate-400 border-2 border-dashed rounded-xl">
