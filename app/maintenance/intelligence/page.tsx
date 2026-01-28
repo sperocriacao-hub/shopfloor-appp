@@ -27,7 +27,7 @@ export default function MaintenanceIntelligencePage() {
         return acc;
     }, {} as Record<string, number>);
 
-    const sortedDefects = Object.entries(defectCounts).sort((a: [string, number], b: [string, number]) => b[1] - a[1]);
+    const sortedDefects = (Object.entries(defectCounts) as [string, number][]).sort((a, b) => b[1] - a[1]);
 
     const handlePrintReport = () => {
         window.print();

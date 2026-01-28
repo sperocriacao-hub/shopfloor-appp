@@ -11,7 +11,8 @@ import {
     ProductionLine, SequencingRule, Alert,
     MoldCompatibility, MoldMaintenanceLog,
     ProductPart, OrderPart,
-    RfidReader, IotEvent
+    RfidReader, IotEvent,
+    MaintenanceOrder, MaintenancePin, MoldGeometry
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
