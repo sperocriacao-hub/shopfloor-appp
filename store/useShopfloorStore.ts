@@ -10,7 +10,8 @@ import {
     ConsumableTransaction, CostCenterMapping, PpeRequest,
     ProductionLine, SequencingRule, Alert,
     MoldCompatibility, MoldMaintenanceLog,
-    ProductPart, OrderPart
+    ProductPart, OrderPart,
+    RfidReader, IotEvent
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -192,6 +193,15 @@ interface ShopfloorState {
     alerts: Alert[];
     triggerAndon: (alert: Alert) => Promise<void>;
     resolveAndon: (id: string, resolvedBy: string) => Promise<void>;
+
+    // Shopfloor IoT - Hardware (RFID Readers)
+    rfidReaders: RfidReader[];
+    iotEvents: IotEvent[];
+    addRfidReader: (reader: RfidReader) => void;
+    updateRfidReader: (id: string, updates: Partial<RfidReader>) => void;
+    deleteRfidReader: (id: string) => void;
+    logIotEvent: (event: IotEvent) => void;
+    clearIotEvents: () => void;
 
     addAsset: (asset: Asset) => void;
     updateAsset: (id: string, updates: Partial<Asset>) => Promise<void>;
@@ -1187,6 +1197,21 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 set(s => ({ sequencingRules: s.sequencingRules.filter(r => r.id !== id) }));
                 await supabase.from('sequencing_rules').delete().eq('id', id);
             },
+
+
+            // --- Shopfloor IoT - Hardware Actions ---
+            rfidReaders: [],
+            iotEvents: [],
+
+            addRfidReader: (reader) => set(s => ({ rfidReaders: [...s.rfidReaders, reader] })),
+            updateRfidReader: (id, updates) => set(s => ({ rfidReaders: s.rfidReaders.map(r => r.id === id ? { ...r, ...updates } : r) })),
+            deleteRfidReader: (id) => set(s => ({ rfidReaders: s.rfidReaders.filter(r => r.id !== id) })),
+
+            logIotEvent: (event) => set(s => {
+                const newEvents = [event, ...s.iotEvents];
+                return { iotEvents: newEvents.slice(0, 50) };
+            }),
+            clearIotEvents: () => set({ iotEvents: [] }),
 
             // --- Shopfloor V6 IoT Actions ---
             findAssetByRfid: (tag) => {

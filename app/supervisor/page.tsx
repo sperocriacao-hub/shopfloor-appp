@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, BarChart3, LayoutDashboard, Anchor, AlertTriangle, MoveRight } from "lucide-react";
+import { Users, BarChart3, LayoutDashboard, Anchor, AlertTriangle, MoveRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Employee, Asset } from "@/types";
 
 export default function SupervisorPage() {
     const {
         orders, assets, employees, productionLines,
-        updateEmployee, events // Removed activeAlerts (calculated locally)
+        updateEmployee, events, resolveAndon // Added resolveAndon
     } = useShopfloorStore();
 
     // We need to fetch alerts if not exposed directly, but we added 'alerts' to store state previously.
@@ -79,6 +79,10 @@ export default function SupervisorPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="tracks" className="flex gap-2"><LayoutDashboard className="h-4 w-4" /> Pistas (Linhas)</TabsTrigger>
+                    <TabsTrigger value="alerts" className="flex gap-2 relative">
+                        <AlertTriangle className="h-4 w-4 text-red-500" /> Andon
+                        {activeAlertsCount > 0 && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}
+                    </TabsTrigger>
                     <TabsTrigger value="resources" className="flex gap-2"><Users className="h-4 w-4" /> Recursos (RH)</TabsTrigger>
                     <TabsTrigger value="bi" className="flex gap-2"><BarChart3 className="h-4 w-4" /> Relatório de Turno</TabsTrigger>
                 </TabsList>
@@ -128,7 +132,79 @@ export default function SupervisorPage() {
                     </div>
                 </TabsContent>
 
-                {/* --- TAB: RESOURCES --- */}
+                {/* --- TAB: ALERTS (ANDON) --- */}
+                <TabsContent value="alerts" className="space-y-4">
+                    <div className="grid gap-4">
+                        {alerts.length === 0 ? (
+                            <Card className="bg-slate-50 border-dashed border-2">
+                                <CardContent className="flex flex-col items-center justify-center p-12 text-slate-400">
+                                    <CheckCircle2 className="h-12 w-12 mb-4 text-green-500/50" />
+                                    <h3 className="text-lg font-medium">Todos os sistemas operacionais</h3>
+                                    <p>Nenhum alerta ativo no momento.</p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            alerts.filter(a => a.status !== 'resolved').map(alert => (
+                                <Card key={alert.id} className="border-l-4 border-l-red-500 shadow-sm animate-in fade-in slide-in-from-left-4">
+                                    <CardContent className="p-4 flex flex-row items-center justify-between">
+                                        <div className="flex gap-4 items-start">
+                                            <div className="bg-red-100 p-3 rounded-full text-red-600">
+                                                <AlertTriangle className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Badge variant={alert.type === 'help' ? 'default' : 'destructive'} className="uppercase">
+                                                        {alert.type}
+                                                    </Badge>
+                                                    <span className="text-xs text-slate-500 font-mono">
+                                                        {new Date(alert.createdAt).toLocaleTimeString()} (+{Math.floor((new Date().getTime() - new Date(alert.createdAt).getTime()) / 60000)} min)
+                                                    </span>
+                                                </div>
+                                                <h3 className="font-bold text-lg text-slate-800">
+                                                    {assets.find(a => a.id === alert.stationId)?.name || "Estação Desconhecida"}
+                                                </h3>
+                                                <p className="text-slate-600">{alert.description || "Sem descrição"}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" onClick={() => toast.info("Notificação reenviada ao Líder!")}>
+                                                Escalar
+                                            </Button>
+                                            <Button
+                                                className="bg-green-600 hover:bg-green-700"
+                                                onClick={() => {
+                                                    resolveAndon(alert.id, "Supervisor");
+                                                    toast.success("Alerta resolvido");
+                                                }}
+                                            >
+                                                Resolver
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+
+                        {/* History (Closed) */}
+                        {alerts.filter(a => a.status === 'resolved').length > 0 && (
+                            <div className="mt-8">
+                                <h3 className="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wider">Histórico Recente</h3>
+                                <div className="space-y-2 opacity-60">
+                                    {alerts.filter(a => a.status === 'resolved').slice(0, 5).map(alert => (
+                                        <div key={alert.id} className="flex justify-between items-center bg-slate-50 p-3 rounded border">
+                                            <div className="flex gap-2 items-center">
+                                                <Badge variant="secondary" className="scale-75">{alert.type}</Badge>
+                                                <span className="text-sm font-medium">{assets.find(a => a.id === alert.stationId)?.name}</span>
+                                                <span className="text-xs text-slate-400">Resolvido por {alert.resolvedBy}</span>
+                                            </div>
+                                            <span className="text-xs font-mono text-slate-400">{new Date(alert.resolvedAt!).toLocaleTimeString()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </TabsContent>
                 <TabsContent value="resources" className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* List of Employees */}

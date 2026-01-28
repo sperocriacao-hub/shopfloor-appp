@@ -419,3 +419,22 @@ export interface ConsumableTransaction {
     mappedAssetId?: string;
     mappedEmployeeId?: string;
 }
+
+// --- IoT & Hardware ---
+export interface RfidReader {
+    id: string;
+    name: string;
+    ipAddress: string;
+    stationId?: string; // Linked Station (Fixed Reader)
+    status: 'online' | 'offline' | 'error';
+    lastHeartbeat?: string;
+}
+
+export interface IotEvent {
+    id: string;
+    readerId: string;
+    tagId: string;
+    timestamp: string;
+    type: 'READ' | 'HEARTBEAT' | 'ERROR';
+    metadata?: any;
+}
