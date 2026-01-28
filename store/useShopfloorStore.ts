@@ -282,6 +282,15 @@ interface ShopfloorState {
     findAssetByRfid: (tag: string) => Asset | undefined; // Synchronous lookups from loaded state preferred for speed
     findEmployeeByRfid: (tag: string) => Employee | undefined;
     findStationByFixedId: (fixedId: string) => Asset | undefined;
+
+    // Shopfloor V8 Actions (Mold Maintenance)
+    maintenanceOrders: MaintenanceOrder[];
+    moldGeometries: MoldGeometry[];
+    addMaintenanceOrder: (order: MaintenanceOrder) => void;
+    updateMaintenanceOrder: (id: string, updates: Partial<MaintenanceOrder>) => void;
+    addMaintenancePin: (pin: MaintenancePin) => void;
+    updateMaintenancePin: (id: string, updates: Partial<MaintenancePin>) => void;
+    setMoldGeometries: (geometries: MoldGeometry[]) => void;
 }
 
 const mapDbToEmployee = (dbEmp: any): Employee => ({
@@ -591,6 +600,10 @@ export const useShopfloorStore = create<ShopfloorState>()(
             moldCompatibility: [],
             moldMaintenanceLogs: [],
             alerts: [],
+
+            // Shopfloor V8 (Mold Maintenance)
+            maintenanceOrders: [],
+            moldGeometries: [],
 
             // Actions
             addAsset: async (asset) => {
@@ -1536,6 +1549,35 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     set({ orders: mappedOrders });
                 }
             },
+
+            // --- V8: Mold Maintenance Actions ---
+
+            addMaintenanceOrder: (order) => set(s => ({ maintenanceOrders: [...s.maintenanceOrders, order] })),
+
+            updateMaintenanceOrder: (id, updates) => set(s => ({
+                maintenanceOrders: s.maintenanceOrders.map(o => o.id === id ? { ...o, ...updates } : o)
+            })),
+
+            addMaintenancePin: (pin) => set(s => ({
+                maintenanceOrders: s.maintenanceOrders.map(o =>
+                    o.id === pin.orderId
+                        ? { ...o, pins: [...(o.pins || []), pin] }
+                        : o
+                )
+            })),
+
+            updateMaintenancePin: (id, updates) => set(s => ({
+                maintenanceOrders: s.maintenanceOrders.map(o => {
+                    if (o.id !== (s.maintenanceOrders.find(mo => mo.pins?.some(p => p.id === id))?.id)) return o;
+
+                    return {
+                        ...o,
+                        pins: o.pins?.map(p => p.id === id ? { ...p, ...updates } : p)
+                    };
+                })
+            })),
+
+            setMoldGeometries: (geometries) => set({ moldGeometries: geometries }),
         }),
         {
             name: 'shopfloor-storage',

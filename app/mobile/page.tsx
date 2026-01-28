@@ -8,20 +8,29 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PlayCircle, StopCircle, AlertTriangle, CheckCircle2, Wifi, Scan } from "lucide-react";
 import { toast } from "sonner";
-import { Alert } from "@/types";
+import { Alert, MaintenanceOrder } from "@/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Hammer } from "lucide-react";
 
 export default function MobileShopfloorPage() {
     const {
+        alerts, addMaintenanceOrder,
         assets, orders, events, employees,
         findStationByFixedId, findEmployeeByRfid,
         startOperation, stopOperation, triggerAndon,
-        alerts
     } = useShopfloorStore();
 
     // Session State
     const [stationId, setStationId] = useState<string>("");
     const [employeeId, setEmployeeId] = useState<string>("");
     const [scanInput, setScanInput] = useState("");
+    const [isReportOpen, setIsReportOpen] = useState(false);
+    const [reportStatus, setReportStatus] = useState<"ok" | "nok">("ok");
+    const [defectType, setDefectType] = useState("scratch");
+    const [priority, setPriority] = useState("medium");
 
     // UI Logic
     const currentStation = assets.find(a => a.id === stationId);
@@ -75,6 +84,29 @@ export default function MobileShopfloorPage() {
             description: `Alerta acionado via Mobile por ${employees.find(e => e.id === employeeId)?.name || 'Anon'}`
         });
         toast.success(`Andon ${type.toUpperCase()} acionado!`);
+    };
+
+    const handleReportSubmit = () => {
+        if (reportStatus === 'ok') {
+            toast.success("Desmolde registrado com sucesso (OK)!");
+            setIsReportOpen(false);
+            return;
+        }
+
+        // Create Maintenance Order
+        addMaintenanceOrder({
+            id: `mo-${Date.now()}`,
+            assetId: stationId, // Assuming Station IS the Asset (Mold) for simplicity in this V8 Mock
+            status: 'pending',
+            priority: priority as any,
+            createdAt: new Date().toISOString(),
+            reportedBy: employees.find(e => e.id === employeeId)?.name || 'Operador',
+            description: `Defeito reportado no Desmolde: ${defectType}`,
+            totalTimeMinutes: 0
+        });
+
+        toast.warning("Ordem de Manutenção Criada!");
+        setIsReportOpen(false);
     };
 
     if (!stationId) {
@@ -148,6 +180,83 @@ export default function MobileShopfloorPage() {
                         <StopCircle className="mr-3 h-8 w-8" /> PARAR
                     </Button>
                 )}
+
+                {/* Demolding Report Action */}
+                <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" className="h-16 text-xl border-dashed border-2 border-slate-600 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-white">
+                            <Hammer className="mr-3 h-6 w-6" /> REPORTAR DESMOLDE
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-slate-900 text-white border-slate-700">
+                        <DialogHeader>
+                            <DialogTitle>Reporte de Desmolde</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-6 py-4">
+                            <div className="space-y-2">
+                                <Label>Condição do Molde</Label>
+                                <div className="flex gap-4">
+                                    <Button
+                                        variant={reportStatus === 'ok' ? 'default' : 'outline'}
+                                        className={`flex-1 h-12 ${reportStatus === 'ok' ? 'bg-green-600 hover:bg-green-500' : ''}`}
+                                        onClick={() => setReportStatus('ok')}
+                                    >
+                                        <CheckCircle2 className="mr-2" /> APROVADO
+                                    </Button>
+                                    <Button
+                                        variant={reportStatus === 'nok' ? 'destructive' : 'outline'}
+                                        className="flex-1 h-12"
+                                        onClick={() => setReportStatus('nok')}
+                                    >
+                                        <AlertTriangle className="mr-2" /> INTERVENÇÃO
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {reportStatus === 'nok' && (
+                                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="space-y-2">
+                                        <Label>Tipo de Necessidade</Label>
+                                        <Select value={defectType} onValueChange={setDefectType}>
+                                            <SelectTrigger className="bg-slate-800 border-slate-600">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="wax">Cera Extra</SelectItem>
+                                                <SelectItem value="polish">Polimento</SelectItem>
+                                                <SelectItem value="gelcoat">Reparação Gelcoat</SelectItem>
+                                                <SelectItem value="structural">Dano Estrutural</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Urgência</Label>
+                                        <RadioGroup value={priority} onValueChange={setPriority} className="flex gap-4">
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="low" id="r1" className="text-yellow-500 border-yellow-500" />
+                                                <Label htmlFor="r1">Baixa</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="medium" id="r2" className="text-orange-500 border-orange-500" />
+                                                <Label htmlFor="r2">Média</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="critical" id="r3" className="text-red-500 border-red-500" />
+                                                <Label htmlFor="r3">Crítica (Bloqueia)</Label>
+                                            </div>
+                                        </RadioGroup>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={handleReportSubmit} className="w-full text-lg h-12">
+                                CONFIRMAR
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 {/* Andon Grid */}
                 <div className="grid grid-cols-2 gap-2 mt-auto">

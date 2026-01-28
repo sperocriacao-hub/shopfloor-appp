@@ -438,3 +438,40 @@ export interface IotEvent {
     type: 'READ' | 'HEARTBEAT' | 'ERROR';
     metadata?: any;
 }
+
+// --- Shopfloor V8: Mold Maintenance (Spatial) ---
+export interface MoldGeometry {
+    id: string;
+    productModelId: string;
+    partType: string;
+    svgContent: string;
+    width: number;
+    height: number;
+}
+
+export interface MaintenanceOrder {
+    id: string;
+    assetId: string;
+    status: 'pending' | 'in_progress' | 'completed' | 'verified';
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    createdAt: string;
+    startedAt?: string;
+    completedAt?: string;
+    reportedBy?: string;
+    technicianId?: string;
+    description: string;
+    totalTimeMinutes: number;
+    pins?: MaintenancePin[];
+}
+
+export interface MaintenancePin {
+    id: string;
+    orderId: string;
+    posX: number;
+    posY: number;
+    type: 'crack' | 'scratch' | 'polish' | 'wax' | 'gelcoat' | 'structural';
+    severity: 'monitoring' | 'repair_needed';
+    status: 'open' | 'fixed';
+    photoBeforeUrl?: string;
+    photoAfterUrl?: string;
+}
