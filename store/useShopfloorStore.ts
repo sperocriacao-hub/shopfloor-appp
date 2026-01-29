@@ -574,6 +574,10 @@ export const useShopfloorStore = create<ShopfloorState>()(
             products: [], // Start Empty (Wait for Sync)
             routings: [],
 
+            // Shopfloor V9 (IAM)
+            currentUser: null,
+            auditLogs: [],
+
             // Execution Data
             orders: [],
             events: [],
