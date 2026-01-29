@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, BarChart3, LayoutDashboard, Anchor, AlertTriangle, MoveRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Employee, Asset } from "@/types";
+import { SupervisorDashboardV2 } from "@/components/supervisor/SupervisorDashboardV2";
 
 export default function SupervisorPage() {
     const {
@@ -59,24 +60,14 @@ export default function SupervisorPage() {
     const qualityLoss = 0; // events.filter(e => e.type === 'SCRAP')... 
 
     const availability = (480 - totalDownTime) / 480; // Assuming 8h shift (480m)
-    const activeAlertsCount = alerts.filter(a => a.status === 'open').length;
 
     return (
         <div className="space-y-6 animate-in fade-in">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Supervisor de Produção</h1>
-                    <p className="text-slate-500">Gestão de Linhas, Recursos e Indicadores.</p>
-                </div>
-                <div className="flex gap-2">
-                    <div className="bg-red-50 text-red-700 px-3 py-1 rounded border border-red-200 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span className="font-bold">{activeAlertsCount}</span> Alertas
-                    </div>
-                </div>
-            </div>
+            {/* V2 DASHBOARD HEADER (Replaces old static header) */}
+            <SupervisorDashboardV2 />
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 pt-4 border-t">
+
                 <TabsList>
                     <TabsTrigger value="tracks" className="flex gap-2"><LayoutDashboard className="h-4 w-4" /> Pistas (Linhas)</TabsTrigger>
                     <TabsTrigger value="alerts" className="flex gap-2 relative">

@@ -475,3 +475,52 @@ export interface MaintenancePin {
     photoBeforeUrl?: string;
     photoAfterUrl?: string;
 }
+
+// --- Shopfloor V9: IAM & Settings ---
+export interface UserSettings {
+    theme: 'light' | 'dark' | 'system';
+    units: 'metric' | 'imperial';
+    dateFormat: 'DD/MM/YYYY' | 'MM/DD/YYYY';
+    soundEnabled: boolean;
+    soundVolume: number; // 0-100
+}
+
+export type PermissionLevel = 'none' | 'read' | 'write' | 'admin';
+
+export type AppModule =
+    | 'dashboard'
+    | 'orders'
+    | 'assets'
+    | 'products'
+    | 'engineering'
+    | 'consumables'
+    | 'staff'
+    | 'quality'
+    | 'tools'
+    | 'molds'
+    | 'supervisor'
+    | 'mobile'
+    | 'admin'
+    | 'legacy';
+
+export interface UserPermissions {
+    [key: string]: PermissionLevel; // key is AppModule
+}
+
+export interface AuditLog {
+    id: string;
+    userId: string;
+    userName: string;
+    action: string;
+    targetModule: string;
+    description: string;
+    timestamp: string;
+}
+
+// Extend Employee to include permissions
+export interface EmployeeWithPermissions extends Employee {
+    role: UserRole;
+    permissions?: UserPermissions;
+    settings?: UserSettings;
+    pinHash?: string; // For PIN login
+}

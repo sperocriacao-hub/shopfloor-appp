@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SystemConfigModal } from '@/components/config/SystemConfigModal';
+import { useShopfloorStore } from '@/store/useShopfloorStore';
+import { AppModule } from '@/types';
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -29,22 +31,34 @@ export function Sidebar() {
         return () => window.removeEventListener('resize', checkSize);
     }, []);
 
+    const { currentUser, logout } = useShopfloorStore();
+
+    // Map routes to Permission Modules
     const navItems = [
-        { name: 'Dashboard', href: '/', icon: Home },
-        { name: 'Ordens de Produção', href: '/orders', icon: Activity },
-        { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes },
-        { name: 'Produtos & Roteiros', href: '/products', icon: Settings },
-        { name: 'Engenharia Avançada', href: '/engineering', icon: Wrench },
-        { name: 'Materiais (AS400)', href: '/consumables', icon: Package },
-        { name: 'Recursos Humanos', href: '/staff', icon: Users },
-        { name: 'Qualidade', href: '/quality', icon: Microscope },
-        { name: 'Ferramentaria', href: '/tools', icon: Settings },
-        { name: 'Moldes', href: '/molds', icon: Anchor },
-        { name: 'Supervisor', href: '/supervisor', icon: Users }, // Visibility Fix
-        { name: 'App Mobile', href: '/mobile', icon: Ship }, // Visibility Fix
-        { name: 'Admin / Suporte', href: '/admin', icon: Wrench }, // New Admin Module
-        { name: 'Modo Shopfloor (Legacy)', href: '/shopfloor', icon: Ship },
+        { name: 'Dashboard', href: '/', icon: Home, module: 'dashboard' },
+        { name: 'Ordens de Produção', href: '/orders', icon: Activity, module: 'orders' },
+        { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes, module: 'assets' },
+        { name: 'Produtos & Roteiros', href: '/products', icon: Settings, module: 'products' },
+        { name: 'Engenharia Avançada', href: '/engineering', icon: Wrench, module: 'engineering' },
+        { name: 'Materiais (AS400)', href: '/consumables', icon: Package, module: 'consumables' },
+        { name: 'Recursos Humanos', href: '/staff', icon: Users, module: 'staff' },
+        { name: 'Qualidade', href: '/quality', icon: Microscope, module: 'quality' },
+        { name: 'Ferramentaria', href: '/tools', icon: Settings, module: 'tools' },
+        { name: 'Moldes', href: '/molds', icon: Anchor, module: 'molds' },
+        { name: 'Supervisor', href: '/supervisor', icon: Users, module: 'supervisor' },
+        { name: 'App Mobile', href: '/mobile', icon: Ship, module: 'mobile' },
+        { name: 'Admin / Suporte', href: '/admin', icon: Wrench, module: 'admin' },
+        { name: 'Modo Shopfloor (Legacy)', href: '/shopfloor', icon: Ship, module: 'legacy' },
     ];
+
+    // Filter items based on permissions
+    const visibleItems = navItems.filter(item => {
+        if (!currentUser) return false; // Hide all if not logged in (middleware usually handles this, but visual check)
+        if (currentUser.role === 'admin') return true; // Master access
+
+        const permission = currentUser.permissions?.[item.module as AppModule];
+        return permission && permission !== 'none';
+    });
 
     return (
         <div
@@ -77,7 +91,7 @@ export function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 space-y-1 px-2 py-4 overflow-x-hidden">
-                {navItems.map((item) => {
+                {visibleItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (
                         <Link
@@ -114,9 +128,9 @@ export function Sidebar() {
                     </div>
                     {!isCollapsed && (
                         <div className="ml-3 truncate">
-                            <p className="text-sm font-medium text-white truncate">Produção</p>
-                            <p className="text-xs text-blue-200 truncate">Admin</p>
-                            <p className="text-[10px] text-blue-400/50 mt-1 truncate">v1.2.0</p>
+                            <p className="text-sm font-medium text-white truncate">{currentUser?.name || 'Visitante'}</p>
+                            <p className="text-xs text-blue-200 truncate capitalize">{currentUser?.role || 'Faça Login'}</p>
+                            <button onClick={() => logout()} className="text-[10px] text-red-300 hover:text-red-100 mt-1 truncate underline">Sair</button>
                         </div>
                     )}
                 </div>

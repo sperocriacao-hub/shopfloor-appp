@@ -12,7 +12,8 @@ import {
     MoldCompatibility, MoldMaintenanceLog,
     ProductPart, OrderPart,
     RfidReader, IotEvent,
-    MaintenanceOrder, MaintenancePin, MoldGeometry
+    MaintenanceOrder, MaintenancePin, MoldGeometry,
+    UserSettings, UserPermissions, AuditLog, EmployeeWithPermissions, AppModule
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 
@@ -292,6 +293,15 @@ interface ShopfloorState {
     addMaintenancePin: (pin: MaintenancePin) => void;
     updateMaintenancePin: (id: string, updates: Partial<MaintenancePin>) => void;
     setMoldGeometries: (geometries: MoldGeometry[]) => void;
+
+    // --- Shopfloor V9: IAM Actions ---
+    currentUser: EmployeeWithPermissions | null;
+    auditLogs: AuditLog[];
+    login: (user: EmployeeWithPermissions) => void;
+    logout: () => void;
+    updateUserPermissions: (userId: string, permissions: UserPermissions) => void;
+    updateUserSettings: (settings: Partial<UserSettings>) => void;
+    logAudit: (action: string, module: string, description: string) => void;
 }
 
 const mapDbToEmployee = (dbEmp: any): Employee => ({
@@ -1579,6 +1589,49 @@ export const useShopfloorStore = create<ShopfloorState>()(
             })),
 
             setMoldGeometries: (geometries) => set({ moldGeometries: geometries }),
+
+            // --- V9: IAM Actions ---
+            login: (user) => {
+                set({ currentUser: user });
+                get().logAudit('LOGIN', 'auth', `User ${user.name} logged in`);
+            },
+            logout: () => {
+                const user = get().currentUser;
+                set({ currentUser: null });
+                if (user) get().logAudit('LOGOUT', 'auth', `User ${user.name} logged out`);
+            },
+            updateUserPermissions: (userId, permissions) => {
+                set(state => {
+                    const isCurrentUser = state.currentUser?.id === userId;
+                    return {
+                        currentUser: isCurrentUser ? { ...state.currentUser!, permissions } : state.currentUser
+                    };
+                });
+                get().logAudit('UPDATE_PERMISSIONS', 'admin', `Permissions updated for user ${userId}`);
+            },
+            updateUserSettings: (settings) => {
+                set(state => {
+                    if (!state.currentUser) return state;
+                    return {
+                        currentUser: {
+                            ...state.currentUser,
+                            settings: { ...state.currentUser.settings, ...settings } as UserSettings
+                        }
+                    };
+                });
+            },
+            logAudit: (action, module, description) => {
+                const log: AuditLog = {
+                    id: `log-${Date.now()}`,
+                    userId: get().currentUser?.id || 'system',
+                    userName: get().currentUser?.name || 'System',
+                    action,
+                    targetModule: module,
+                    description,
+                    timestamp: new Date().toISOString()
+                };
+                set(s => ({ auditLogs: [log, ...s.auditLogs].slice(0, 1000) }));
+            },
         }),
         {
             name: 'shopfloor-storage',
