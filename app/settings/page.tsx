@@ -2,6 +2,7 @@
 
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +13,7 @@ import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
     const { currentUser, updateUserSettings } = useShopfloorStore();
+    const router = useRouter();
 
     // Local state for immediate feedback before persisting
     const [theme, setTheme] = useState(currentUser?.settings?.theme || 'light');
@@ -43,8 +45,10 @@ export default function SettingsPage() {
         toast.success(checked ? "Sons ativados" : "Sons desativados");
     };
 
+    // Redirect handled by Sidebar, but for safety:
     if (!currentUser) {
-        return <div className="p-8">Por favor faça login.</div>;
+        // Return null cleanly while redirect happens
+        return null;
     }
 
     return (

@@ -242,9 +242,9 @@ export default function LoginPage() {
                     <p className="text-xs text-center text-slate-500">
                         Esqueceu a senha? Contacte o suporte de TI.
                     </p>
-                    <div className="flex items-center justify-center gap-2 text-[10px] text-slate-600 bg-slate-900/50 p-2 rounded w-full">
+                    <div className="flex items-center justify-center gap-2 text-[10px] text-slate-600 bg-slate-900/50 p-2 rounded w-full opacity-0 hover:opacity-100 transition-opacity cursor-default">
                         <AlertCircle className="h-3 w-3" />
-                        <span>Master Access: MASTER / Admin123</span>
+                        <span>System Stable v9.0</span>
                     </div>
                 </CardFooter>
             </Card>

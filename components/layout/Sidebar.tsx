@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,15 @@ export function Sidebar() {
     }, []);
 
     const { currentUser, logout } = useShopfloorStore();
+    const router = useRouter(); // Actually imported? Need to check imports
+
+    // --- Global Auth Guard ---
+    useEffect(() => {
+        // If no user and NOT on login page, redirect to login
+        if (!currentUser && pathname !== '/login') {
+            router.push('/login');
+        }
+    }, [currentUser, pathname, router]);
 
     // Map routes to Permission Modules
     const navItems = [

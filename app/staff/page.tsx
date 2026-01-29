@@ -45,7 +45,7 @@ export default function StaffPage() {
         }
     };
 
-    const filteredEmployees = employees.filter(e => {
+    const filteredEmployees = (employees || []).filter(e => {
         const matchesSearch = e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             e.workerNumber.includes(searchTerm) ||
             e.area.toLowerCase().includes(searchTerm.toLowerCase());
@@ -110,7 +110,7 @@ export default function StaffPage() {
                         <Users className="h-4 w-4 text-blue-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-blue-700">{employees.length}</div>
+                        <div className="text-2xl font-bold text-blue-700">{(employees || []).length}</div>
                     </CardContent>
                 </Card>
                 <Card className="bg-green-50 border-green-100">
@@ -120,12 +120,12 @@ export default function StaffPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-700">
-                            {employees.filter(e => {
+                            {(employees || []).filter(e => {
                                 // Must be active
                                 if (e.hrStatus !== 'active') return false;
                                 // Must NOT have a full day absence/sick leave TODAY
                                 const today = new Date().toISOString().split('T')[0];
-                                const hasAbsence = absenteeismRecords.some(r =>
+                                const hasAbsence = (absenteeismRecords || []).some(r =>
                                     r.employeeId === e.id &&
                                     r.date === today &&
                                     (r.type === 'Full Day' || r.type === 'Sick Leave' || r.type === 'Vacation')
@@ -142,7 +142,7 @@ export default function StaffPage() {
                         <Award className="h-4 w-4 text-purple-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-purple-700">{employees.filter(e => e.iluo === 'O' || e.iluo === 'U').length} <span className="text-sm font-normal text-purple-600">(U/O Level)</span></div>
+                        <div className="text-2xl font-bold text-purple-700">{(employees || []).filter(e => e.iluo === 'O' || e.iluo === 'U').length} <span className="text-sm font-normal text-purple-600">(U/O Level)</span></div>
                     </CardContent>
                 </Card>
             </div>
