@@ -60,6 +60,7 @@ export default function SupervisorPage() {
     const qualityLoss = 0; // events.filter(e => e.type === 'SCRAP')... 
 
     const availability = (480 - totalDownTime) / 480; // Assuming 8h shift (480m)
+    const activeAlertsCount = alerts.filter(a => a.status === 'open').length;
 
     return (
         <div className="space-y-6 animate-in fade-in">
