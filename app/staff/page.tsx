@@ -46,9 +46,10 @@ export default function StaffPage() {
     };
 
     const filteredEmployees = (employees || []).filter(e => {
-        const matchesSearch = e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            e.workerNumber.includes(searchTerm) ||
-            e.area.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (e.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (e.workerNumber || "").includes(searchTerm) ||
+            (e.area || "").toLowerCase().includes(searchTerm.toLowerCase());
+
         const matchesStatus = showInactive ? true : e.hrStatus !== 'terminated';
         return matchesSearch && matchesStatus;
     });
@@ -186,8 +187,8 @@ export default function StaffPage() {
                             <tbody className="divide-y">
                                 {filteredEmployees.map((emp) => (
                                     <tr key={emp.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-mono">{emp.workerNumber}</td>
-                                        <td className="px-4 py-3 font-medium text-blue-900">{emp.name}</td>
+                                        <td className="px-4 py-3 font-mono">{emp.workerNumber || "-"}</td>
+                                        <td className="px-4 py-3 font-medium text-blue-900">{emp.name || "Sem Nome"}</td>
                                         <td className="px-4 py-3">
                                             <div className="text-slate-900">{emp.area}</div>
                                             <div className="text-xs text-slate-500">{emp.workstation}</div>
@@ -196,7 +197,7 @@ export default function StaffPage() {
                                         <td className="px-4 py-3 text-slate-600">
                                             {emp.contractType}
                                             <span className="block text-xs text-slate-400">
-                                                {emp.admissionDate.split('-').reverse().join('/')}
+                                                {(emp.admissionDate || "").split('-').reverse().join('/')}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
