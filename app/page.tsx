@@ -4,11 +4,22 @@ import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, AlertTriangle, Activity, TrendingUp, Calendar, Anchor } from 'lucide-react';
 import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 export default function Home() {
-  const { assets, employees, orders, events, alerts, products } = useShopfloorStore();
+  const { assets, employees, orders, events, alerts, products, currentUser } = useShopfloorStore();
   const [activeTab, setActiveTab] = useState('overview');
+  const router = useRouter();
+
+  // --- Auth Guard ---
+  useEffect(() => {
+    if (!currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, router]);
+
+  if (!currentUser) return null; // Avoid flash
 
   // --- KPI Calculations ---
 

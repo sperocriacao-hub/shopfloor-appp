@@ -122,18 +122,20 @@ export function Sidebar() {
 
             {/* Footer / User Profile */}
             <div className="border-t border-blue-800 p-4 overflow-hidden">
-                <div className={cn("flex items-center transition-all", isCollapsed ? "justify-center" : "")}>
+                <Link href="/settings" className={cn("flex items-center transition-all hover:bg-blue-800/50 rounded p-1 -m-1 cursor-pointer", isCollapsed ? "justify-center" : "")}>
                     <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold border-2 border-blue-400">
-                        P
+                        {currentUser?.name?.charAt(0) || 'U'}
                     </div>
                     {!isCollapsed && (
                         <div className="ml-3 truncate">
                             <p className="text-sm font-medium text-white truncate">{currentUser?.name || 'Visitante'}</p>
                             <p className="text-xs text-blue-200 truncate capitalize">{currentUser?.role || 'Faça Login'}</p>
-                            <button onClick={() => logout()} className="text-[10px] text-red-300 hover:text-red-100 mt-1 truncate underline">Sair</button>
                         </div>
                     )}
-                </div>
+                </Link>
+                {!isCollapsed && currentUser && (
+                    <button onClick={() => logout()} className="text-[10px] text-red-300 hover:text-red-100 mt-2 w-full text-left pl-12 underline">Sair</button>
+                )}
             </div>
 
             <SystemConfigModal open={isConfigOpen} onOpenChange={setIsConfigOpen} />

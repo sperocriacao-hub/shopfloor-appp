@@ -129,6 +129,10 @@ export interface Employee {
     // System Access
     hasSystemAccess: boolean;
     systemAccess?: SystemAccess;
+
+    // IAM / V9
+    permissions?: UserPermissions;
+    settings?: UserSettings;
 }
 
 export interface Routing {
