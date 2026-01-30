@@ -11,25 +11,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Plus, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Check, ChevronsUpDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function PPIRequestModal() {
-    const { employees, assets, ppeRequests, addPpeRequest, consumableTransactions } = useShopfloorStore();
+    const { employees, assets, addPpeRequest, consumableTransactions } = useShopfloorStore();
     const [isOpen, setIsOpen] = useState(false);
 
-    // Form State
+    // Form State (V2 Multi-item)
     const [employeeId, setEmployeeId] = useState("");
     const [assetId, setAssetId] = useState("");
-    const [itemName, setItemName] = useState("");
-    const [partNumber, setPartNumber] = useState("");
-    const [quantity, setQuantity] = useState(1);
-    const [unitCost, setUnitCost] = useState(0);
+
+    // Items state (Max 5)
+    type ItemRow = { id: string, itemName: string, partNumber: string, quantity: number, unitCost: number };
+    const [items, setItems] = useState<ItemRow[]>([{ id: '1', itemName: '', partNumber: '', quantity: 1, unitCost: 0 }]);
+
     const [notes, setNotes] = useState("");
 
     // Combobox Open States
     const [openEmployee, setOpenEmployee] = useState(false);
-    const [openPart, setOpenPart] = useState(false);
 
     // Derived Catalog from History
     const partCatalog = useMemo(() => {
@@ -46,16 +46,36 @@ export function PPIRequestModal() {
         return Array.from(map.values());
     }, [consumableTransactions]);
 
-    const handleSelectPart = (part: any) => {
-        setPartNumber(part.partNumber);
-        setItemName(part.description || "");
-        setUnitCost(part.unitCost || 0);
-        setOpenPart(false);
+    const updateItem = (id: string, field: keyof ItemRow, val: any) => {
+        setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: val } : item));
+    };
+
+    const handleSelectPart = (id: string, part: any) => {
+        setItems(prev => prev.map(item => item.id === id ? {
+            ...item,
+            partNumber: part.partNumber,
+            itemName: part.description || "",
+            unitCost: part.unitCost || 0
+        } : item));
+    };
+
+    const addItem = () => {
+        if (items.length < 5) {
+            setItems([...items, { id: crypto.randomUUID(), itemName: '', partNumber: '', quantity: 1, unitCost: 0 }]);
+        }
+    };
+
+    const removeItem = (id: string) => {
+        if (items.length > 1) {
+            setItems(items.filter(i => i.id !== id));
+        }
     };
 
     const handleSubmit = async () => {
-        if (!itemName || !quantity) {
-            toast.error("Por favor, preencha o nome do item e a quantidade.");
+        const validItems = items.filter(i => i.itemName && i.quantity > 0);
+
+        if (validItems.length === 0) {
+            toast.error("Adicione pelo menos um item válido.");
             return;
         }
 
@@ -63,10 +83,13 @@ export function PPIRequestModal() {
             id: crypto.randomUUID(),
             employeeId: employeeId && employeeId !== "none" ? employeeId : undefined,
             assetId: assetId && assetId !== "none" ? assetId : undefined,
-            itemName,
-            partNumber,
-            quantity: Number(quantity),
-            unitCost: Number(unitCost),
+            // Legacy fields (First item)
+            itemName: validItems[0].itemName,
+            partNumber: validItems[0].partNumber,
+            quantity: validItems[0].quantity,
+            unitCost: validItems[0].unitCost,
+            // V2
+            items: validItems,
             status: 'pending' as const,
             requestDate: new Date().toISOString(),
             notes
@@ -76,13 +99,10 @@ export function PPIRequestModal() {
             await addPpeRequest(newRequest);
             toast.success("Pedido de EPI criado com sucesso!");
             setIsOpen(false);
-            // Reset form
+            // Reset
             setEmployeeId("");
             setAssetId("");
-            setItemName("");
-            setPartNumber("");
-            setQuantity(1);
-            setUnitCost(0);
+            setItems([{ id: '1', itemName: '', partNumber: '', quantity: 1, unitCost: 0 }]);
             setNotes("");
         } catch (error) {
             toast.error("Erro ao criar pedido.");
@@ -96,7 +116,7 @@ export function PPIRequestModal() {
                     <Plus className="mr-2 h-4 w-4" /> Novo Pedido (EPI)
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md bg-white">
+            <DialogContent className="max-w-md bg-white overflow-y-auto max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>Novo Pedido de EPI/Consumível</DialogTitle>
                 </DialogHeader>
@@ -180,98 +200,97 @@ export function PPIRequestModal() {
                         </Select>
                     </div>
 
-                    {/* Part Number Combobox */}
-                    <div className="space-y-2 flex flex-col">
-                        <Label>Buscar Item (Part Number / Descrição)</Label>
-                        <Popover open={openPart} onOpenChange={setOpenPart}>
-                            <PopoverTrigger asChild>
+                    {/* Items List */}
+                    <div className="space-y-4 border rounded p-4 bg-slate-50">
+                        <Label>Itens (Máx 5)</Label>
+                        {items.map((item, index) => (
+                            <div key={item.id} className="space-y-3 pb-3 border-b last:border-0 relative">
                                 <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={openPart}
-                                    className="w-full justify-between bg-white text-slate-600 font-normal hover:text-slate-900"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-6 w-6 p-0 text-slate-400 hover:text-red-500"
+                                    onClick={() => removeItem(item.id)}
                                 >
-                                    {partNumber
-                                        ? `${partNumber} - ${itemName}`
-                                        : "Buscar no histórico..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    <Trash2 className="h-4 w-4" />
                                 </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0 bg-white">
-                                <Command className="bg-white">
-                                    <CommandInput placeholder="Buscar item..." />
-                                    <CommandList>
-                                        <CommandEmpty>Nenhum item encontrado.</CommandEmpty>
-                                        <CommandGroup>
-                                            {partCatalog.map((part) => (
-                                                <CommandItem
-                                                    key={part.partNumber}
-                                                    value={`${part.partNumber} ${part.description}`}
-                                                    onSelect={() => handleSelectPart(part)}
+
+                                <span className="text-xs font-bold text-slate-500">Item {index + 1}</span>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Part Number (Busca)</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    size="sm"
+                                                    className="w-full justify-between bg-white h-8 text-xs"
                                                 >
-                                                    <Check
-                                                        className={cn(
-                                                            "mr-2 h-4 w-4",
-                                                            partNumber === part.partNumber ? "opacity-100" : "opacity-0"
-                                                        )}
-                                                    />
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium">{part.partNumber}</span>
-                                                        <span className="text-xs text-slate-500">{part.description}</span>
-                                                    </div>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Item (Descrição)</Label>
-                            <Input
-                                placeholder="Ex: Luvas Nitrílicas"
-                                value={itemName}
-                                onChange={e => setItemName(e.target.value)}
-                                className="bg-white"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Part Number</Label>
-                            <Input
-                                placeholder="Ex: 12345"
-                                value={partNumber}
-                                onChange={e => setPartNumber(e.target.value)}
-                                className="bg-white"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Quantidade</Label>
-                            <Input
-                                type="number"
-                                min={1}
-                                value={quantity}
-                                onChange={e => setQuantity(Number(e.target.value))}
-                                className="bg-white"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Custo Unit. (€)</Label>
-                            <Input
-                                type="number"
-                                min={0}
-                                step={0.01}
-                                value={unitCost}
-                                onChange={e => setUnitCost(Number(e.target.value))}
-                                className="bg-white bg-slate-50"
-                                readOnly
-                            />
-                        </div>
+                                                    {item.partNumber || "Buscar..."}
+                                                    <ChevronsUpDown className="ml-2 h-3 w-3 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[300px] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Buscar..." className="h-8" />
+                                                    <CommandList>
+                                                        <CommandEmpty>Nad.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {partCatalog.map((p) => (
+                                                                <CommandItem
+                                                                    key={p.partNumber}
+                                                                    value={`${p.partNumber} ${p.description}`}
+                                                                    onSelect={() => handleSelectPart(item.id, p)}
+                                                                    className="text-xs"
+                                                                >
+                                                                    <Check className={cn("mr-2 h-3 w-3", item.partNumber === p.partNumber ? "opacity-100" : "opacity-0")} />
+                                                                    {p.partNumber} - {p.description}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Descrição</Label>
+                                        <Input
+                                            value={item.itemName}
+                                            onChange={e => updateItem(item.id, 'itemName', e.target.value)}
+                                            className="h-8 text-xs bg-white"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Qtd</Label>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            value={item.quantity}
+                                            onChange={e => updateItem(item.id, 'quantity', Number(e.target.value))}
+                                            className="h-8 text-xs bg-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Custo Unit.</Label>
+                                        <Input
+                                            type="number"
+                                            value={item.unitCost}
+                                            onChange={e => updateItem(item.id, 'unitCost', Number(e.target.value))}
+                                            className="h-8 text-xs bg-white"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {items.length < 5 && (
+                            <Button variant="outline" size="sm" onClick={addItem} className="w-full border-dashed">
+                                <Plus className="mr-2 h-3 w-3" /> Adicionar Item
+                            </Button>
+                        )}
                     </div>
 
                     <div className="space-y-2">

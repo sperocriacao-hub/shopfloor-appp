@@ -91,23 +91,12 @@ export default function LoginPage() {
         const found = employees.find(e => e.workerNumber === username && e.hasSystemAccess);
 
         if (found) {
-            // Mock Permissions for demo
-            const userWithPerms: EmployeeWithPermissions = {
-                ...found,
-                role: 'operator',
-                permissions: {
-                    dashboard: 'read',
-                    mobile: 'read', // Operators usually only have mobile
-                    molds: 'none'
-                },
-                settings: {
-                    theme: 'light',
-                    units: 'metric',
-                    dateFormat: 'DD/MM/YYYY',
-                    soundEnabled: true,
-                    soundVolume: 80
-                }
-            };
+            // Use stored permissions (mapped from DB)
+            const userWithPerms = found as EmployeeWithPermissions;
+
+            // Ensure role exists (fallback)
+            if (!userWithPerms.role) userWithPerms.role = 'operator';
+            if (!userWithPerms.permissions) userWithPerms.permissions = { mobile: 'read' };
 
             login(userWithPerms);
             toast.success(`Bem-vindo, ${found.name}!`);

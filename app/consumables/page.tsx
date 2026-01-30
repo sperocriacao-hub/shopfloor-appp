@@ -8,6 +8,8 @@ import { ConsumablesList } from "@/components/consumables/ConsumablesList";
 import { PPIView } from "@/components/consumables/PPIView";
 import { ScrapView } from "@/components/consumables/ScrapView";
 import { CostCenterManager } from "@/components/consumables/CostCenterManager";
+import { MaterialRequestForm } from "@/components/consumables/MaterialRequestForm";
+import { MaterialWarehouseView } from "@/components/consumables/MaterialWarehouseView";
 import { Package } from "lucide-react";
 import { useEffect } from "react";
 
@@ -41,6 +43,7 @@ export default function ConsumablesPage() {
                     <TabsTrigger value="ppi">PPI (EPIs)</TabsTrigger>
                     <TabsTrigger value="scrap">Refugo</TabsTrigger>
                     <TabsTrigger value="import">Importar Dados</TabsTrigger>
+                    <TabsTrigger value="requests">Pedidos Material</TabsTrigger>
                     <TabsTrigger value="config">Config. Centros</TabsTrigger>
                 </TabsList>
 
@@ -74,6 +77,19 @@ export default function ConsumablesPage() {
 
                 <TabsContent value="config">
                     <CostCenterManager />
+                </TabsContent>
+
+                <TabsContent value="requests" className="space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                            <h2 className="text-xl font-bold mb-4 text-slate-800">Novo Pedido</h2>
+                            <MaterialRequestForm onSuccess={() => { }} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold mb-4 text-slate-800">Warehouse / Logística</h2>
+                            <MaterialWarehouseView />
+                        </div>
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>

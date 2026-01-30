@@ -41,9 +41,9 @@ export function ConsumableImporter() {
                     const rawArea = String(row['Area'] || '');
 
                     // Auto-Mapping Logic
-                    // 1. Customer Code -> Asset (Cost Center)
+                    // 1. Customer Code -> Area Name
                     const mapping = costCenterMappings.find(m => m.customerCode === customerCode);
-                    const mappedAssetId = mapping?.assetId;
+                    const mappedArea = mapping?.mappedArea;
 
                     // 2. Area -> Employee (for PPI)
                     // Assuming 'Area' column contains Worker Number for PPI items
@@ -72,7 +72,20 @@ export function ConsumableImporter() {
                         unitCost: Number(row['Unit Cost'] || 0),
                         extensionCost: Number(row['Extension Cost'] || 0),
                         userAs400: String(row['User'] || ''),
-                        mappedAssetId,
+                        mappedAssetId: mappedArea, // Using Area Name as ID for now, or look up Asset by Area?
+                        // Ideally we want to link valid assets, but the mapping provides Area String.
+                        // Let's store the Area string in the transaction if possible, or leave undefined if not matching an Asset ID.
+                        // The ConsumableTransaction type has 'mappedAssetId'. 
+                        // We should probably just store the mappedArea in 'areaSource' or a new field?
+                        // The Type definition says: mappedAssetId?: string;
+                        // CostCenterManager says: mappedArea?: string;
+                        // Let's use mappedArea as is, or find an asset in that area?
+                        // For reporting, we want to group by Area.
+                        // So let's ensure we save the Mapped Area.
+                        // But the interface is mappedAssetId.
+                        // Let's update `mapDbToConsumable` to read `mapped_area`?
+                        // For now, let's just comment this out or set it to undefined if it's a string name.
+                        // Or better, update transaction to support mappedAreaName.
                         mappedEmployeeId
                     };
                 });

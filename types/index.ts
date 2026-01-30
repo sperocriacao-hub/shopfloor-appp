@@ -133,6 +133,7 @@ export interface Employee {
     // IAM / V9
     permissions?: UserPermissions;
     settings?: UserSettings;
+    role?: UserRole;
 }
 
 export interface Routing {
@@ -384,7 +385,7 @@ export interface CostCenterMapping {
     id: string;
     customerCode: string;
     description: string;
-    assetId?: string; // Mapped Shopfloor Area
+    mappedArea?: string; // String Area Name
 }
 
 export interface PpeRequest {
@@ -400,6 +401,39 @@ export interface PpeRequest {
     processedAt?: string;
     processedBy?: string;
     notes?: string;
+    // V2: Multi-item support
+    items?: PpeRequestItem[];
+}
+
+export interface PpeRequestItem {
+    id: string;
+    itemName: string;
+    partNumber?: string;
+    quantity: number;
+    unitCost?: number;
+}
+
+export interface MaterialRequest {
+    id: string;
+    area: string; // Cost Center
+    status: 'pending' | 'approved' | 'rejected' | 'delivered';
+    requestDate: string;
+    requestedBy?: string;
+    items: MaterialRequestItem[];
+    totalCost: number;
+    notes?: string;
+    // Warehouse Action
+    processedAt?: string;
+    processedBy?: string;
+}
+
+export interface MaterialRequestItem {
+    id: string; // generated
+    partNumber: string;
+    description: string;
+    quantity: number;
+    unitCost: number;
+    total: number;
 }
 
 export interface ConsumableTransaction {

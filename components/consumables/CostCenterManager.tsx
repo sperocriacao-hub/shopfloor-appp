@@ -16,6 +16,9 @@ export function CostCenterManager() {
     const knownCodes = new Set(costCenterMappings.map(m => m.customerCode));
     const newCodes = Array.from(new Set(consumableTransactions.map(t => t.customerCode))).filter(c => !knownCodes.has(c));
 
+    // Get unique Areas from assets
+    const uniqueAreas = Array.from(new Set(assets.map(a => a.area))).sort();
+
     const [newMappingDesc, setNewMappingDesc] = useState("");
 
     const handleAutoCreate = async (code: string) => {
@@ -27,8 +30,8 @@ export function CostCenterManager() {
         });
     };
 
-    const handleUpdateAsset = async (mappingId: string, assetId: string) => {
-        await updateCostCenterMapping(mappingId, { assetId });
+    const handleUpdateArea = async (mappingId: string, mappedArea: string) => {
+        await updateCostCenterMapping(mappingId, { mappedArea });
     };
 
     return (
@@ -74,17 +77,17 @@ export function CostCenterManager() {
                                 </TableCell>
                                 <TableCell>
                                     <Select
-                                        value={mapping.assetId || "none"}
-                                        onValueChange={(val) => handleUpdateAsset(mapping.id, val === "none" ? "" : val)}
+                                        value={mapping.mappedArea || "none"}
+                                        onValueChange={(val) => handleUpdateArea(mapping.id, val === "none" ? "" : val)}
                                     >
                                         <SelectTrigger className="w-[300px] bg-white">
                                             <SelectValue placeholder="Selecione uma Área..." />
                                         </SelectTrigger>
                                         <SelectContent className="bg-white">
                                             <SelectItem value="none">-- Sem Vínculo --</SelectItem>
-                                            {assets.map(asset => (
-                                                <SelectItem key={asset.id} value={asset.id}>
-                                                    {asset.name} ({asset.area})
+                                            {uniqueAreas.map(area => (
+                                                <SelectItem key={area} value={area}>
+                                                    {area}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

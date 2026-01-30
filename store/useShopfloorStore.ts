@@ -7,7 +7,7 @@ import {
     ProductOption, OptionTask, OrderIssue, TaskExecution,
     QualityCase, QualityAction, ScrapReport,
     Tool, ToolTransaction, ToolMaintenance,
-    ConsumableTransaction, CostCenterMapping, PpeRequest,
+    ConsumableTransaction, CostCenterMapping, PpeRequest, PpeRequestItem, MaterialRequest,
     ProductionLine, SequencingRule, Alert,
     MoldCompatibility, MoldMaintenanceLog,
     ProductPart, OrderPart,
@@ -273,6 +273,11 @@ interface ShopfloorState {
     addPpeRequest: (req: PpeRequest) => Promise<void>;
     updatePpeRequest: (id: string, updates: Partial<PpeRequest>) => Promise<void>;
 
+    // Material Requests (Requests V2)
+    materialRequests: MaterialRequest[];
+    addMaterialRequest: (req: MaterialRequest) => Promise<void>;
+    updateMaterialRequest: (id: string, updates: Partial<MaterialRequest>) => Promise<void>;
+
     // Shopfloor V6 Actions
     addProductionLine: (line: ProductionLine) => Promise<void>;
     updateProductionLine: (id: string, updates: Partial<ProductionLine>) => Promise<void>;
@@ -327,7 +332,10 @@ const mapDbToEmployee = (dbEmp: any): Employee => ({
     hrNotes: '',
     rfidTag: dbEmp.rfid_tag,
     hasSystemAccess: !!dbEmp.system_access,
-    systemAccess: dbEmp.system_access || undefined
+    systemAccess: dbEmp.system_access || undefined,
+    role: dbEmp.role || 'operator',
+    permissions: dbEmp.permissions || {},
+    settings: dbEmp.settings || {}
 });
 
 const mapDbToAbsenteeism = (dbAbs: any): AbsenteeismRecord => ({
@@ -426,7 +434,7 @@ const mapDbToCostCenter = (db: any): CostCenterMapping => ({
     id: db.id,
     customerCode: db.customer_code,
     description: db.description,
-    assetId: db.asset_id
+    mappedArea: db.mapped_area // Changed from assetId
 });
 
 const mapDbToConsumable = (db: any): ConsumableTransaction => ({
@@ -606,6 +614,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
             costCenterMappings: [],
             ppeRequests: [],
+            materialRequests: [],
 
             // Shopfloor V6
             productionLines: [],
@@ -1031,7 +1040,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
             addCostCenterMapping: async (mapping) => {
                 set(s => ({ costCenterMappings: [...s.costCenterMappings, mapping] }));
                 const { error } = await supabase.from('cost_center_mappings').insert({
-                    id: mapping.id, customer_code: mapping.customerCode, description: mapping.description, asset_id: mapping.assetId
+                    id: mapping.id, customer_code: mapping.customerCode, description: mapping.description, mapped_area: mapping.mappedArea
                 });
                 if (error) console.error("Error adding CC mapping:", error);
             },
@@ -1042,8 +1051,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 }));
                 const toUpdate: any = {};
                 if (updates.description) toUpdate.description = updates.description;
-                if (updates.assetId !== undefined) {
-                    toUpdate.asset_id = updates.assetId === "" ? null : updates.assetId;
+                if (updates.mappedArea !== undefined) {
+                    toUpdate.mapped_area = updates.mappedArea === "" ? null : updates.mappedArea;
                 }
 
                 if (Object.keys(toUpdate).length > 0) {
@@ -1402,6 +1411,20 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 await supabase.from('tool_maintenance').update(toUpdate).eq('id', id);
             },
 
+            addMaterialRequest: async (req) => {
+                set(state => {
+                    return { materialRequests: [req, ...state.materialRequests] };
+                });
+                get().logAudit('CREATE_REQUEST', 'consumables', `Created Material Request for ${req.area}`);
+            },
+
+            updateMaterialRequest: async (id, updates) => {
+                set(state => ({
+                    materialRequests: state.materialRequests.map(r => r.id === id ? { ...r, ...updates } : r)
+                }));
+                // Mock persist via update if needed or just sync
+            },
+
             syncData: async () => {
                 // Employees
                 const { data: emps } = await supabase.from('employees').select('*');
@@ -1607,13 +1630,25 @@ export const useShopfloorStore = create<ShopfloorState>()(
             updateUserPermissions: (userId, permissions) => {
                 set(state => {
                     const isCurrentUser = state.currentUser?.id === userId;
+                    const updatedEmployees = state.employees.map(e =>
+                        e.id === userId ? { ...e, permissions, role: (e as any).role || 'operator' } : e
+                    );
+
                     return {
-                        currentUser: isCurrentUser ? { ...state.currentUser!, permissions } : state.currentUser
+                        currentUser: isCurrentUser ? { ...state.currentUser!, permissions } : state.currentUser,
+                        employees: updatedEmployees
                     };
+                });
+                // Persist to DB
+                supabase.from('employees').update({ permissions }).eq('id', userId).then(({ error }) => {
+                    if (error) console.error("Failed to persist permissions:", error);
                 });
                 get().logAudit('UPDATE_PERMISSIONS', 'admin', `Permissions updated for user ${userId}`);
             },
             updateUserSettings: (settings) => {
+                const currentUser = get().currentUser;
+                if (!currentUser) return;
+
                 set(state => {
                     if (!state.currentUser) return state;
                     return {
@@ -1622,6 +1657,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
                             settings: { ...state.currentUser.settings, ...settings } as UserSettings
                         }
                     };
+                });
+
+                // Persist
+                const newSettings = { ...currentUser.settings, ...settings };
+                supabase.from('employees').update({ settings: newSettings }).eq('id', currentUser.id).then(({ error }) => {
+                    if (error) console.error("Failed to persist settings:", error);
                 });
             },
             logAudit: (action, module, description) => {
@@ -1644,7 +1685,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 orders: state.orders,
                 events: state.events,
                 assets: state.assets,
-                products: state.products
+                products: state.products,
+                materialRequests: state.materialRequests
             }),
         }
     ));

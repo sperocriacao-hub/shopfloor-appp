@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Printer, Search } from "lucide-react";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface ConsumablesListProps {
     type: 'INT' | 'PCS' | 'PST';
@@ -155,13 +156,15 @@ export function ConsumablesList({ type, title }: ConsumablesListProps) {
                                     {(() => {
                                         // Resolve dynamic mapping first, then fallback to stored
                                         const mappingConfig = costCenterMappings.find(m => m.customerCode === row.customerCode);
-                                        const resolvedAssetId = mappingConfig?.assetId || row.mappedAssetId;
-                                        const assetName = resolvedAssetId ? assets.find(a => a.id === resolvedAssetId)?.name : null;
+                                        // V5 Change: Mapping now points to Area Name, not Asset ID
+                                        const resolvedArea = mappingConfig?.mappedArea || row.areaSource || "N/A";
 
-                                        return assetName ? (
-                                            <span className="font-medium text-slate-700">{assetName}</span>
-                                        ) : (
-                                            <span className="text-orange-400 text-xs italic">Não Mapeado</span>
+                                        return (
+                                            <div className="flex items-center gap-1">
+                                                <Badge variant="outline" className="text-xs font-normal">
+                                                    {resolvedArea}
+                                                </Badge>
+                                            </div>
                                         );
                                     })()}
                                 </TableCell>
