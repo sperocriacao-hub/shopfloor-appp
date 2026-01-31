@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2 } from 'lucide-react';
+import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2, Smartphone, UserCheck, ClipboardCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -43,19 +43,20 @@ export function Sidebar() {
     }, [currentUser, pathname, router]);
 
     // Map routes to Permission Modules
+    // Map routes to Permission Modules
     const navItems = [
         { name: 'Dashboard', href: '/', icon: Home, module: 'dashboard' },
         { name: 'Ordens de Produção', href: '/orders', icon: Activity, module: 'orders' },
         { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes, module: 'assets' },
-        { name: 'Produtos & Roteiros', href: '/products', icon: Settings, module: 'products' },
-        { name: 'Engenharia Avançada', href: '/engineering', icon: Wrench, module: 'engineering' },
-        { name: 'Materiais (AS400)', href: '/consumables', icon: Package, module: 'consumables' },
+        { name: 'Produtos & Roteiros', href: '/products', icon: Package, module: 'products' }, // Changed to Package
+        { name: 'Engenharia Avançada', href: '/engineering', icon: Microscope, module: 'engineering' }, // Changed to Microscope (Wrench used in Admin)
+        { name: 'Materiais (AS400)', href: '/consumables', icon: BarChart2, module: 'consumables' }, // Changed to BarChart2
         { name: 'Recursos Humanos', href: '/staff', icon: Users, module: 'staff' },
-        { name: 'Qualidade', href: '/quality', icon: Microscope, module: 'quality' },
-        { name: 'Ferramentaria', href: '/tools', icon: Settings, module: 'tools' },
+        { name: 'Qualidade', href: '/quality', icon: ClipboardCheck, module: 'quality' },
+        { name: 'Ferramentaria', href: '/tools', icon: Hammer, module: 'tools' }, // Changed to Hammer
         { name: 'Moldes', href: '/molds', icon: Anchor, module: 'molds' },
-        { name: 'Supervisor', href: '/supervisor', icon: Users, module: 'supervisor' },
-        { name: 'App Mobile', href: '/mobile', icon: Ship, module: 'mobile' },
+        { name: 'Supervisor', href: '/supervisor', icon: UserCheck, module: 'supervisor' }, // Changed to UserCheck
+        { name: 'App Mobile', href: '/mobile', icon: Smartphone, module: 'mobile' }, // Changed to Smartphone
         { name: 'Admin / Suporte', href: '/admin', icon: Wrench, module: 'admin' },
         { name: 'Modo Shopfloor (Legacy)', href: '/shopfloor', icon: Ship, module: 'legacy' },
     ];

@@ -160,83 +160,93 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-            <div className="absolute top-8 left-8 text-white flex items-center gap-2 opacity-50">
-                <Ship className="h-6 w-6" />
-                <span className="font-bold tracking-widest">NAVAL SHOPFLOOR</span>
+        <div
+            className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
+            style={{ backgroundImage: "url('/login-bg.png')" }}
+        >
+            {/* Overlay for better text readability */}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+
+            <div className="absolute top-8 left-8 text-white flex items-center gap-3 z-10 opacity-90">
+                <div className="bg-white/10 p-2 rounded-full backdrop-blur-md border border-white/20">
+                    <Ship className="h-6 w-6 text-blue-200" />
+                </div>
+                <div>
+                    <span className="font-bold tracking-widest text-lg block leading-none">BRUNSWICK</span>
+                    <span className="text-[10px] tracking-[0.3em] font-light text-blue-100 block">BOAT GROUP</span>
+                </div>
             </div>
 
-            <Card className="w-full max-w-md border-slate-800 bg-slate-950/50 backdrop-blur text-slate-100 shadow-2xl">
-                <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl font-bold flex flex-col gap-2">
-                        <span>Acesso ao Sistema</span>
-                    </CardTitle>
-                    <CardDescription className="text-slate-400">
-                        Insira as suas credenciais ou aproxime o cartão.
+            <Card className="w-full max-w-md border-white/10 bg-black/60 backdrop-blur-md text-slate-100 shadow-2xl relative z-10 animate-in fade-in zoom-in duration-500">
+                <CardHeader className="space-y-1 text-center pb-2">
+                    <CardTitle className="text-3xl font-bold tracking-tight text-white">Bem-vindo</CardTitle>
+                    <CardDescription className="text-slate-300 text-sm">
+                        Sistema Integrado de Gestão de Produção
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-4">
-                    <div className="grid grid-cols-2 gap-6">
+                <CardContent className="grid gap-6 pt-4">
+                    <div className="grid grid-cols-2 gap-4">
                         <Button
                             variant="outline"
-                            className={`h-24 flex flex-col items-center justify-center gap-2 border-slate-700 hover:bg-slate-800 hover:text-white transition-all ${rfidScanning ? 'animate-pulse border-blue-500 text-blue-400' : ''}`}
+                            className={`h-24 flex flex-col items-center justify-center gap-3 border-white/10 bg-white/5 hover:bg-white/20 hover:text-white transition-all text-slate-300 ${rfidScanning ? 'animate-pulse ring-2 ring-blue-500 bg-blue-500/20 text-blue-300' : ''}`}
                             onClick={simulateRfid}
                         >
                             <Radio className="h-8 w-8" />
-                            <span className="text-xs">Login RFID</span>
+                            <span className="text-xs font-medium">Cartão RFID</span>
                         </Button>
-                        <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-2 border-slate-700 hover:bg-slate-800 hover:text-white transition-all opacity-50 cursor-not-allowed">
+                        <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-3 border-white/10 bg-white/5 hover:bg-white/20 hover:text-white transition-all text-slate-300 opacity-50 cursor-not-allowed">
                             <UserCheck className="h-8 w-8" />
-                            <span className="text-xs">Face ID</span>
+                            <span className="text-xs font-medium">Face ID</span>
                         </Button>
                     </div>
 
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-slate-800" />
+                            <span className="w-full border-t border-white/10" />
                         </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-slate-950 px-2 text-slate-500">Ou utilize password</span>
+                        <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-semibold">
+                            <span className="bg-transparent px-2 text-slate-400">Ou entre com credenciais</span>
                         </div>
                     </div>
 
                     <form onSubmit={handleLogin} className="grid gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="username">Utilizador / Nº Mecanográfico</Label>
+                            <Label htmlFor="username" className="text-slate-200 text-xs uppercase font-bold tracking-wider ml-1">Utilizador</Label>
                             <Input
                                 id="username"
                                 type="text"
-                                placeholder="ex: MASTER"
-                                className="bg-slate-900 border-slate-800 focus:border-blue-700"
+                                placeholder="Nº Mecanográfico ou User"
+                                className="bg-black/40 border-white/10 focus:border-blue-500 text-white placeholder:text-slate-600 h-11"
                                 value={username}
                                 onChange={e => setUsername(e.target.value)}
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="password" className="text-slate-200 text-xs uppercase font-bold tracking-wider ml-1">Password</Label>
                             <Input
                                 id="password"
                                 type="password"
-                                className="bg-slate-900 border-slate-800 focus:border-blue-700"
+                                placeholder="••••••••"
+                                className="bg-black/40 border-white/10 focus:border-blue-500 text-white placeholder:text-slate-600 h-11"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                             />
                         </div>
-                        <Button className="w-full bg-blue-700 hover:bg-blue-600" disabled={isLoading}>
-                            {isLoading ? "Validando..." : "Entrar"} <KeyRound className="ml-2 h-4 w-4" />
+                        <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold h-11 shadow-lg shadow-blue-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]" disabled={isLoading}>
+                            {isLoading ? "Validando..." : "ACEDER AO SISTEMA"} <KeyRound className="ml-2 h-4 w-4" />
                         </Button>
                     </form>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-2">
-                    <p className="text-xs text-center text-slate-500">
-                        Esqueceu a senha? Contacte o suporte de TI.
+                <CardFooter className="flex flex-col gap-4 pb-6">
+                    <p className="text-xs text-center text-slate-500 hover:text-slate-300 cursor-pointer transition-colors">
+                        Esqueceu a senha? Contacte o suporte.
                     </p>
-                    <div className="flex items-center justify-center gap-2 text-[10px] text-slate-600 bg-slate-900/50 p-2 rounded w-full opacity-0 hover:opacity-100 transition-opacity cursor-default">
-                        <AlertCircle className="h-3 w-3" />
-                        <span>System Stable v9.0</span>
-                    </div>
                 </CardFooter>
             </Card>
+
+            <div className="absolute bottom-4 right-6 text-white/30 text-[10px] font-mono">
+                v10.2.4-stable • Brunswick Corp
+            </div>
         </div>
     );
 }
