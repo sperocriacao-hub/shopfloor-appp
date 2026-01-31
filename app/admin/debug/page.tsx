@@ -11,7 +11,13 @@ export default function DebugPersistencePage() {
     const store = useShopfloorStore();
     const [status, setStatus] = useState<any>({});
     const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     // const supabase = createClientComponentClient(); -> Removed
+
+    // Auto-hydrate on mount
+    useEffect(() => {
+        store.syncData();
+    }, []);
 
     const checkTables = async () => {
         setLoading(true);
@@ -20,6 +26,17 @@ export default function DebugPersistencePage() {
             'mold_maintenance_orders', 'mold_geometries', 'maintenance_pins',
             'consumable_transactions', 'cost_center_mappings', 'material_requests', 'ppe_requests'
         ];
+
+        // Env Var Check
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (!url || !key) {
+            const msg = "ERRO CRÍTICO: Variáveis de Ambiente do Supabase não encontradas!";
+            toast.error(msg);
+            alert(msg);
+            setLoading(false);
+            return;
+        }
 
         const results: any = {};
 
@@ -57,7 +74,9 @@ export default function DebugPersistencePage() {
                 toast.success("Teste de Escrita: SUCESSO! (Tabela audit_logs)");
             }
         } catch (e: any) {
+            console.error("Write Exception:", e);
             toast.error(`Exceção de Escrita: ${e.message}`);
+            alert(`Exceção de Escrita: ${e.message}`);
         }
         setLoading(false);
     };

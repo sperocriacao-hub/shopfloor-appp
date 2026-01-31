@@ -1751,11 +1751,16 @@ export const useShopfloorStore = create<ShopfloorState>()(
             name: 'shopfloor-storage',
             storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
+                currentUser: state.currentUser, // Critical for session persistence
+                employees: state.employees,
                 orders: state.orders,
                 events: state.events,
                 assets: state.assets,
                 products: state.products,
-                materialRequests: state.materialRequests
+                materialRequests: state.materialRequests,
+                consumableTransactions: state.consumableTransactions,
+                moldMaintenanceLogs: state.moldMaintenanceLogs,
+                maintenanceOrders: state.maintenanceOrders
             }),
         }
     ));
