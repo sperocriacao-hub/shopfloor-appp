@@ -58,7 +58,7 @@ export default function DebugPersistencePage() {
             const { error } = await supabase.from('audit_logs').insert({
                 id: `test-write-${Date.now()}`,
                 action: 'TEST_WRITE',
-                module: 'debug',
+                target_module: 'debug',
                 description: 'Testing write permissions via Admin Debug',
                 timestamp: new Date().toISOString(),
                 user_id: 'debug-user',
