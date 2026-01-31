@@ -872,69 +872,82 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     name: employee.name,
                     contract_type: employee.contractType,
                     job_title: employee.jobTitle,
-                    "group": employee.group,
+                    group: employee.group,
                     area: employee.area,
                     workstation: employee.workstation,
                     shift: employee.shift,
                     supervisor: employee.supervisor,
                     leader: employee.leader,
                     manager: employee.manager,
-                    admission_date: employee.admissionDate || null,
-                    birthday: employee.birthday || null,
-                    status: employee.hrStatus,
-                    contract_start_date: employee.contractStartDate || null,
+                    admission_date: employee.admissionDate,
+                    contract_start_date: employee.contractStartDate,
+                    birthday: employee.birthday,
                     talent_matrix: employee.talentMatrix,
-                    system_access: employee.systemAccess,
-                    rfid_tag: employee.rfidTag
+                    status: employee.hrStatus,
+                    system_access: employee.hasSystemAccess,
+                    rfid_tag: employee.rfidTag,
+                    // IAM V9
+                    role: employee.role,
+                    permissions: employee.permissions,
+                    settings: employee.settings
                 });
-                if (error) console.error("Error adding employee to DB:", error);
+                manager: employee.manager,
+                    admission_date: employee.admissionDate || null,
+                        birthday: employee.birthday || null,
+                            status: employee.hrStatus,
+                                contract_start_date: employee.contractStartDate || null,
+                                    talent_matrix: employee.talentMatrix,
+                                        system_access: employee.systemAccess,
+                                            rfid_tag: employee.rfidTag
+            });
+if (error) console.error("Error adding employee to DB:", error);
             },
 
-            updateEmployee: async (id, updates) => {
-                set((state) => ({
-                    employees: state.employees.map(e => e.id === id ? { ...e, ...updates } : e)
-                }));
-                const toUpdate: any = {};
-                if (updates.name) toUpdate.name = updates.name;
-                if (updates.area) toUpdate.area = updates.area;
-                if (updates.manager) toUpdate.manager = updates.manager;
-                if (updates.leader) toUpdate.leader = updates.leader;
-                if (updates.supervisor) toUpdate.supervisor = updates.supervisor;
-                if (updates.jobTitle) toUpdate.job_title = updates.jobTitle;
-                if (updates.shift) toUpdate.shift = updates.shift;
-                if (updates.hrStatus) toUpdate.status = updates.hrStatus;
-                if (updates.contractStartDate) toUpdate.contract_start_date = updates.contractStartDate;
-                if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
-                if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
-                if (updates.systemAccess) toUpdate.system_access = updates.systemAccess;
-                if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
+updateEmployee: async (id, updates) => {
+    set((state) => ({
+        employees: state.employees.map(e => e.id === id ? { ...e, ...updates } : e)
+    }));
+    const toUpdate: any = {};
+    if (updates.name) toUpdate.name = updates.name;
+    if (updates.area) toUpdate.area = updates.area;
+    if (updates.manager) toUpdate.manager = updates.manager;
+    if (updates.leader) toUpdate.leader = updates.leader;
+    if (updates.supervisor) toUpdate.supervisor = updates.supervisor;
+    if (updates.jobTitle) toUpdate.job_title = updates.jobTitle;
+    if (updates.shift) toUpdate.shift = updates.shift;
+    if (updates.hrStatus) toUpdate.status = updates.hrStatus;
+    if (updates.contractStartDate) toUpdate.contract_start_date = updates.contractStartDate;
+    if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
+    if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
+    if (updates.systemAccess) toUpdate.system_access = updates.systemAccess;
+    if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
 
-                if (Object.keys(toUpdate).length > 0) {
-                    const { error } = await supabase.from('employees').update(toUpdate).eq('id', id);
-                    if (error) console.error("Error updating employee DB:", error);
-                }
-            },
+    if (Object.keys(toUpdate).length > 0) {
+        const { error } = await supabase.from('employees').update(toUpdate).eq('id', id);
+        if (error) console.error("Error updating employee DB:", error);
+    }
+},
 
-            removeEmployee: async (id) => {
-                set((state) => ({
-                    employees: state.employees.filter(e => e.id !== id)
-                }));
-                await supabase.from('employees').delete().eq('id', id);
-            },
+    removeEmployee: async (id) => {
+        set((state) => ({
+            employees: state.employees.filter(e => e.id !== id)
+        }));
+        await supabase.from('employees').delete().eq('id', id);
+    },
 
-            addAbsenteeismRecord: async (record) => {
-                set((state) => ({
-                    absenteeismRecords: [...state.absenteeismRecords, record]
-                }));
-                const { error } = await supabase.from('absenteeism_records').insert({
-                    id: record.id,
-                    employee_id: record.employeeId,
-                    date: record.date,
-                    type: record.type,
-                    duration_minutes: record.durationMinutes || 0
-                });
-                if (error) console.error("Error adding record DB:", error);
-            },
+        addAbsenteeismRecord: async (record) => {
+            set((state) => ({
+                absenteeismRecords: [...state.absenteeismRecords, record]
+            }));
+            const { error } = await supabase.from('absenteeism_records').insert({
+                id: record.id,
+                employee_id: record.employeeId,
+                date: record.date,
+                type: record.type,
+                duration_minutes: record.durationMinutes || 0
+            });
+            if (error) console.error("Error adding record DB:", error);
+        },
 
             // --- Shopfloor 3.0 Actions ---
             addOption: async (option) => {
@@ -945,811 +958,811 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (error) console.error("Error adding option:", error);
             },
 
-            addTask: async (task) => {
-                set((state) => ({ optionTasks: [...state.optionTasks, task] }));
-                const { error } = await supabase.from('option_tasks').insert({
-                    id: task.id,
-                    option_id: task.optionId,
-                    description: task.description,
-                    sequence: task.sequence,
-                    station_id: task.stationId,
-                    pdf_url: task.pdfUrl,
-                    standard_time_minutes: task.standardTimeMinutes || 0
-                });
-                if (error) console.error("Error adding option task:", error);
-            },
-
-            updateTask: async (id, updates) => {
-                set((state) => ({
-                    optionTasks: state.optionTasks.map(t => t.id === id ? { ...t, ...updates } : t)
-                }));
-                const toUpdate: any = {};
-                if (updates.description) toUpdate.description = updates.description;
-                if (updates.sequence) toUpdate.sequence = updates.sequence;
-                if (updates.pdfUrl) toUpdate.pdf_url = updates.pdfUrl;
-                if (updates.stationId) toUpdate.station_id = updates.stationId;
-                if (updates.standardTimeMinutes !== undefined) toUpdate.standard_time_minutes = updates.standardTimeMinutes;
-
-                if (Object.keys(toUpdate).length > 0) {
-                    const { error } = await supabase.from('option_tasks').update(toUpdate).eq('id', id);
-                    if (error) console.error("Error updating task:", error);
-                }
-            },
-
-            removeTask: async (id) => {
-                set(s => ({ optionTasks: s.optionTasks.filter(t => t.id !== id) }));
-                const { error } = await supabase.from('option_tasks').delete().eq('id', id);
-                if (error) console.error("Error deleting task:", error);
-            },
-
-            updateOption: async (id, updates) => {
-                set(s => ({
-                    productOptions: s.productOptions.map(o => o.id === id ? { ...o, ...updates } : o)
-                }));
-                const toUpdate: any = {};
-                if (updates.name) toUpdate.name = updates.name;
-                if (updates.description) toUpdate.description = updates.description;
-                if (updates.productModelId) toUpdate.product_model_id = updates.productModelId;
-
-                if (Object.keys(toUpdate).length > 0) {
-                    const { error } = await supabase.from('product_options').update(toUpdate).eq('id', id);
-                    if (error) console.error("Error updating option:", error);
-                }
-            },
-
-            removeOption: async (id) => {
-                set(s => ({ productOptions: s.productOptions.filter(o => o.id !== id) }));
-                const { error } = await supabase.from('product_options').delete().eq('id', id);
-                if (error) console.error("Error deleting option:", error);
-            },
-
-            toggleTask: async (orderId, taskId, isCompleted, userId) => {
-                // Optimistic Update
-                const completedAt = isCompleted ? new Date().toISOString() : undefined;
-                set(s => {
-                    const existing = s.taskExecutions.find(te => te.orderId === orderId && te.taskId === taskId);
-                    if (existing) {
-                        return {
-                            taskExecutions: s.taskExecutions.map(te => te.orderId === orderId && te.taskId === taskId
-                                ? { ...te, completedAt, completedBy: userId }
-                                : te)
-                        };
-                    } else {
-                        return {
-                            taskExecutions: [...s.taskExecutions, { orderId, taskId, completedAt, completedBy: userId }]
-                        };
-                    }
-                });
-
-                if (isCompleted) {
-                    await supabase.from('task_executions').upsert({
-                        order_id: orderId, task_id: taskId, completed_at: completedAt, completed_by: userId
+                addTask: async (task) => {
+                    set((state) => ({ optionTasks: [...state.optionTasks, task] }));
+                    const { error } = await supabase.from('option_tasks').insert({
+                        id: task.id,
+                        option_id: task.optionId,
+                        description: task.description,
+                        sequence: task.sequence,
+                        station_id: task.stationId,
+                        pdf_url: task.pdfUrl,
+                        standard_time_minutes: task.standardTimeMinutes || 0
                     });
-                } else {
-                    await supabase.from('task_executions').delete().match({ order_id: orderId, task_id: taskId });
-                }
-            },
+                    if (error) console.error("Error adding option task:", error);
+                },
 
-            reportIssue: async (issue) => {
-                set(s => ({ orderIssues: [...s.orderIssues, issue] }));
-                const { error } = await supabase.from('order_issues').insert({
-                    id: issue.id, order_id: issue.orderId, station_id: issue.stationId, related_station_id: issue.relatedStationId,
-                    type: issue.type, description: issue.description, status: issue.status
-                });
-                if (error) console.error("Error reporting issue:", error);
-            },
-
-            resolveIssue: async (issueId, resolvedBy) => {
-                const resolvedAt = new Date().toISOString();
-                set(s => ({
-                    orderIssues: s.orderIssues.map(i => i.id === issueId ? { ...i, status: 'resolved', resolvedAt, resolvedBy } : i)
-                }));
-                await supabase.from('order_issues').update({ status: 'resolved', resolved_at: resolvedAt, resolved_by: resolvedBy })
-                    .eq('id', issueId);
-            },
-
-            // --- Consumables Actions ---
-            addCostCenterMapping: async (mapping) => {
-                set(s => ({ costCenterMappings: [...s.costCenterMappings, mapping] }));
-                const { error } = await supabase.from('cost_center_mappings').insert({
-                    id: mapping.id, customer_code: mapping.customerCode, description: mapping.description, mapped_area: mapping.mappedArea
-                });
-                if (error) {
-                    console.error("Error adding CC mapping:", error);
-                    toast.error("Erro ao salvar Centro de Custo: " + error.message);
-                }
-            },
-
-            updateCostCenterMapping: async (id, updates) => {
-                set(s => ({
-                    costCenterMappings: s.costCenterMappings.map(m => m.id === id ? { ...m, ...updates } : m)
-                }));
-                const toUpdate: any = {};
-                if (updates.description) toUpdate.description = updates.description;
-                if (updates.mappedArea !== undefined) {
-                    toUpdate.mapped_area = updates.mappedArea === "" ? null : updates.mappedArea;
-                }
-
-                if (Object.keys(toUpdate).length > 0) {
-                    const { error } = await supabase.from('cost_center_mappings').update(toUpdate).eq('id', id);
-                    if (error) console.error("Error updating CC mapping:", error);
-                }
-            },
-
-            importConsumablesBatch: async (transactions) => {
-                // Optimistic UI update might be too heavy for large batches, so we might skip it or just append
-                set(s => ({ consumableTransactions: [...s.consumableTransactions, ...transactions] }));
-
-                const dbTransactions = transactions.map(t => ({
-                    id: t.id,
-                    import_id: t.importId,
-                    date: t.date,
-                    week: t.week,
-                    order_number: t.orderNumber,
-                    ims_number: t.imsNumber,
-                    customer_code: t.customerCode,
-                    area_source: t.areaSource,
-                    prod_line: t.prodLine,
-                    part_number: t.partNumber,
-                    part_description: t.partDescription,
-                    quantity: t.quantity,
-                    unit_cost: t.unitCost,
-                    extension_cost: t.extensionCost,
-                    user_as400: t.userAs400,
-                    mapped_asset_id: t.mappedAssetId,
-                    mapped_employee_id: t.mappedEmployeeId
-                }));
-
-                const { error } = await supabase.from('consumable_transactions').insert(dbTransactions);
-                if (error) {
-                    console.error("Error importing consumables:", error);
-                    toast.error("Erro ao importar Lote: " + error.message);
-                } else {
-                    toast.success("Importação concluída com sucesso!");
-                }
-
-            },
-
-            addPpeRequest: async (req) => {
-                set(s => ({ ppeRequests: [...s.ppeRequests, req] }));
-                const { error } = await supabase.from('ppe_requests').insert({
-                    id: req.id, employee_id: req.employeeId, asset_id: req.assetId,
-                    item_name: req.itemName, part_number: req.partNumber, quantity: req.quantity,
-                    unit_cost: req.unitCost, status: req.status, request_date: req.requestDate, notes: req.notes
-                });
-                if (error) console.error("Error adding PPI request:", error);
-            },
-
-            updatePpeRequest: async (id, updates) => {
-                set(s => ({
-                    ppeRequests: s.ppeRequests.map(r => r.id === id ? { ...r, ...updates } : r)
-                }));
-                const toUpdate: any = {};
-                if (updates.status) toUpdate.status = updates.status;
-                if (updates.processedBy) {
-                    toUpdate.processed_by = updates.processedBy;
-                    toUpdate.processed_at = new Date().toISOString();
-                }
-
-                if (Object.keys(toUpdate).length > 0) {
-                    await supabase.from('ppe_requests').update(toUpdate).eq('id', id);
-                }
-            },
-
-
-            // --- Shopfloor V5 Actions ---
-            addQualityCase: async (qCase) => {
-                set(s => ({ qualityCases: [...s.qualityCases, qCase] }));
-                const { error } = await supabase.from('quality_cases').insert({
-                    id: qCase.id,
-                    order_id: qCase.orderId,
-                    asset_id: qCase.assetId,
-                    description: qCase.description,
-                    type: qCase.type,
-                    severity: qCase.severity,
-                    status: qCase.status,
-                    methodology: qCase.methodology,
-                    methodology_data: qCase.methodologyData,
-                    images: qCase.images,
-                    due_date: qCase.dueDate,
-                    created_by: qCase.createdBy
-                });
-                if (error) {
-                    console.error("Error adding quality case:", error);
-                    // Revert state if needed, or just let UI handle
-                }
-                return { error };
-            },
-
-            updateQualityCase: async (id, updates) => {
-                set(s => ({ qualityCases: s.qualityCases.map(c => c.id === id ? { ...c, ...updates } : c) }));
-                const toUpdate: any = {};
-                if (updates.status) toUpdate.status = updates.status;
-                if (updates.methodology) toUpdate.methodology = updates.methodology;
-                if (updates.methodologyData) toUpdate.methodology_data = updates.methodologyData;
-                if (updates.images) toUpdate.images = updates.images;
-                if (updates.dueDate) toUpdate.due_date = updates.dueDate;
-
-                if (Object.keys(toUpdate).length > 0) {
-                    await supabase.from('quality_cases').update(toUpdate).eq('id', id);
-                }
-            },
-
-            addQualityAction: async (action) => {
-                set(s => ({ qualityActions: [...s.qualityActions, action] }));
-                const { error } = await supabase.from('quality_actions').insert({
-                    id: action.id, case_id: action.caseId, description: action.description,
-                    responsible: action.responsible, deadline: action.deadline, status: action.status
-                });
-                if (error) console.error("Error adding quality action:", error);
-            },
-
-            updateQualityAction: async (id, updates) => {
-                set(s => ({ qualityActions: s.qualityActions.map(a => a.id === id ? { ...a, ...updates } : a) }));
-                await supabase.from('quality_actions').update({
-                    status: updates.status, completed_at: updates.status === 'completed' ? new Date().toISOString() : null
-                }).eq('id', id);
-            },
-
-            addScrapReport: async (report) => {
-                set(s => ({ scrapReports: [...s.scrapReports, report] }));
-                const { error } = await supabase.from('scrap_reports').insert({
-                    id: report.id, order_id: report.orderId, asset_id: report.assetId,
-                    reported_by: report.reportedBy, type: report.type, item_description: report.itemDescription,
-                    quantity: report.quantity, reason: report.reason, action_taken: report.actionTaken,
-                    replacement_order_id: report.replacementOrderId
-                });
-                if (error) console.error("Error adding scrap report:", error);
-            },
-
-            removeAbsenteeismRecord: async (id) => {
-                set((state) => ({
-                    absenteeismRecords: state.absenteeismRecords.filter(r => r.id !== id)
-                }));
-                await supabase.from('absenteeism_records').delete().eq('id', id);
-            },
-
-            // --- Shopfloor V6 Actions ---
-            addProductionLine: async (line) => {
-                set(s => ({ productionLines: [...s.productionLines, line] }));
-                const { error } = await supabase.from('production_lines').insert({
-                    id: line.id, description: line.description,
-                    daily_capacity: line.dailyCapacity, allowed_models: line.allowedModels,
-                    active: line.active
-                });
-                if (error) console.error("Error adding production line:", error);
-            },
-
-            updateProductionLine: async (id, updates) => {
-                set(s => ({ productionLines: s.productionLines.map(l => l.id === id ? { ...l, ...updates } : l) }));
-                const toUpdate: any = {};
-                if (updates.description) toUpdate.description = updates.description;
-                if (updates.dailyCapacity) toUpdate.daily_capacity = updates.dailyCapacity;
-                if (updates.allowedModels) toUpdate.allowed_models = updates.allowedModels;
-                if (updates.active !== undefined) toUpdate.active = updates.active;
-
-                await supabase.from('production_lines').update(toUpdate).eq('id', id);
-            },
-
-            addSequencingRule: async (rule) => {
-                set(s => ({ sequencingRules: [...s.sequencingRules, rule] }));
-                const { error } = await supabase.from('sequencing_rules').insert({
-                    id: rule.id, product_model_id: rule.productModelId, area_id: rule.areaId,
-                    offset_days: rule.offsetDays, duration_days: rule.durationDays,
-                    dependency_area_id: rule.dependencyAreaId
-                });
-                if (error) console.error("Error adding sequencing rule:", error);
-            },
-
-            updateSequencingRule: async (id, updates) => {
-                set(s => ({ sequencingRules: s.sequencingRules.map(r => r.id === id ? { ...r, ...updates } : r) }));
-                const toUpdate: any = {};
-                if (updates.offsetDays !== undefined) toUpdate.offset_days = updates.offsetDays;
-                if (updates.durationDays !== undefined) toUpdate.duration_days = updates.durationDays;
-                if (updates.dependencyAreaId !== undefined) toUpdate.dependency_area_id = updates.dependencyAreaId;
-                await supabase.from('sequencing_rules').update(toUpdate).eq('id', id);
-            },
-
-            deleteSequencingRule: async (id) => {
-                set(s => ({ sequencingRules: s.sequencingRules.filter(r => r.id !== id) }));
-                await supabase.from('sequencing_rules').delete().eq('id', id);
-            },
-
-
-            // --- Shopfloor IoT - Hardware Actions ---
-            rfidReaders: [],
-            iotEvents: [],
-
-            addRfidReader: (reader) => set(s => ({ rfidReaders: [...s.rfidReaders, reader] })),
-            updateRfidReader: (id, updates) => set(s => ({ rfidReaders: s.rfidReaders.map(r => r.id === id ? { ...r, ...updates } : r) })),
-            deleteRfidReader: (id) => set(s => ({ rfidReaders: s.rfidReaders.filter(r => r.id !== id) })),
-
-            logIotEvent: (event) => set(s => {
-                const newEvents = [event, ...s.iotEvents];
-                return { iotEvents: newEvents.slice(0, 50) };
-            }),
-            clearIotEvents: () => set({ iotEvents: [] }),
-
-            // --- Shopfloor V6 IoT Actions ---
-            findAssetByRfid: (tag) => {
-                return get().assets.find(a => a.rfidTag?.toUpperCase() === tag.toUpperCase());
-            },
-
-            findEmployeeByRfid: (tag) => {
-                return get().employees.find(e => e.rfidTag?.toUpperCase() === tag.toUpperCase());
-            },
-
-            findStationByFixedId: (fixedId) => {
-                // Stations are Assets (Workstations) or defined Stations? 
-                // Currently looking at Assets with type='Workstation' or similar, 
-                // but checking all assets is safer if we attach fixedId to them.
-                return get().assets.find(a => a.locationFixedId?.toUpperCase() === fixedId.toUpperCase());
-            },
-
-            // --- Shopfloor V7 Parts Actions ---
-            addProductPart: async (part) => {
-                set(s => ({ productParts: [...s.productParts, part] }));
-                const { error } = await supabase.from('product_parts').insert({
-                    id: part.id, product_model_id: part.productModelId, name: part.name, category: part.category, rfid_required: part.rfidRequired
-                });
-                if (error) console.error("Error adding product part", error);
-            },
-
-            addOrderPart: async (part) => {
-                set(s => ({ orderParts: [...s.orderParts, part] }));
-                const { error } = await supabase.from('order_parts').insert({
-                    id: part.id, order_id: part.orderId, part_definition_id: part.partDefinitionId,
-                    rfid_tag: part.rfidTag, status: part.status
-                });
-                if (error) console.error("Error adding order part", error);
-            },
-
-            updateOrderPart: async (id, updates) => {
-                set(s => ({ orderParts: s.orderParts.map(p => p.id === id ? { ...p, ...updates } : p) }));
-                const toUpdate: any = {};
-                if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
-                if (updates.status) toUpdate.status = updates.status;
-                if (updates.producedAt) toUpdate.produced_at = updates.producedAt;
-
-                await supabase.from('order_parts').update(toUpdate).eq('id', id);
-            },
-
-            // --- Mold Management Actions ---
-            addMoldCompatibility: async (pair) => {
-                set(s => ({ moldCompatibility: [...s.moldCompatibility, pair] }));
-                const { error } = await supabase.from('mold_compatibility').insert({
-                    id: pair.id, hull_mold_id: pair.hullMoldId, deck_mold_id: pair.deckMoldId,
-                    compatibility_score: pair.compatibilityScore, notes: pair.notes
-                });
-                if (error) console.error("Error adding mold compatibility:", error);
-            },
-
-            removeMoldCompatibility: async (id) => {
-                set(s => ({ moldCompatibility: s.moldCompatibility.filter(c => c.id !== id) }));
-                await supabase.from('mold_compatibility').delete().eq('id', id);
-            },
-
-            // --- Andon Actions ---
-            triggerAndon: async (alert) => {
-                set(s => ({ alerts: [...s.alerts, alert] }));
-                const { error } = await supabase.from('alerts').insert({
-                    id: alert.id, station_id: alert.stationId, type: alert.type,
-                    status: alert.status, description: alert.description,
-                    created_at: alert.createdAt
-                });
-                if (error) console.error("Error triggering andon:", error);
-            },
-
-            resolveAndon: async (id, resolvedBy) => {
-                const now = new Date().toISOString();
-                set(s => ({
-                    alerts: s.alerts.map(a => a.id === id ? { ...a, status: 'resolved', resolvedAt: now, resolvedBy } : a)
-                }));
-                await supabase.from('alerts').update({
-                    status: 'resolved', resolved_at: now, resolved_by: resolvedBy
-                }).eq('id', id);
-            },
-
-            addMoldMaintenanceLog: async (log) => {
-                set(s => ({ moldMaintenanceLogs: [...s.moldMaintenanceLogs, log] }));
-                const { error } = await supabase.from('mold_maintenance_logs').insert({
-                    id: log.id, mold_id: log.moldId, description: log.description,
-                    severity: log.severity, status: log.status, images: log.images,
-                    technician_id: log.technicianId
-                });
-                if (error) console.error("Error adding mold log:", error);
-            },
-
-            updateMoldMaintenanceLog: async (id, updates) => {
-                set(s => ({
-                    moldMaintenanceLogs: s.moldMaintenanceLogs.map(l => l.id === id ? { ...l, ...updates } : l)
-                }));
-                const toUpdate: any = {};
-                if (updates.status) {
-                    toUpdate.status = updates.status;
-                    if (updates.status === 'Resolved') toUpdate.resolved_at = new Date().toISOString();
-                }
-                if (updates.description) toUpdate.description = updates.description;
-                if (updates.images) toUpdate.images = updates.images;
-
-                if (Object.keys(toUpdate).length > 0) {
-                    await supabase.from('mold_maintenance_logs').update(toUpdate).eq('id', id);
-                }
-            },
-
-            // --- Tool Management Actions ---
-            addTool: async (tool) => {
-                set(s => ({ tools: [...s.tools, tool] }));
-                const { error } = await supabase.from('tools').insert({
-                    id: tool.id, code: tool.code, name: tool.name, category: tool.category,
-                    status: tool.status, condition: tool.condition, current_holder_id: tool.currentHolderId,
-                    location: tool.location
-                });
-                if (error) console.error("Error adding tool:", error);
-            },
-
-            updateTool: async (id, updates) => {
-                set(s => ({ tools: s.tools.map(t => t.id === id ? { ...t, ...updates } : t) }));
-                const toUpdate: any = {};
-                if (updates.status) toUpdate.status = updates.status;
-                if (updates.currentHolderId !== undefined) toUpdate.current_holder_id = updates.currentHolderId;
-                if (updates.condition) toUpdate.condition = updates.condition;
-                if (updates.location) toUpdate.location = updates.location;
-
-                await supabase.from('tools').update(toUpdate).eq('id', id);
-            },
-
-            removeTool: async (id) => {
-                set(s => ({ tools: s.tools.filter(t => t.id !== id) }));
-                const { error } = await supabase.from('tools').delete().eq('id', id);
-                if (error) console.error("Error deleting tool:", error);
-            },
-
-            addToolTransaction: async (tx) => {
-                set(s => ({ toolTransactions: [...s.toolTransactions, tx] }));
-                const { error } = await supabase.from('tool_transactions').insert({
-                    id: tx.id, tool_id: tx.toolId, employee_id: tx.employeeId,
-                    action: tx.action, signature: tx.signature, notes: tx.notes, created_by: tx.createdBy
-                });
-                if (error) console.error("Error adding tool transaction:", error);
-            },
-
-            addToolMaintenance: async (m) => {
-                set(s => ({ toolMaintenances: [...s.toolMaintenances, m] }));
-                const { error } = await supabase.from('tool_maintenance').insert({
-                    id: m.id, tool_id: m.toolId, description: m.description,
-                    status: m.status, technician_notes: m.technicianNotes
-                });
-            },
-
-            updateToolMaintenance: async (id, updates) => {
-                set(s => ({ toolMaintenances: s.toolMaintenances.map(m => m.id === id ? { ...m, ...updates } : m) }));
-                const toUpdate: any = { status: updates.status };
-                if (updates.status === 'completed' || updates.status === 'condemned') {
-                    toUpdate.completed_at = new Date().toISOString();
-                }
-                await supabase.from('tool_maintenance').update(toUpdate).eq('id', id);
-            },
-
-            addMaterialRequest: async (req) => {
-                set(state => {
-                    return { materialRequests: [req, ...state.materialRequests] };
-                });
-
-                // Persist
-                const { error } = await supabase.from('material_requests').insert({
-                    id: req.id,
-                    area: req.area,
-                    status: req.status,
-                    request_date: req.requestDate,
-                    items: req.items,
-                    total_cost: req.totalCost
-                });
-
-                if (error) {
-                    console.error("Error adding material request:", error);
-                    toast.error("Erro ao salvar Pedido: " + error.message);
-                } else {
-                    toast.success("Pedido salvo com sucesso!");
-                }
-
-                get().logAudit('CREATE_REQUEST', 'consumables', `Created Material Request for ${req.area}`);
-            },
-
-            updateMaterialRequest: async (id, updates) => {
-                set(state => ({
-                    materialRequests: state.materialRequests.map(r => r.id === id ? { ...r, ...updates } : r)
-                }));
-                // Mock persist via update if needed or just sync
-            },
-
-            syncData: async () => {
-                // Employees
-                try {
-                    const { data: emps, error } = await supabase.from('employees').select('*');
-                    if (error) throw error;
-                    if (emps) set({ employees: emps.map(mapDbToEmployee) });
-                } catch (e) { console.error("Sync Error: Employees", e); }
-
-                // Absenteeism
-                const { data: recs } = await supabase.from('absenteeism_records').select('*');
-                if (recs) set({ absenteeismRecords: recs.map(mapDbToAbsenteeism) });
-
-                // Assets
-                const { data: assets } = await supabase.from('assets').select('*');
-                if (assets) set({ assets: assets.map(mapDbToAsset) });
-
-                // Products
-                // Products & Routings (Derived from Products)
-                const { data: products } = await supabase.from('products').select('*');
-                if (products) {
-                    set({ products: products.map(mapDbToProduct) });
-
-                    // Generate routings from product operations
-                    const derivedRoutings: Routing[] = products
-                        .filter(p => p.operations && Array.isArray(p.operations))
-                        .map(p => ({
-                            id: `rt-${p.id}`,
-                            productModelId: p.id,
-                            operations: p.operations
+                    updateTask: async (id, updates) => {
+                        set((state) => ({
+                            optionTasks: state.optionTasks.map(t => t.id === id ? { ...t, ...updates } : t)
                         }));
+                        const toUpdate: any = {};
+                        if (updates.description) toUpdate.description = updates.description;
+                        if (updates.sequence) toUpdate.sequence = updates.sequence;
+                        if (updates.pdfUrl) toUpdate.pdf_url = updates.pdfUrl;
+                        if (updates.stationId) toUpdate.station_id = updates.stationId;
+                        if (updates.standardTimeMinutes !== undefined) toUpdate.standard_time_minutes = updates.standardTimeMinutes;
 
-                    set({ routings: derivedRoutings }); // Always update routings
-                }
-
-                // Orders
-                const { data: orders } = await supabase.from('orders').select('*');
-                if (orders) set({ orders: orders.map(mapDbToOrder) });
-
-                // Events
-                const { data: events } = await supabase.from('events').select('*');
-                if (events) set({ events: events.map(mapDbToEvent) });
-
-                // Shopfloor 3.0 Data Sync
-                const { data: opts } = await supabase.from('product_options').select('*');
-                if (opts) set({ productOptions: opts.map(mapDbToOption) });
-
-                const { data: tasks } = await supabase.from('option_tasks').select('*');
-                if (tasks) set({ optionTasks: tasks.map(mapDbToTask) });
-
-                const { data: execs } = await supabase.from('task_executions').select('*');
-                if (execs) set({ taskExecutions: execs.map(mapDbToExecution) });
-
-                const { data: issues } = await supabase.from('order_issues').select('*');
-                if (issues) set({ orderIssues: issues.map(mapDbToIssue) });
-
-                // V5 Sync
-                const { data: qCases } = await supabase.from('quality_cases').select('*');
-                if (qCases) set({ qualityCases: qCases.map(mapDbToQualityCase) });
-
-                const { data: qActions } = await supabase.from('quality_actions').select('*');
-                if (qActions) set({ qualityActions: qActions.map(mapDbToQualityAction) });
-
-                const { data: scrap } = await supabase.from('scrap_reports').select('*');
-                if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
-
-                // V8 Molds Sync (Shopfloor 3.0)
-                try {
-                    const { data: moldComp } = await supabase.from('mold_compatibility').select('*');
-                    if (moldComp) set({ moldCompatibility: moldComp.map(mapDbToMoldCompatibility) });
-
-                    const { data: moldLogs } = await supabase.from('mold_maintenance_logs').select('*');
-                    if (moldLogs) set({ moldMaintenanceLogs: moldLogs.map(mapDbToMoldMaintenanceLog) });
-
-                    // New Tables V8 (Maintenance)
-                    const { data: moldOrders } = await supabase.from('mold_maintenance_orders').select('*'); // Check table name
-                    // Mapped via specific function if needed, or generic
-                    // Check if mapDbToMaintenanceOrder exists? If not, we skip or map manually
-                    // Assuming types match generic
-
-                    // const { data: pins } = await supabase.from('maintenance_pins').select('*');
-                    // const { data: geoms } = await supabase.from('mold_geometries').select('*');
-
-                } catch (e) {
-                    console.error("Sync Error: Molds V8", e);
-                }
-
-                // Andon Alerts
-                const { data: alerts } = await supabase.from('alerts').select('*').in('status', ['open', 'acknowledged']); // Only active alerts? Or all? Let's keep active for performance, or recent.
-                // For simplicity, let's fetch all relevant ones.
-                if (alerts) set({ alerts: alerts.map(mapDbToAlert) });
-
-                // V7 Tools Sync
-                const { data: tools } = await supabase.from('tools').select('*');
-                if (tools) set({
-                    tools: tools.map((t: any) => ({
-                        id: t.id, code: t.code, name: t.name, category: t.category,
-                        status: t.status, condition: t.condition, currentHolderId: t.current_holder_id,
-                        location: t.location, purchaseDate: t.purchase_date, lastMaintenance: t.last_maintenance
-                    }))
-                });
-
-                const { data: toolTxs } = await supabase.from('tool_transactions').select('*');
-                if (toolTxs) set({
-                    toolTransactions: toolTxs.map((t: any) => ({
-                        id: t.id, toolId: t.tool_id, employeeId: t.employee_id,
-                        action: t.action, signature: t.signature, notes: t.notes,
-                        createdAt: t.created_at, createdBy: t.created_by
-                    }))
-                });
-
-                // Tool Maintenance
-                const { data: toolMaint } = await supabase.from('tool_maintenance').select('*');
-                if (toolMaint) set({ toolMaintenances: toolMaint.map(mapDbToToolMaintenance) });
-
-                // Consumables (Shopfloor V11/V12)
-                try {
-                    const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
-                    if (ccMap) set({ costCenterMappings: ccMap.map(mapDbToCostCenter) });
-
-                    const { data: ppiReqs } = await supabase.from('ppe_requests').select('*');
-                    if (ppiReqs) set({ ppeRequests: ppiReqs.map(mapDbToPpeRequest) });
-
-                    const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
-                    if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
-
-                    const { data: matReqs } = await supabase.from('material_requests').select('*');
-                    if (matReqs) set({ materialRequests: matReqs.map(mapDbToMaterialRequest) });
-                } catch (e) {
-                    console.error("Sync Error: Consumables", e);
-                }
-
-                // V7 Parts Sync
-                const { data: pParts } = await supabase.from('product_parts').select('*');
-                if (pParts) set({
-                    productParts: pParts.map(p => ({
-                        id: p.id, productModelId: p.product_model_id, name: p.name,
-                        category: p.category, rfidRequired: p.rfid_required
-                    }))
-                });
-
-                const { data: oParts } = await supabase.from('order_parts').select('*');
-                if (oParts) set({
-                    orderParts: oParts.map(p => ({
-                        id: p.id, orderId: p.order_id, partDefinitionId: p.part_definition_id,
-                        rfidTag: p.rfid_tag, status: p.status, producedAt: p.produced_at
-                    }))
-                });
-
-                // Shopfloor V6 Sync
-                const { data: lines } = await supabase.from('production_lines').select('*');
-                if (lines) set({ productionLines: lines.map(mapDbToLine) });
-
-                const { data: rules } = await supabase.from('sequencing_rules').select('*');
-                if (rules) set({ sequencingRules: rules.map(mapDbToRule) });
-
-                // Fetch Order Options Pivot and Map to Orders
-                // Fetch Order Options Pivot and Map to Orders
-                const { data: pivot } = await supabase.from('production_order_options').select('*');
-                const { data: assetPivot } = await supabase.from('production_order_assets').select('*');
-
-                if (orders) {
-                    const mappedOrders = orders.map(mapDbToOrder).map(o => {
-                        const myOptions = pivot ? pivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.option_id) : [];
-
-                        const myAssets = assetPivot
-                            ? assetPivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.asset_id)
-                            : [];
-
-                        // Fallback to legacy assetId if no pivot data
-                        if (myAssets.length === 0 && o.assetId) {
-                            myAssets.push(o.assetId);
+                        if (Object.keys(toUpdate).length > 0) {
+                            const { error } = await supabase.from('option_tasks').update(toUpdate).eq('id', id);
+                            if (error) console.error("Error updating task:", error);
                         }
+                    },
 
-                        return {
-                            ...o,
-                            selectedOptions: myOptions,
-                            assetIds: myAssets
-                        };
-                    });
+                        removeTask: async (id) => {
+                            set(s => ({ optionTasks: s.optionTasks.filter(t => t.id !== id) }));
+                            const { error } = await supabase.from('option_tasks').delete().eq('id', id);
+                            if (error) console.error("Error deleting task:", error);
+                        },
 
-                    set({ orders: mappedOrders });
-                }
-            },
+                            updateOption: async (id, updates) => {
+                                set(s => ({
+                                    productOptions: s.productOptions.map(o => o.id === id ? { ...o, ...updates } : o)
+                                }));
+                                const toUpdate: any = {};
+                                if (updates.name) toUpdate.name = updates.name;
+                                if (updates.description) toUpdate.description = updates.description;
+                                if (updates.productModelId) toUpdate.product_model_id = updates.productModelId;
 
-            // --- V8: Mold Maintenance Actions ---
+                                if (Object.keys(toUpdate).length > 0) {
+                                    const { error } = await supabase.from('product_options').update(toUpdate).eq('id', id);
+                                    if (error) console.error("Error updating option:", error);
+                                }
+                            },
 
-            addMaintenanceOrder: (order) => set(s => ({ maintenanceOrders: [...s.maintenanceOrders, order] })),
+                                removeOption: async (id) => {
+                                    set(s => ({ productOptions: s.productOptions.filter(o => o.id !== id) }));
+                                    const { error } = await supabase.from('product_options').delete().eq('id', id);
+                                    if (error) console.error("Error deleting option:", error);
+                                },
 
-            updateMaintenanceOrder: (id, updates) => set(s => ({
-                maintenanceOrders: s.maintenanceOrders.map(o => o.id === id ? { ...o, ...updates } : o)
-            })),
+                                    toggleTask: async (orderId, taskId, isCompleted, userId) => {
+                                        // Optimistic Update
+                                        const completedAt = isCompleted ? new Date().toISOString() : undefined;
+                                        set(s => {
+                                            const existing = s.taskExecutions.find(te => te.orderId === orderId && te.taskId === taskId);
+                                            if (existing) {
+                                                return {
+                                                    taskExecutions: s.taskExecutions.map(te => te.orderId === orderId && te.taskId === taskId
+                                                        ? { ...te, completedAt, completedBy: userId }
+                                                        : te)
+                                                };
+                                            } else {
+                                                return {
+                                                    taskExecutions: [...s.taskExecutions, { orderId, taskId, completedAt, completedBy: userId }]
+                                                };
+                                            }
+                                        });
 
-            addMaintenancePin: (pin) => set(s => ({
-                maintenanceOrders: s.maintenanceOrders.map(o =>
-                    o.id === pin.orderId
-                        ? { ...o, pins: [...(o.pins || []), pin] }
-                        : o
-                )
-            })),
+                                        if (isCompleted) {
+                                            await supabase.from('task_executions').upsert({
+                                                order_id: orderId, task_id: taskId, completed_at: completedAt, completed_by: userId
+                                            });
+                                        } else {
+                                            await supabase.from('task_executions').delete().match({ order_id: orderId, task_id: taskId });
+                                        }
+                                    },
 
-            updateMaintenancePin: (id, updates) => set(s => ({
-                maintenanceOrders: s.maintenanceOrders.map(o => {
-                    if (o.id !== (s.maintenanceOrders.find(mo => mo.pins?.some(p => p.id === id))?.id)) return o;
+                                        reportIssue: async (issue) => {
+                                            set(s => ({ orderIssues: [...s.orderIssues, issue] }));
+                                            const { error } = await supabase.from('order_issues').insert({
+                                                id: issue.id, order_id: issue.orderId, station_id: issue.stationId, related_station_id: issue.relatedStationId,
+                                                type: issue.type, description: issue.description, status: issue.status
+                                            });
+                                            if (error) console.error("Error reporting issue:", error);
+                                        },
 
-                    return {
-                        ...o,
-                        pins: o.pins?.map(p => p.id === id ? { ...p, ...updates } : p)
-                    };
-                })
-            })),
+                                            resolveIssue: async (issueId, resolvedBy) => {
+                                                const resolvedAt = new Date().toISOString();
+                                                set(s => ({
+                                                    orderIssues: s.orderIssues.map(i => i.id === issueId ? { ...i, status: 'resolved', resolvedAt, resolvedBy } : i)
+                                                }));
+                                                await supabase.from('order_issues').update({ status: 'resolved', resolved_at: resolvedAt, resolved_by: resolvedBy })
+                                                    .eq('id', issueId);
+                                            },
 
-            setMoldGeometries: (geometries) => set({ moldGeometries: geometries }),
+                                                // --- Consumables Actions ---
+                                                addCostCenterMapping: async (mapping) => {
+                                                    set(s => ({ costCenterMappings: [...s.costCenterMappings, mapping] }));
+                                                    const { error } = await supabase.from('cost_center_mappings').insert({
+                                                        id: mapping.id, customer_code: mapping.customerCode, description: mapping.description, mapped_area: mapping.mappedArea
+                                                    });
+                                                    if (error) {
+                                                        console.error("Error adding CC mapping:", error);
+                                                        toast.error("Erro ao salvar Centro de Custo: " + error.message);
+                                                    }
+                                                },
 
-            // --- V9: IAM Actions ---
-            login: (user) => {
-                set({ currentUser: user });
-                get().logAudit('LOGIN', 'auth', `User ${user.name} logged in`);
-            },
-            logout: () => {
-                const user = get().currentUser;
-                set({ currentUser: null });
-                if (user) get().logAudit('LOGOUT', 'auth', `User ${user.name} logged out`);
-            },
-            updateUserPermissions: (userId, permissions) => {
-                set(state => {
-                    const isCurrentUser = state.currentUser?.id === userId;
-                    const updatedEmployees = state.employees.map(e =>
-                        e.id === userId ? { ...e, permissions, role: (e as any).role || 'operator' } : e
-                    );
+                                                    updateCostCenterMapping: async (id, updates) => {
+                                                        set(s => ({
+                                                            costCenterMappings: s.costCenterMappings.map(m => m.id === id ? { ...m, ...updates } : m)
+                                                        }));
+                                                        const toUpdate: any = {};
+                                                        if (updates.description) toUpdate.description = updates.description;
+                                                        if (updates.mappedArea !== undefined) {
+                                                            toUpdate.mapped_area = updates.mappedArea === "" ? null : updates.mappedArea;
+                                                        }
 
-                    return {
-                        currentUser: isCurrentUser ? { ...state.currentUser!, permissions } : state.currentUser,
-                        employees: updatedEmployees
-                    };
-                });
-                // Persist to DB
-                supabase.from('employees').update({ permissions }).eq('id', userId).then(({ error }) => {
-                    if (error) {
-                        console.error("Failed to persist permissions:", error);
-                        toast.error("Erro ao salvar Permissões: " + error.message);
-                    } else {
-                        toast.success("Permissões atualizadas.");
-                    }
-                });
-                get().logAudit('UPDATE_PERMISSIONS', 'admin', `Permissions updated for user ${userId}`);
-            },
-            updateUserSettings: (settings) => {
-                const currentUser = get().currentUser;
-                if (!currentUser) return;
+                                                        if (Object.keys(toUpdate).length > 0) {
+                                                            const { error } = await supabase.from('cost_center_mappings').update(toUpdate).eq('id', id);
+                                                            if (error) console.error("Error updating CC mapping:", error);
+                                                        }
+                                                    },
 
-                set(state => {
-                    if (!state.currentUser) return state;
-                    return {
-                        currentUser: {
-                            ...state.currentUser,
-                            settings: { ...state.currentUser.settings, ...settings } as UserSettings
-                        }
-                    };
-                });
+                                                        importConsumablesBatch: async (transactions) => {
+                                                            // Optimistic UI update might be too heavy for large batches, so we might skip it or just append
+                                                            set(s => ({ consumableTransactions: [...s.consumableTransactions, ...transactions] }));
 
-                // Persist
-                const newSettings = { ...currentUser.settings, ...settings };
-                supabase.from('employees').update({ settings: newSettings }).eq('id', currentUser.id).then(({ error }) => {
-                    if (error) {
-                        console.error("Failed to persist settings:", error);
-                        toast.error("Erro ao salvar Configurações: " + error.message);
-                    } else {
-                        toast.success("Configurações salvas.");
-                    }
-                });
-            },
-            logAudit: (action, module, description) => {
-                const log: AuditLog = {
-                    id: `log-${Date.now()}`,
-                    userId: get().currentUser?.id || 'system',
-                    userName: get().currentUser?.name || 'System',
-                    action,
-                    targetModule: module,
-                    description,
-                    timestamp: new Date().toISOString()
-                };
-                set(s => ({ auditLogs: [log, ...s.auditLogs].slice(0, 1000) }));
-            },
+                                                            const dbTransactions = transactions.map(t => ({
+                                                                id: t.id,
+                                                                import_id: t.importId,
+                                                                date: t.date,
+                                                                week: t.week,
+                                                                order_number: t.orderNumber,
+                                                                ims_number: t.imsNumber,
+                                                                customer_code: t.customerCode,
+                                                                area_source: t.areaSource,
+                                                                prod_line: t.prodLine,
+                                                                part_number: t.partNumber,
+                                                                part_description: t.partDescription,
+                                                                quantity: t.quantity,
+                                                                unit_cost: t.unitCost,
+                                                                extension_cost: t.extensionCost,
+                                                                user_as400: t.userAs400,
+                                                                mapped_asset_id: t.mappedAssetId,
+                                                                mapped_employee_id: t.mappedEmployeeId
+                                                            }));
+
+                                                            const { error } = await supabase.from('consumable_transactions').insert(dbTransactions);
+                                                            if (error) {
+                                                                console.error("Error importing consumables:", error);
+                                                                toast.error("Erro ao importar Lote: " + error.message);
+                                                            } else {
+                                                                toast.success("Importação concluída com sucesso!");
+                                                            }
+
+                                                        },
+
+                                                            addPpeRequest: async (req) => {
+                                                                set(s => ({ ppeRequests: [...s.ppeRequests, req] }));
+                                                                const { error } = await supabase.from('ppe_requests').insert({
+                                                                    id: req.id, employee_id: req.employeeId, asset_id: req.assetId,
+                                                                    item_name: req.itemName, part_number: req.partNumber, quantity: req.quantity,
+                                                                    unit_cost: req.unitCost, status: req.status, request_date: req.requestDate, notes: req.notes
+                                                                });
+                                                                if (error) console.error("Error adding PPI request:", error);
+                                                            },
+
+                                                                updatePpeRequest: async (id, updates) => {
+                                                                    set(s => ({
+                                                                        ppeRequests: s.ppeRequests.map(r => r.id === id ? { ...r, ...updates } : r)
+                                                                    }));
+                                                                    const toUpdate: any = {};
+                                                                    if (updates.status) toUpdate.status = updates.status;
+                                                                    if (updates.processedBy) {
+                                                                        toUpdate.processed_by = updates.processedBy;
+                                                                        toUpdate.processed_at = new Date().toISOString();
+                                                                    }
+
+                                                                    if (Object.keys(toUpdate).length > 0) {
+                                                                        await supabase.from('ppe_requests').update(toUpdate).eq('id', id);
+                                                                    }
+                                                                },
+
+
+                                                                    // --- Shopfloor V5 Actions ---
+                                                                    addQualityCase: async (qCase) => {
+                                                                        set(s => ({ qualityCases: [...s.qualityCases, qCase] }));
+                                                                        const { error } = await supabase.from('quality_cases').insert({
+                                                                            id: qCase.id,
+                                                                            order_id: qCase.orderId,
+                                                                            asset_id: qCase.assetId,
+                                                                            description: qCase.description,
+                                                                            type: qCase.type,
+                                                                            severity: qCase.severity,
+                                                                            status: qCase.status,
+                                                                            methodology: qCase.methodology,
+                                                                            methodology_data: qCase.methodologyData,
+                                                                            images: qCase.images,
+                                                                            due_date: qCase.dueDate,
+                                                                            created_by: qCase.createdBy
+                                                                        });
+                                                                        if (error) {
+                                                                            console.error("Error adding quality case:", error);
+                                                                            // Revert state if needed, or just let UI handle
+                                                                        }
+                                                                        return { error };
+                                                                    },
+
+                                                                        updateQualityCase: async (id, updates) => {
+                                                                            set(s => ({ qualityCases: s.qualityCases.map(c => c.id === id ? { ...c, ...updates } : c) }));
+                                                                            const toUpdate: any = {};
+                                                                            if (updates.status) toUpdate.status = updates.status;
+                                                                            if (updates.methodology) toUpdate.methodology = updates.methodology;
+                                                                            if (updates.methodologyData) toUpdate.methodology_data = updates.methodologyData;
+                                                                            if (updates.images) toUpdate.images = updates.images;
+                                                                            if (updates.dueDate) toUpdate.due_date = updates.dueDate;
+
+                                                                            if (Object.keys(toUpdate).length > 0) {
+                                                                                await supabase.from('quality_cases').update(toUpdate).eq('id', id);
+                                                                            }
+                                                                        },
+
+                                                                            addQualityAction: async (action) => {
+                                                                                set(s => ({ qualityActions: [...s.qualityActions, action] }));
+                                                                                const { error } = await supabase.from('quality_actions').insert({
+                                                                                    id: action.id, case_id: action.caseId, description: action.description,
+                                                                                    responsible: action.responsible, deadline: action.deadline, status: action.status
+                                                                                });
+                                                                                if (error) console.error("Error adding quality action:", error);
+                                                                            },
+
+                                                                                updateQualityAction: async (id, updates) => {
+                                                                                    set(s => ({ qualityActions: s.qualityActions.map(a => a.id === id ? { ...a, ...updates } : a) }));
+                                                                                    await supabase.from('quality_actions').update({
+                                                                                        status: updates.status, completed_at: updates.status === 'completed' ? new Date().toISOString() : null
+                                                                                    }).eq('id', id);
+                                                                                },
+
+                                                                                    addScrapReport: async (report) => {
+                                                                                        set(s => ({ scrapReports: [...s.scrapReports, report] }));
+                                                                                        const { error } = await supabase.from('scrap_reports').insert({
+                                                                                            id: report.id, order_id: report.orderId, asset_id: report.assetId,
+                                                                                            reported_by: report.reportedBy, type: report.type, item_description: report.itemDescription,
+                                                                                            quantity: report.quantity, reason: report.reason, action_taken: report.actionTaken,
+                                                                                            replacement_order_id: report.replacementOrderId
+                                                                                        });
+                                                                                        if (error) console.error("Error adding scrap report:", error);
+                                                                                    },
+
+                                                                                        removeAbsenteeismRecord: async (id) => {
+                                                                                            set((state) => ({
+                                                                                                absenteeismRecords: state.absenteeismRecords.filter(r => r.id !== id)
+                                                                                            }));
+                                                                                            await supabase.from('absenteeism_records').delete().eq('id', id);
+                                                                                        },
+
+                                                                                            // --- Shopfloor V6 Actions ---
+                                                                                            addProductionLine: async (line) => {
+                                                                                                set(s => ({ productionLines: [...s.productionLines, line] }));
+                                                                                                const { error } = await supabase.from('production_lines').insert({
+                                                                                                    id: line.id, description: line.description,
+                                                                                                    daily_capacity: line.dailyCapacity, allowed_models: line.allowedModels,
+                                                                                                    active: line.active
+                                                                                                });
+                                                                                                if (error) console.error("Error adding production line:", error);
+                                                                                            },
+
+                                                                                                updateProductionLine: async (id, updates) => {
+                                                                                                    set(s => ({ productionLines: s.productionLines.map(l => l.id === id ? { ...l, ...updates } : l) }));
+                                                                                                    const toUpdate: any = {};
+                                                                                                    if (updates.description) toUpdate.description = updates.description;
+                                                                                                    if (updates.dailyCapacity) toUpdate.daily_capacity = updates.dailyCapacity;
+                                                                                                    if (updates.allowedModels) toUpdate.allowed_models = updates.allowedModels;
+                                                                                                    if (updates.active !== undefined) toUpdate.active = updates.active;
+
+                                                                                                    await supabase.from('production_lines').update(toUpdate).eq('id', id);
+                                                                                                },
+
+                                                                                                    addSequencingRule: async (rule) => {
+                                                                                                        set(s => ({ sequencingRules: [...s.sequencingRules, rule] }));
+                                                                                                        const { error } = await supabase.from('sequencing_rules').insert({
+                                                                                                            id: rule.id, product_model_id: rule.productModelId, area_id: rule.areaId,
+                                                                                                            offset_days: rule.offsetDays, duration_days: rule.durationDays,
+                                                                                                            dependency_area_id: rule.dependencyAreaId
+                                                                                                        });
+                                                                                                        if (error) console.error("Error adding sequencing rule:", error);
+                                                                                                    },
+
+                                                                                                        updateSequencingRule: async (id, updates) => {
+                                                                                                            set(s => ({ sequencingRules: s.sequencingRules.map(r => r.id === id ? { ...r, ...updates } : r) }));
+                                                                                                            const toUpdate: any = {};
+                                                                                                            if (updates.offsetDays !== undefined) toUpdate.offset_days = updates.offsetDays;
+                                                                                                            if (updates.durationDays !== undefined) toUpdate.duration_days = updates.durationDays;
+                                                                                                            if (updates.dependencyAreaId !== undefined) toUpdate.dependency_area_id = updates.dependencyAreaId;
+                                                                                                            await supabase.from('sequencing_rules').update(toUpdate).eq('id', id);
+                                                                                                        },
+
+                                                                                                            deleteSequencingRule: async (id) => {
+                                                                                                                set(s => ({ sequencingRules: s.sequencingRules.filter(r => r.id !== id) }));
+                                                                                                                await supabase.from('sequencing_rules').delete().eq('id', id);
+                                                                                                            },
+
+
+                                                                                                                // --- Shopfloor IoT - Hardware Actions ---
+                                                                                                                rfidReaders: [],
+                                                                                                                    iotEvents: [],
+
+                                                                                                                        addRfidReader: (reader) => set(s => ({ rfidReaders: [...s.rfidReaders, reader] })),
+                                                                                                                            updateRfidReader: (id, updates) => set(s => ({ rfidReaders: s.rfidReaders.map(r => r.id === id ? { ...r, ...updates } : r) })),
+                                                                                                                                deleteRfidReader: (id) => set(s => ({ rfidReaders: s.rfidReaders.filter(r => r.id !== id) })),
+
+                                                                                                                                    logIotEvent: (event) => set(s => {
+                                                                                                                                        const newEvents = [event, ...s.iotEvents];
+                                                                                                                                        return { iotEvents: newEvents.slice(0, 50) };
+                                                                                                                                    }),
+                                                                                                                                        clearIotEvents: () => set({ iotEvents: [] }),
+
+                                                                                                                                            // --- Shopfloor V6 IoT Actions ---
+                                                                                                                                            findAssetByRfid: (tag) => {
+                                                                                                                                                return get().assets.find(a => a.rfidTag?.toUpperCase() === tag.toUpperCase());
+                                                                                                                                            },
+
+                                                                                                                                                findEmployeeByRfid: (tag) => {
+                                                                                                                                                    return get().employees.find(e => e.rfidTag?.toUpperCase() === tag.toUpperCase());
+                                                                                                                                                },
+
+                                                                                                                                                    findStationByFixedId: (fixedId) => {
+                                                                                                                                                        // Stations are Assets (Workstations) or defined Stations? 
+                                                                                                                                                        // Currently looking at Assets with type='Workstation' or similar, 
+                                                                                                                                                        // but checking all assets is safer if we attach fixedId to them.
+                                                                                                                                                        return get().assets.find(a => a.locationFixedId?.toUpperCase() === fixedId.toUpperCase());
+                                                                                                                                                    },
+
+                                                                                                                                                        // --- Shopfloor V7 Parts Actions ---
+                                                                                                                                                        addProductPart: async (part) => {
+                                                                                                                                                            set(s => ({ productParts: [...s.productParts, part] }));
+                                                                                                                                                            const { error } = await supabase.from('product_parts').insert({
+                                                                                                                                                                id: part.id, product_model_id: part.productModelId, name: part.name, category: part.category, rfid_required: part.rfidRequired
+                                                                                                                                                            });
+                                                                                                                                                            if (error) console.error("Error adding product part", error);
+                                                                                                                                                        },
+
+                                                                                                                                                            addOrderPart: async (part) => {
+                                                                                                                                                                set(s => ({ orderParts: [...s.orderParts, part] }));
+                                                                                                                                                                const { error } = await supabase.from('order_parts').insert({
+                                                                                                                                                                    id: part.id, order_id: part.orderId, part_definition_id: part.partDefinitionId,
+                                                                                                                                                                    rfid_tag: part.rfidTag, status: part.status
+                                                                                                                                                                });
+                                                                                                                                                                if (error) console.error("Error adding order part", error);
+                                                                                                                                                            },
+
+                                                                                                                                                                updateOrderPart: async (id, updates) => {
+                                                                                                                                                                    set(s => ({ orderParts: s.orderParts.map(p => p.id === id ? { ...p, ...updates } : p) }));
+                                                                                                                                                                    const toUpdate: any = {};
+                                                                                                                                                                    if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
+                                                                                                                                                                    if (updates.status) toUpdate.status = updates.status;
+                                                                                                                                                                    if (updates.producedAt) toUpdate.produced_at = updates.producedAt;
+
+                                                                                                                                                                    await supabase.from('order_parts').update(toUpdate).eq('id', id);
+                                                                                                                                                                },
+
+                                                                                                                                                                    // --- Mold Management Actions ---
+                                                                                                                                                                    addMoldCompatibility: async (pair) => {
+                                                                                                                                                                        set(s => ({ moldCompatibility: [...s.moldCompatibility, pair] }));
+                                                                                                                                                                        const { error } = await supabase.from('mold_compatibility').insert({
+                                                                                                                                                                            id: pair.id, hull_mold_id: pair.hullMoldId, deck_mold_id: pair.deckMoldId,
+                                                                                                                                                                            compatibility_score: pair.compatibilityScore, notes: pair.notes
+                                                                                                                                                                        });
+                                                                                                                                                                        if (error) console.error("Error adding mold compatibility:", error);
+                                                                                                                                                                    },
+
+                                                                                                                                                                        removeMoldCompatibility: async (id) => {
+                                                                                                                                                                            set(s => ({ moldCompatibility: s.moldCompatibility.filter(c => c.id !== id) }));
+                                                                                                                                                                            await supabase.from('mold_compatibility').delete().eq('id', id);
+                                                                                                                                                                        },
+
+                                                                                                                                                                            // --- Andon Actions ---
+                                                                                                                                                                            triggerAndon: async (alert) => {
+                                                                                                                                                                                set(s => ({ alerts: [...s.alerts, alert] }));
+                                                                                                                                                                                const { error } = await supabase.from('alerts').insert({
+                                                                                                                                                                                    id: alert.id, station_id: alert.stationId, type: alert.type,
+                                                                                                                                                                                    status: alert.status, description: alert.description,
+                                                                                                                                                                                    created_at: alert.createdAt
+                                                                                                                                                                                });
+                                                                                                                                                                                if (error) console.error("Error triggering andon:", error);
+                                                                                                                                                                            },
+
+                                                                                                                                                                                resolveAndon: async (id, resolvedBy) => {
+                                                                                                                                                                                    const now = new Date().toISOString();
+                                                                                                                                                                                    set(s => ({
+                                                                                                                                                                                        alerts: s.alerts.map(a => a.id === id ? { ...a, status: 'resolved', resolvedAt: now, resolvedBy } : a)
+                                                                                                                                                                                    }));
+                                                                                                                                                                                    await supabase.from('alerts').update({
+                                                                                                                                                                                        status: 'resolved', resolved_at: now, resolved_by: resolvedBy
+                                                                                                                                                                                    }).eq('id', id);
+                                                                                                                                                                                },
+
+                                                                                                                                                                                    addMoldMaintenanceLog: async (log) => {
+                                                                                                                                                                                        set(s => ({ moldMaintenanceLogs: [...s.moldMaintenanceLogs, log] }));
+                                                                                                                                                                                        const { error } = await supabase.from('mold_maintenance_logs').insert({
+                                                                                                                                                                                            id: log.id, mold_id: log.moldId, description: log.description,
+                                                                                                                                                                                            severity: log.severity, status: log.status, images: log.images,
+                                                                                                                                                                                            technician_id: log.technicianId
+                                                                                                                                                                                        });
+                                                                                                                                                                                        if (error) console.error("Error adding mold log:", error);
+                                                                                                                                                                                    },
+
+                                                                                                                                                                                        updateMoldMaintenanceLog: async (id, updates) => {
+                                                                                                                                                                                            set(s => ({
+                                                                                                                                                                                                moldMaintenanceLogs: s.moldMaintenanceLogs.map(l => l.id === id ? { ...l, ...updates } : l)
+                                                                                                                                                                                            }));
+                                                                                                                                                                                            const toUpdate: any = {};
+                                                                                                                                                                                            if (updates.status) {
+                                                                                                                                                                                                toUpdate.status = updates.status;
+                                                                                                                                                                                                if (updates.status === 'Resolved') toUpdate.resolved_at = new Date().toISOString();
+                                                                                                                                                                                            }
+                                                                                                                                                                                            if (updates.description) toUpdate.description = updates.description;
+                                                                                                                                                                                            if (updates.images) toUpdate.images = updates.images;
+
+                                                                                                                                                                                            if (Object.keys(toUpdate).length > 0) {
+                                                                                                                                                                                                await supabase.from('mold_maintenance_logs').update(toUpdate).eq('id', id);
+                                                                                                                                                                                            }
+                                                                                                                                                                                        },
+
+                                                                                                                                                                                            // --- Tool Management Actions ---
+                                                                                                                                                                                            addTool: async (tool) => {
+                                                                                                                                                                                                set(s => ({ tools: [...s.tools, tool] }));
+                                                                                                                                                                                                const { error } = await supabase.from('tools').insert({
+                                                                                                                                                                                                    id: tool.id, code: tool.code, name: tool.name, category: tool.category,
+                                                                                                                                                                                                    status: tool.status, condition: tool.condition, current_holder_id: tool.currentHolderId,
+                                                                                                                                                                                                    location: tool.location
+                                                                                                                                                                                                });
+                                                                                                                                                                                                if (error) console.error("Error adding tool:", error);
+                                                                                                                                                                                            },
+
+                                                                                                                                                                                                updateTool: async (id, updates) => {
+                                                                                                                                                                                                    set(s => ({ tools: s.tools.map(t => t.id === id ? { ...t, ...updates } : t) }));
+                                                                                                                                                                                                    const toUpdate: any = {};
+                                                                                                                                                                                                    if (updates.status) toUpdate.status = updates.status;
+                                                                                                                                                                                                    if (updates.currentHolderId !== undefined) toUpdate.current_holder_id = updates.currentHolderId;
+                                                                                                                                                                                                    if (updates.condition) toUpdate.condition = updates.condition;
+                                                                                                                                                                                                    if (updates.location) toUpdate.location = updates.location;
+
+                                                                                                                                                                                                    await supabase.from('tools').update(toUpdate).eq('id', id);
+                                                                                                                                                                                                },
+
+                                                                                                                                                                                                    removeTool: async (id) => {
+                                                                                                                                                                                                        set(s => ({ tools: s.tools.filter(t => t.id !== id) }));
+                                                                                                                                                                                                        const { error } = await supabase.from('tools').delete().eq('id', id);
+                                                                                                                                                                                                        if (error) console.error("Error deleting tool:", error);
+                                                                                                                                                                                                    },
+
+                                                                                                                                                                                                        addToolTransaction: async (tx) => {
+                                                                                                                                                                                                            set(s => ({ toolTransactions: [...s.toolTransactions, tx] }));
+                                                                                                                                                                                                            const { error } = await supabase.from('tool_transactions').insert({
+                                                                                                                                                                                                                id: tx.id, tool_id: tx.toolId, employee_id: tx.employeeId,
+                                                                                                                                                                                                                action: tx.action, signature: tx.signature, notes: tx.notes, created_by: tx.createdBy
+                                                                                                                                                                                                            });
+                                                                                                                                                                                                            if (error) console.error("Error adding tool transaction:", error);
+                                                                                                                                                                                                        },
+
+                                                                                                                                                                                                            addToolMaintenance: async (m) => {
+                                                                                                                                                                                                                set(s => ({ toolMaintenances: [...s.toolMaintenances, m] }));
+                                                                                                                                                                                                                const { error } = await supabase.from('tool_maintenance').insert({
+                                                                                                                                                                                                                    id: m.id, tool_id: m.toolId, description: m.description,
+                                                                                                                                                                                                                    status: m.status, technician_notes: m.technicianNotes
+                                                                                                                                                                                                                });
+                                                                                                                                                                                                            },
+
+                                                                                                                                                                                                                updateToolMaintenance: async (id, updates) => {
+                                                                                                                                                                                                                    set(s => ({ toolMaintenances: s.toolMaintenances.map(m => m.id === id ? { ...m, ...updates } : m) }));
+                                                                                                                                                                                                                    const toUpdate: any = { status: updates.status };
+                                                                                                                                                                                                                    if (updates.status === 'completed' || updates.status === 'condemned') {
+                                                                                                                                                                                                                        toUpdate.completed_at = new Date().toISOString();
+                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                    await supabase.from('tool_maintenance').update(toUpdate).eq('id', id);
+                                                                                                                                                                                                                },
+
+                                                                                                                                                                                                                    addMaterialRequest: async (req) => {
+                                                                                                                                                                                                                        set(state => {
+                                                                                                                                                                                                                            return { materialRequests: [req, ...state.materialRequests] };
+                                                                                                                                                                                                                        });
+
+                                                                                                                                                                                                                        // Persist
+                                                                                                                                                                                                                        const { error } = await supabase.from('material_requests').insert({
+                                                                                                                                                                                                                            id: req.id,
+                                                                                                                                                                                                                            area: req.area,
+                                                                                                                                                                                                                            status: req.status,
+                                                                                                                                                                                                                            request_date: req.requestDate,
+                                                                                                                                                                                                                            items: req.items,
+                                                                                                                                                                                                                            total_cost: req.totalCost
+                                                                                                                                                                                                                        });
+
+                                                                                                                                                                                                                        if (error) {
+                                                                                                                                                                                                                            console.error("Error adding material request:", error);
+                                                                                                                                                                                                                            toast.error("Erro ao salvar Pedido: " + error.message);
+                                                                                                                                                                                                                        } else {
+                                                                                                                                                                                                                            toast.success("Pedido salvo com sucesso!");
+                                                                                                                                                                                                                        }
+
+                                                                                                                                                                                                                        get().logAudit('CREATE_REQUEST', 'consumables', `Created Material Request for ${req.area}`);
+                                                                                                                                                                                                                    },
+
+                                                                                                                                                                                                                        updateMaterialRequest: async (id, updates) => {
+                                                                                                                                                                                                                            set(state => ({
+                                                                                                                                                                                                                                materialRequests: state.materialRequests.map(r => r.id === id ? { ...r, ...updates } : r)
+                                                                                                                                                                                                                            }));
+                                                                                                                                                                                                                            // Mock persist via update if needed or just sync
+                                                                                                                                                                                                                        },
+
+                                                                                                                                                                                                                            syncData: async () => {
+                                                                                                                                                                                                                                // Employees
+                                                                                                                                                                                                                                try {
+                                                                                                                                                                                                                                    const { data: emps, error } = await supabase.from('employees').select('*');
+                                                                                                                                                                                                                                    if (error) throw error;
+                                                                                                                                                                                                                                    if (emps) set({ employees: emps.map(mapDbToEmployee) });
+                                                                                                                                                                                                                                } catch (e) { console.error("Sync Error: Employees", e); }
+
+                                                                                                                                                                                                                                // Absenteeism
+                                                                                                                                                                                                                                const { data: recs } = await supabase.from('absenteeism_records').select('*');
+                                                                                                                                                                                                                                if (recs) set({ absenteeismRecords: recs.map(mapDbToAbsenteeism) });
+
+                                                                                                                                                                                                                                // Assets
+                                                                                                                                                                                                                                const { data: assets } = await supabase.from('assets').select('*');
+                                                                                                                                                                                                                                if (assets) set({ assets: assets.map(mapDbToAsset) });
+
+                                                                                                                                                                                                                                // Products
+                                                                                                                                                                                                                                // Products & Routings (Derived from Products)
+                                                                                                                                                                                                                                const { data: products } = await supabase.from('products').select('*');
+                                                                                                                                                                                                                                if (products) {
+                                                                                                                                                                                                                                    set({ products: products.map(mapDbToProduct) });
+
+                                                                                                                                                                                                                                    // Generate routings from product operations
+                                                                                                                                                                                                                                    const derivedRoutings: Routing[] = products
+                                                                                                                                                                                                                                        .filter(p => p.operations && Array.isArray(p.operations))
+                                                                                                                                                                                                                                        .map(p => ({
+                                                                                                                                                                                                                                            id: `rt-${p.id}`,
+                                                                                                                                                                                                                                            productModelId: p.id,
+                                                                                                                                                                                                                                            operations: p.operations
+                                                                                                                                                                                                                                        }));
+
+                                                                                                                                                                                                                                    set({ routings: derivedRoutings }); // Always update routings
+                                                                                                                                                                                                                                }
+
+                                                                                                                                                                                                                                // Orders
+                                                                                                                                                                                                                                const { data: orders } = await supabase.from('orders').select('*');
+                                                                                                                                                                                                                                if (orders) set({ orders: orders.map(mapDbToOrder) });
+
+                                                                                                                                                                                                                                // Events
+                                                                                                                                                                                                                                const { data: events } = await supabase.from('events').select('*');
+                                                                                                                                                                                                                                if (events) set({ events: events.map(mapDbToEvent) });
+
+                                                                                                                                                                                                                                // Shopfloor 3.0 Data Sync
+                                                                                                                                                                                                                                const { data: opts } = await supabase.from('product_options').select('*');
+                                                                                                                                                                                                                                if (opts) set({ productOptions: opts.map(mapDbToOption) });
+
+                                                                                                                                                                                                                                const { data: tasks } = await supabase.from('option_tasks').select('*');
+                                                                                                                                                                                                                                if (tasks) set({ optionTasks: tasks.map(mapDbToTask) });
+
+                                                                                                                                                                                                                                const { data: execs } = await supabase.from('task_executions').select('*');
+                                                                                                                                                                                                                                if (execs) set({ taskExecutions: execs.map(mapDbToExecution) });
+
+                                                                                                                                                                                                                                const { data: issues } = await supabase.from('order_issues').select('*');
+                                                                                                                                                                                                                                if (issues) set({ orderIssues: issues.map(mapDbToIssue) });
+
+                                                                                                                                                                                                                                // V5 Sync
+                                                                                                                                                                                                                                const { data: qCases } = await supabase.from('quality_cases').select('*');
+                                                                                                                                                                                                                                if (qCases) set({ qualityCases: qCases.map(mapDbToQualityCase) });
+
+                                                                                                                                                                                                                                const { data: qActions } = await supabase.from('quality_actions').select('*');
+                                                                                                                                                                                                                                if (qActions) set({ qualityActions: qActions.map(mapDbToQualityAction) });
+
+                                                                                                                                                                                                                                const { data: scrap } = await supabase.from('scrap_reports').select('*');
+                                                                                                                                                                                                                                if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
+
+                                                                                                                                                                                                                                // V8 Molds Sync (Shopfloor 3.0)
+                                                                                                                                                                                                                                try {
+                                                                                                                                                                                                                                    const { data: moldComp } = await supabase.from('mold_compatibility').select('*');
+                                                                                                                                                                                                                                    if (moldComp) set({ moldCompatibility: moldComp.map(mapDbToMoldCompatibility) });
+
+                                                                                                                                                                                                                                    const { data: moldLogs } = await supabase.from('mold_maintenance_logs').select('*');
+                                                                                                                                                                                                                                    if (moldLogs) set({ moldMaintenanceLogs: moldLogs.map(mapDbToMoldMaintenanceLog) });
+
+                                                                                                                                                                                                                                    // New Tables V8 (Maintenance)
+                                                                                                                                                                                                                                    const { data: moldOrders } = await supabase.from('mold_maintenance_orders').select('*'); // Check table name
+                                                                                                                                                                                                                                    // Mapped via specific function if needed, or generic
+                                                                                                                                                                                                                                    // Check if mapDbToMaintenanceOrder exists? If not, we skip or map manually
+                                                                                                                                                                                                                                    // Assuming types match generic
+
+                                                                                                                                                                                                                                    // const { data: pins } = await supabase.from('maintenance_pins').select('*');
+                                                                                                                                                                                                                                    // const { data: geoms } = await supabase.from('mold_geometries').select('*');
+
+                                                                                                                                                                                                                                } catch (e) {
+                                                                                                                                                                                                                                    console.error("Sync Error: Molds V8", e);
+                                                                                                                                                                                                                                }
+
+                                                                                                                                                                                                                                // Andon Alerts
+                                                                                                                                                                                                                                const { data: alerts } = await supabase.from('alerts').select('*').in('status', ['open', 'acknowledged']); // Only active alerts? Or all? Let's keep active for performance, or recent.
+                                                                                                                                                                                                                                // For simplicity, let's fetch all relevant ones.
+                                                                                                                                                                                                                                if (alerts) set({ alerts: alerts.map(mapDbToAlert) });
+
+                                                                                                                                                                                                                                // V7 Tools Sync
+                                                                                                                                                                                                                                const { data: tools } = await supabase.from('tools').select('*');
+                                                                                                                                                                                                                                if (tools) set({
+                                                                                                                                                                                                                                    tools: tools.map((t: any) => ({
+                                                                                                                                                                                                                                        id: t.id, code: t.code, name: t.name, category: t.category,
+                                                                                                                                                                                                                                        status: t.status, condition: t.condition, currentHolderId: t.current_holder_id,
+                                                                                                                                                                                                                                        location: t.location, purchaseDate: t.purchase_date, lastMaintenance: t.last_maintenance
+                                                                                                                                                                                                                                    }))
+                                                                                                                                                                                                                                });
+
+                                                                                                                                                                                                                                const { data: toolTxs } = await supabase.from('tool_transactions').select('*');
+                                                                                                                                                                                                                                if (toolTxs) set({
+                                                                                                                                                                                                                                    toolTransactions: toolTxs.map((t: any) => ({
+                                                                                                                                                                                                                                        id: t.id, toolId: t.tool_id, employeeId: t.employee_id,
+                                                                                                                                                                                                                                        action: t.action, signature: t.signature, notes: t.notes,
+                                                                                                                                                                                                                                        createdAt: t.created_at, createdBy: t.created_by
+                                                                                                                                                                                                                                    }))
+                                                                                                                                                                                                                                });
+
+                                                                                                                                                                                                                                // Tool Maintenance
+                                                                                                                                                                                                                                const { data: toolMaint } = await supabase.from('tool_maintenance').select('*');
+                                                                                                                                                                                                                                if (toolMaint) set({ toolMaintenances: toolMaint.map(mapDbToToolMaintenance) });
+
+                                                                                                                                                                                                                                // Consumables (Shopfloor V11/V12)
+                                                                                                                                                                                                                                try {
+                                                                                                                                                                                                                                    const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
+                                                                                                                                                                                                                                    if (ccMap) set({ costCenterMappings: ccMap.map(mapDbToCostCenter) });
+
+                                                                                                                                                                                                                                    const { data: ppiReqs } = await supabase.from('ppe_requests').select('*');
+                                                                                                                                                                                                                                    if (ppiReqs) set({ ppeRequests: ppiReqs.map(mapDbToPpeRequest) });
+
+                                                                                                                                                                                                                                    const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
+                                                                                                                                                                                                                                    if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
+
+                                                                                                                                                                                                                                    const { data: matReqs } = await supabase.from('material_requests').select('*');
+                                                                                                                                                                                                                                    if (matReqs) set({ materialRequests: matReqs.map(mapDbToMaterialRequest) });
+                                                                                                                                                                                                                                } catch (e) {
+                                                                                                                                                                                                                                    console.error("Sync Error: Consumables", e);
+                                                                                                                                                                                                                                }
+
+                                                                                                                                                                                                                                // V7 Parts Sync
+                                                                                                                                                                                                                                const { data: pParts } = await supabase.from('product_parts').select('*');
+                                                                                                                                                                                                                                if (pParts) set({
+                                                                                                                                                                                                                                    productParts: pParts.map(p => ({
+                                                                                                                                                                                                                                        id: p.id, productModelId: p.product_model_id, name: p.name,
+                                                                                                                                                                                                                                        category: p.category, rfidRequired: p.rfid_required
+                                                                                                                                                                                                                                    }))
+                                                                                                                                                                                                                                });
+
+                                                                                                                                                                                                                                const { data: oParts } = await supabase.from('order_parts').select('*');
+                                                                                                                                                                                                                                if (oParts) set({
+                                                                                                                                                                                                                                    orderParts: oParts.map(p => ({
+                                                                                                                                                                                                                                        id: p.id, orderId: p.order_id, partDefinitionId: p.part_definition_id,
+                                                                                                                                                                                                                                        rfidTag: p.rfid_tag, status: p.status, producedAt: p.produced_at
+                                                                                                                                                                                                                                    }))
+                                                                                                                                                                                                                                });
+
+                                                                                                                                                                                                                                // Shopfloor V6 Sync
+                                                                                                                                                                                                                                const { data: lines } = await supabase.from('production_lines').select('*');
+                                                                                                                                                                                                                                if (lines) set({ productionLines: lines.map(mapDbToLine) });
+
+                                                                                                                                                                                                                                const { data: rules } = await supabase.from('sequencing_rules').select('*');
+                                                                                                                                                                                                                                if (rules) set({ sequencingRules: rules.map(mapDbToRule) });
+
+                                                                                                                                                                                                                                // Fetch Order Options Pivot and Map to Orders
+                                                                                                                                                                                                                                // Fetch Order Options Pivot and Map to Orders
+                                                                                                                                                                                                                                const { data: pivot } = await supabase.from('production_order_options').select('*');
+                                                                                                                                                                                                                                const { data: assetPivot } = await supabase.from('production_order_assets').select('*');
+
+                                                                                                                                                                                                                                if (orders) {
+                                                                                                                                                                                                                                    const mappedOrders = orders.map(mapDbToOrder).map(o => {
+                                                                                                                                                                                                                                        const myOptions = pivot ? pivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.option_id) : [];
+
+                                                                                                                                                                                                                                        const myAssets = assetPivot
+                                                                                                                                                                                                                                            ? assetPivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.asset_id)
+                                                                                                                                                                                                                                            : [];
+
+                                                                                                                                                                                                                                        // Fallback to legacy assetId if no pivot data
+                                                                                                                                                                                                                                        if (myAssets.length === 0 && o.assetId) {
+                                                                                                                                                                                                                                            myAssets.push(o.assetId);
+                                                                                                                                                                                                                                        }
+
+                                                                                                                                                                                                                                        return {
+                                                                                                                                                                                                                                            ...o,
+                                                                                                                                                                                                                                            selectedOptions: myOptions,
+                                                                                                                                                                                                                                            assetIds: myAssets
+                                                                                                                                                                                                                                        };
+                                                                                                                                                                                                                                    });
+
+                                                                                                                                                                                                                                    set({ orders: mappedOrders });
+                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                            },
+
+                                                                                                                                                                                                                                // --- V8: Mold Maintenance Actions ---
+
+                                                                                                                                                                                                                                addMaintenanceOrder: (order) => set(s => ({ maintenanceOrders: [...s.maintenanceOrders, order] })),
+
+                                                                                                                                                                                                                                    updateMaintenanceOrder: (id, updates) => set(s => ({
+                                                                                                                                                                                                                                        maintenanceOrders: s.maintenanceOrders.map(o => o.id === id ? { ...o, ...updates } : o)
+                                                                                                                                                                                                                                    })),
+
+                                                                                                                                                                                                                                        addMaintenancePin: (pin) => set(s => ({
+                                                                                                                                                                                                                                            maintenanceOrders: s.maintenanceOrders.map(o =>
+                                                                                                                                                                                                                                                o.id === pin.orderId
+                                                                                                                                                                                                                                                    ? { ...o, pins: [...(o.pins || []), pin] }
+                                                                                                                                                                                                                                                    : o
+                                                                                                                                                                                                                                            )
+                                                                                                                                                                                                                                        })),
+
+                                                                                                                                                                                                                                            updateMaintenancePin: (id, updates) => set(s => ({
+                                                                                                                                                                                                                                                maintenanceOrders: s.maintenanceOrders.map(o => {
+                                                                                                                                                                                                                                                    if (o.id !== (s.maintenanceOrders.find(mo => mo.pins?.some(p => p.id === id))?.id)) return o;
+
+                                                                                                                                                                                                                                                    return {
+                                                                                                                                                                                                                                                        ...o,
+                                                                                                                                                                                                                                                        pins: o.pins?.map(p => p.id === id ? { ...p, ...updates } : p)
+                                                                                                                                                                                                                                                    };
+                                                                                                                                                                                                                                                })
+                                                                                                                                                                                                                                            })),
+
+                                                                                                                                                                                                                                                setMoldGeometries: (geometries) => set({ moldGeometries: geometries }),
+
+                                                                                                                                                                                                                                                    // --- V9: IAM Actions ---
+                                                                                                                                                                                                                                                    login: (user) => {
+                                                                                                                                                                                                                                                        set({ currentUser: user });
+                                                                                                                                                                                                                                                        get().logAudit('LOGIN', 'auth', `User ${user.name} logged in`);
+                                                                                                                                                                                                                                                    },
+                                                                                                                                                                                                                                                        logout: () => {
+                                                                                                                                                                                                                                                            const user = get().currentUser;
+                                                                                                                                                                                                                                                            set({ currentUser: null });
+                                                                                                                                                                                                                                                            if (user) get().logAudit('LOGOUT', 'auth', `User ${user.name} logged out`);
+                                                                                                                                                                                                                                                        },
+                                                                                                                                                                                                                                                            updateUserPermissions: (userId, permissions) => {
+                                                                                                                                                                                                                                                                set(state => {
+                                                                                                                                                                                                                                                                    const isCurrentUser = state.currentUser?.id === userId;
+                                                                                                                                                                                                                                                                    const updatedEmployees = state.employees.map(e =>
+                                                                                                                                                                                                                                                                        e.id === userId ? { ...e, permissions, role: (e as any).role || 'operator' } : e
+                                                                                                                                                                                                                                                                    );
+
+                                                                                                                                                                                                                                                                    return {
+                                                                                                                                                                                                                                                                        currentUser: isCurrentUser ? { ...state.currentUser!, permissions } : state.currentUser,
+                                                                                                                                                                                                                                                                        employees: updatedEmployees
+                                                                                                                                                                                                                                                                    };
+                                                                                                                                                                                                                                                                });
+                                                                                                                                                                                                                                                                // Persist to DB
+                                                                                                                                                                                                                                                                supabase.from('employees').update({ permissions }).eq('id', userId).then(({ error }) => {
+                                                                                                                                                                                                                                                                    if (error) {
+                                                                                                                                                                                                                                                                        console.error("Failed to persist permissions:", error);
+                                                                                                                                                                                                                                                                        toast.error("Erro ao salvar Permissões: " + error.message);
+                                                                                                                                                                                                                                                                    } else {
+                                                                                                                                                                                                                                                                        toast.success("Permissões atualizadas.");
+                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                });
+                                                                                                                                                                                                                                                                get().logAudit('UPDATE_PERMISSIONS', 'admin', `Permissions updated for user ${userId}`);
+                                                                                                                                                                                                                                                            },
+                                                                                                                                                                                                                                                                updateUserSettings: (settings) => {
+                                                                                                                                                                                                                                                                    const currentUser = get().currentUser;
+                                                                                                                                                                                                                                                                    if (!currentUser) return;
+
+                                                                                                                                                                                                                                                                    set(state => {
+                                                                                                                                                                                                                                                                        if (!state.currentUser) return state;
+                                                                                                                                                                                                                                                                        return {
+                                                                                                                                                                                                                                                                            currentUser: {
+                                                                                                                                                                                                                                                                                ...state.currentUser,
+                                                                                                                                                                                                                                                                                settings: { ...state.currentUser.settings, ...settings } as UserSettings
+                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                        };
+                                                                                                                                                                                                                                                                    });
+
+                                                                                                                                                                                                                                                                    // Persist
+                                                                                                                                                                                                                                                                    const newSettings = { ...currentUser.settings, ...settings };
+                                                                                                                                                                                                                                                                    supabase.from('employees').update({ settings: newSettings }).eq('id', currentUser.id).then(({ error }) => {
+                                                                                                                                                                                                                                                                        if (error) {
+                                                                                                                                                                                                                                                                            console.error("Failed to persist settings:", error);
+                                                                                                                                                                                                                                                                            toast.error("Erro ao salvar Configurações: " + error.message);
+                                                                                                                                                                                                                                                                        } else {
+                                                                                                                                                                                                                                                                            toast.success("Configurações salvas.");
+                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                                },
+                                                                                                                                                                                                                                                                    logAudit: (action, module, description) => {
+                                                                                                                                                                                                                                                                        const log: AuditLog = {
+                                                                                                                                                                                                                                                                            id: `log-${Date.now()}`,
+                                                                                                                                                                                                                                                                            userId: get().currentUser?.id || 'system',
+                                                                                                                                                                                                                                                                            userName: get().currentUser?.name || 'System',
+                                                                                                                                                                                                                                                                            action,
+                                                                                                                                                                                                                                                                            targetModule: module,
+                                                                                                                                                                                                                                                                            description,
+                                                                                                                                                                                                                                                                            timestamp: new Date().toISOString()
+                                                                                                                                                                                                                                                                        };
+                                                                                                                                                                                                                                                                        set(s => ({ auditLogs: [log, ...s.auditLogs].slice(0, 1000) }));
+                                                                                                                                                                                                                                                                    },
         }),
-        {
-            name: 'shopfloor-storage',
-            storage: createJSONStorage(() => localStorage),
+{
+    name: 'shopfloor-storage',
+        storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 currentUser: state.currentUser, // Critical for session persistence
                 employees: state.employees,
