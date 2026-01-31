@@ -94,7 +94,12 @@ export default function AdminPage() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin & Suporte</h1>
-                <p className="text-slate-500">Ferramentas para técnicos e gestão do sistema.</p>
+                <div className="flex justify-between items-center">
+                    <p className="text-slate-500">Ferramentas para técnicos e gestão do sistema.</p>
+                    <Button variant="outline" onClick={() => window.location.href = '/admin/debug'}>
+                        Abrir Diagnóstico Full Screen
+                    </Button>
+                </div>
             </div>
 
             <Tabs defaultValue="health" className="space-y-4">
@@ -103,6 +108,7 @@ export default function AdminPage() {
                     <TabsTrigger value="provisioning">Hardware (IoT)</TabsTrigger>
                     <TabsTrigger value="rfid">Ferramentas RFID</TabsTrigger>
                     <TabsTrigger value="manual">Manual do Sistema</TabsTrigger>
+                    <TabsTrigger value="advanced">Diagnóstico Avançado (DB)</TabsTrigger>
                 </TabsList>
 
                 {/* SYSTEM HEALTH */}
@@ -350,6 +356,42 @@ export default function AdminPage() {
 
                             <h3>3. IoT e Andon</h3>
                             <p>O sistema aceita eventos via API (mqtt-bridge) ou pelo Simulador RFID nesta tela. O Andon (Alertas) pode ser acionado pelo Mobile App.</p>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* ADVANCED DEBUG */}
+                <TabsContent value="advanced">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Diagnóstico de Persistência (Banco de Dados)</CardTitle>
+                            <CardDescription>Verifique se as tabelas existem e se as permissões de escrita estão ativas.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <Button onClick={async () => {
+                                    const tables = ['employees', 'consumable_transactions', 'cost_center_mappings', 'material_requests', 'mold_maintenance_orders'];
+                                    let hasError = false;
+                                    for (const t of tables) {
+                                        const { error } = await supabase.from(t).select('id').limit(1);
+                                        if (error) {
+                                            toast.error(`Erro na tabela ${t}: ${error.message}`);
+                                            hasError = true;
+                                        } else {
+                                            toast.success(`Tabela ${t}: OK`);
+                                        }
+                                    }
+                                    if (!hasError) toast.success("Todas as tabelas críticas acessíveis!");
+                                }}>
+                                    <Activity className="mr-2 h-4 w-4" />
+                                    Testar Conexão com Tabelas Críticas
+                                </Button>
+
+                                <div className="p-4 bg-slate-100 rounded text-sm font-mono mt-4">
+                                    <p className="font-bold text-slate-700 mb-2">Logs de Erro Recentes (Console):</p>
+                                    <p className="text-slate-500">Abra o Console do Navegador (F12) para ver detalhes de erro de "Access Denied" se houver.</p>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
