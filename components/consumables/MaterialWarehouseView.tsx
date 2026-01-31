@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { CheckCircle, XCircle, Printer, Eye } from "lucide-react";
 import { useState } from "react";
 import { MaterialRequest } from "@/types";
@@ -16,9 +17,32 @@ import { ptBR } from "date-fns/locale/pt-BR";
 export function MaterialWarehouseView() {
     const { materialRequests, updateMaterialRequest } = useShopfloorStore();
     const [filterStatus, setFilterStatus] = useState<'pending' | 'all'>('pending');
+    const [searchTerm, setSearchTerm] = useState("");
+    const [dateStart, setDateStart] = useState("");
+    const [dateEnd, setDateEnd] = useState("");
 
     const filtered = materialRequests
-        .filter(r => filterStatus === 'all' ? true : r.status === 'pending')
+        .filter(r => {
+            // Status Filter
+            if (filterStatus !== 'all' && r.status !== filterStatus) return false;
+
+            // Date Range Filter
+            if (dateStart && new Date(r.requestDate) < new Date(dateStart)) return false;
+            if (dateEnd) {
+                const end = new Date(dateEnd);
+                end.setHours(23, 59, 59);
+                if (new Date(r.requestDate) > end) return false;
+            }
+
+            // Search (Area, ID, or Items)
+            if (searchTerm) {
+                const lower = searchTerm.toLowerCase();
+                const inMeta = r.area.toLowerCase().includes(lower) || r.id.toLowerCase().includes(lower);
+                const inItems = r.items.some(i => i.partNumber.toLowerCase().includes(lower) || i.description.toLowerCase().includes(lower));
+                return inMeta || inItems;
+            }
+            return true;
+        })
         .sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
 
     const handleApprove = async (id: string) => {
@@ -119,11 +143,31 @@ export function MaterialWarehouseView() {
         <Card className="w-full">
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Gestão de Pedidos (Armazém)</CardTitle>
-                <div className="flex gap-2">
-                    <Button variant={filterStatus === 'pending' ? 'default' : 'outline'} onClick={() => setFilterStatus('pending')}>Pendentes</Button>
-                    <Button variant={filterStatus === 'all' ? 'default' : 'outline'} onClick={() => setFilterStatus('all')}>Todos</Button>
+                <div className="flex gap-2 items-center">
+                    <div className="flex gap-2">
+                        <Button variant={filterStatus === 'pending' ? 'default' : 'outline'} onClick={() => setFilterStatus('pending')}>Pendentes</Button>
+                        <Button variant={filterStatus === 'all' ? 'default' : 'outline'} onClick={() => setFilterStatus('all')}>Todos</Button>
+                    </div>
                 </div>
             </CardHeader>
+            <div className="px-6 pb-2 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Input
+                    placeholder="Buscar por Área, ID ou Part Number..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="md:col-span-2"
+                />
+                <Input
+                    type="date"
+                    value={dateStart}
+                    onChange={e => setDateStart(e.target.value)}
+                />
+                <Input
+                    type="date"
+                    value={dateEnd}
+                    onChange={e => setDateEnd(e.target.value)}
+                />
+            </div>
             <CardContent>
                 <Table>
                     <TableHeader>

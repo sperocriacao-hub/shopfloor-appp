@@ -557,6 +557,17 @@ const mapDbToPpeRequest = (db: any): PpeRequest => ({
     notes: db.notes
 });
 
+const mapDbToMaterialRequest = (db: any): MaterialRequest => ({
+    id: db.id,
+    area: db.area,
+    status: db.status,
+    requestDate: db.request_date,
+    items: db.items || [],
+    totalCost: db.total_cost || 0,
+    processedAt: db.processed_at,
+    processedBy: db.processed_by
+});
+
 const mapDbToLine = (db: any): ProductionLine => ({
     id: db.id,
     description: db.description,
@@ -1534,6 +1545,10 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // Check performance here later - maybe only fetch last 3 months
                 const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
                 if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
+
+                // Material Requests (Consumables V2)
+                const { data: matReqs } = await supabase.from('material_requests').select('*');
+                if (matReqs) set({ materialRequests: matReqs.map(mapDbToMaterialRequest) });
 
                 // V7 Parts Sync
                 const { data: pParts } = await supabase.from('product_parts').select('*');

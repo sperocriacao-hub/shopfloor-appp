@@ -198,11 +198,8 @@ export function MaterialRequestForm({ onSuccess }: { onSuccess: () => void }) {
                                     <TableCell>
                                         <Input
                                             value={row.description}
-                                            onChange={(e) => {
-                                                const updated = rows.map(r => r.id === row.id ? { ...r, description: e.target.value } : r);
-                                                setRows(updated);
-                                            }}
-                                            className="h-8 bg-slate-50"
+                                            readOnly
+                                            className="h-8 bg-slate-100 text-slate-600 focus-visible:ring-0 cursor-not-allowed"
                                         />
                                     </TableCell>
                                     <TableCell>
@@ -218,8 +215,8 @@ export function MaterialRequestForm({ onSuccess }: { onSuccess: () => void }) {
                                         <Input
                                             type="number"
                                             value={row.unitCost}
-                                            onChange={(e) => handleCostChange(row.id, Number(e.target.value))}
-                                            className="h-8 text-right"
+                                            readOnly
+                                            className="h-8 text-right bg-slate-100 text-slate-600 focus-visible:ring-0 cursor-not-allowed"
                                             min={0}
                                             step={0.01}
                                         />

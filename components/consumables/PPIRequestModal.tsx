@@ -30,6 +30,10 @@ export function PPIRequestModal() {
 
     // Combobox Open States
     const [openEmployee, setOpenEmployee] = useState(false);
+    const [selectedArea, setSelectedArea] = useState("");
+
+    // Unique Areas
+    const areas = useMemo(() => Array.from(new Set(assets.map(a => a.area))).sort(), [assets]);
 
     // Derived Catalog from History
     const partCatalog = useMemo(() => {
@@ -92,7 +96,7 @@ export function PPIRequestModal() {
             items: validItems,
             status: 'pending' as const,
             requestDate: new Date().toISOString(),
-            notes
+            notes: selectedArea ? `Area: ${selectedArea}\n${notes}` : notes
         };
 
         try {
@@ -134,7 +138,10 @@ export function PPIRequestModal() {
                                     className="w-full justify-between bg-white"
                                 >
                                     {employeeId
-                                        ? employees.find((emp) => emp.id === employeeId)?.name
+                                        ? (() => {
+                                            const e = employees.find(emp => emp.id === employeeId);
+                                            return e ? `${e.workerNumber || '?'} - ${e.name}` : "Selecione...";
+                                        })()
                                         : "Selecione o funcionário..."}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
@@ -163,7 +170,7 @@ export function PPIRequestModal() {
                                             {employees.map((emp) => (
                                                 <CommandItem
                                                     key={emp.id}
-                                                    value={emp.name}
+                                                    value={`${emp.workerNumber} ${emp.name}`}
                                                     onSelect={() => {
                                                         setEmployeeId(emp.id === employeeId ? "" : emp.id);
                                                         setOpenEmployee(false);
@@ -175,7 +182,7 @@ export function PPIRequestModal() {
                                                             employeeId === emp.id ? "opacity-100" : "opacity-0"
                                                         )}
                                                     />
-                                                    {emp.name}
+                                                    {emp.workerNumber} - {emp.name}
                                                 </CommandItem>
                                             ))}
                                         </CommandGroup>
@@ -187,14 +194,14 @@ export function PPIRequestModal() {
 
                     <div className="space-y-2">
                         <Label>Área / Centro de Custo (Opcional)</Label>
-                        <Select value={assetId} onValueChange={setAssetId}>
+                        <Select value={selectedArea} onValueChange={setSelectedArea}>
                             <SelectTrigger className="bg-white">
                                 <SelectValue placeholder="Selecione a área..." />
                             </SelectTrigger>
                             <SelectContent className="bg-white">
                                 <SelectItem value="none">-- Nenhuma --</SelectItem>
-                                {assets.map(asset => (
-                                    <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>
+                                {areas.map(area => (
+                                    <SelectItem key={area} value={area}>{area}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
