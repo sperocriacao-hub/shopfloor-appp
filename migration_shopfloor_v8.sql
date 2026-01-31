@@ -1,7 +1,7 @@
 -- Migration V8: Mold Maintenance & Spatial Tracking
 
 -- 1. Mold Geometries (Stores the SVG for a specific model/part)
-CREATE TABLE mold_geometries (
+CREATE TABLE IF NOT EXISTS mold_geometries (
     id TEXT PRIMARY KEY,
     product_model_id TEXT, -- e.g., 'Hull 40ft'
     part_type TEXT, -- 'Hull', 'Deck', 'SmallPart'
@@ -12,7 +12,7 @@ CREATE TABLE mold_geometries (
 );
 
 -- 2. Maintenance Orders (OS) - More detailed than previous logs
-CREATE TABLE maintenance_orders (
+CREATE TABLE IF NOT EXISTS maintenance_orders (
     id TEXT PRIMARY KEY,
     asset_id TEXT NOT NULL REFERENCES assets(id),
     status TEXT CHECK (status IN ('pending', 'in_progress', 'completed', 'verified')),
@@ -33,7 +33,7 @@ CREATE TABLE maintenance_orders (
 );
 
 -- 3. Maintenance Pins (The spatial defects)
-CREATE TABLE maintenance_pins (
+CREATE TABLE IF NOT EXISTS maintenance_pins (
     id TEXT PRIMARY KEY,
     order_id TEXT REFERENCES maintenance_orders(id),
     

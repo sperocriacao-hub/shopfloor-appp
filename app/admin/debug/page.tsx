@@ -1,0 +1,83 @@
+"use client";
+
+import { useShopfloorStore } from "@/store/useShopfloorStore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+
+export default function DebugPersistencePage() {
+    const store = useShopfloorStore();
+    const [status, setStatus] = useState<any>({});
+    const [loading, setLoading] = useState(false);
+    // const supabase = createClientComponentClient(); -> Removed
+
+    const checkTables = async () => {
+        setLoading(true);
+        const tables = [
+            'employees', 'assets', 'products', 'orders', 
+            'mold_maintenance_orders', 'mold_geometries', 'maintenance_pins',
+            'consumable_transactions', 'cost_center_mappings', 'material_requests', 'ppe_requests'
+        ];
+
+        const results: any = {};
+
+        for (const t of tables) {
+            try {
+                const { count, error } = await supabase.from(t).select('*', { count: 'exact', head: true });
+                results[t] = { ok: !error, count, error: error?.message };
+            } catch (e) {
+                results[t] = { ok: false, error: String(e) };
+            }
+        }
+        setStatus(results);
+        setLoading(false);
+    };
+
+    return (
+        <div className="p-8 space-y-6">
+            <h1 className="text-2xl font-bold">Diagnóstico de Persistência (DB)</h1>
+            <p className="text-slate-500">Verifique se as tabelas existem e se o sistema consegue ler os dados.</p>
+
+            <div className="flex gap-4">
+                <Button onClick={checkTables} disabled={loading}>
+                    {loading ? "Verificando..." : "Testar Conexão com Tabelas"}
+                </Button>
+                <Button variant="outline" onClick={() => store.syncData()}>
+                    Forçar Sincronização (Store)
+                </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(status).map(([table, res]: any) => (
+                    <Card key={table} className={res.ok ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+                        <CardHeader className="p-4 py-3">
+                            <CardTitle className="text-sm font-mono flex justify-between">
+                                {table}
+                                <span>{res.ok ? "OK" : "ERRO"}</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0 text-xs">
+                            {res.ok ? (
+                                <span className="text-green-700">Registros: {res.count}</span>
+                            ) : (
+                                <span className="text-red-700">{res.error}</span>
+                            )}
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <Card>
+                <CardHeader><CardTitle>Estado Atual da Store (Memória)</CardTitle></CardHeader>
+                <CardContent className="space-y-2 text-xs font-mono">
+                    <div>Employees: {store.employees.length}</div>
+                    <div>Consumables: {store.consumableTransactions.length}</div>
+                    <div>Material Requests: {store.materialRequests.length}</div>
+                    <div>Mold Configs: {store.moldGeometries?.length || 0}</div>
+                    <div>Mold Orders: {store.maintenanceOrders?.length || 0}</div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}

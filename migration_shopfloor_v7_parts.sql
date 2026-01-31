@@ -14,7 +14,7 @@ create table product_parts (
 -- 2. Order Parts (Instances)
 create table order_parts (
     id text primary key,
-    order_id text references production_orders(id) on delete cascade,
+    order_id text references orders(id) on delete cascade,
     part_definition_id text references product_parts(id),
     rfid_tag text, -- The specific tag assigned to this physical part
     status text default 'pending', -- pending, produced, assembled

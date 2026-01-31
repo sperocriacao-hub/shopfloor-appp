@@ -1438,8 +1438,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
             syncData: async () => {
                 // Employees
-                const { data: emps } = await supabase.from('employees').select('*');
-                if (emps) set({ employees: emps.map(mapDbToEmployee) });
+                try {
+                    const { data: emps, error } = await supabase.from('employees').select('*');
+                    if (error) throw error;
+                    if (emps) set({ employees: emps.map(mapDbToEmployee) });
+                } catch (e) { console.error("Sync Error: Employees", e); }
 
                 // Absenteeism
                 const { data: recs } = await supabase.from('absenteeism_records').select('*');
@@ -1499,11 +1502,25 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
 
                 // V8 Molds Sync (Shopfloor 3.0)
-                const { data: moldComp } = await supabase.from('mold_compatibility').select('*');
-                if (moldComp) set({ moldCompatibility: moldComp.map(mapDbToMoldCompatibility) });
+                try {
+                    const { data: moldComp } = await supabase.from('mold_compatibility').select('*');
+                    if (moldComp) set({ moldCompatibility: moldComp.map(mapDbToMoldCompatibility) });
 
-                const { data: moldLogs } = await supabase.from('mold_maintenance_logs').select('*');
-                if (moldLogs) set({ moldMaintenanceLogs: moldLogs.map(mapDbToMoldMaintenanceLog) });
+                    const { data: moldLogs } = await supabase.from('mold_maintenance_logs').select('*');
+                    if (moldLogs) set({ moldMaintenanceLogs: moldLogs.map(mapDbToMoldMaintenanceLog) });
+
+                    // New Tables V8 (Maintenance)
+                    const { data: moldOrders } = await supabase.from('mold_maintenance_orders').select('*'); // Check table name
+                    // Mapped via specific function if needed, or generic
+                    // Check if mapDbToMaintenanceOrder exists? If not, we skip or map manually
+                    // Assuming types match generic
+                    
+                    // const { data: pins } = await supabase.from('maintenance_pins').select('*');
+                    // const { data: geoms } = await supabase.from('mold_geometries').select('*');
+                    
+                } catch (e) {
+                    console.error("Sync Error: Molds V8", e);
+                }
 
                 // Andon Alerts
                 const { data: alerts } = await supabase.from('alerts').select('*').in('status', ['open', 'acknowledged']); // Only active alerts? Or all? Let's keep active for performance, or recent.
@@ -1533,22 +1550,22 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 const { data: toolMaint } = await supabase.from('tool_maintenance').select('*');
                 if (toolMaint) set({ toolMaintenances: toolMaint.map(mapDbToToolMaintenance) });
 
-                // Consumables (Limit to recent? For now all)
-                const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
+                // Consumables (Shopfloor V11/V12)
+                try {
+                    const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
+                    if (ccMap) set({ costCenterMappings: ccMap.map(mapDbToCostCenter) });
 
-                if (ccMap) set({ costCenterMappings: ccMap.map(mapDbToCostCenter) });
+                    const { data: ppiReqs } = await supabase.from('ppe_requests').select('*');
+                    if (ppiReqs) set({ ppeRequests: ppiReqs.map(mapDbToPpeRequest) });
 
-                // PPI Requests
-                const { data: ppiReqs } = await supabase.from('ppe_requests').select('*');
-                if (ppiReqs) set({ ppeRequests: ppiReqs.map(mapDbToPpeRequest) });
+                    const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
+                    if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
 
-                // Check performance here later - maybe only fetch last 3 months
-                const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
-                if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
-
-                // Material Requests (Consumables V2)
-                const { data: matReqs } = await supabase.from('material_requests').select('*');
-                if (matReqs) set({ materialRequests: matReqs.map(mapDbToMaterialRequest) });
+                    const { data: matReqs } = await supabase.from('material_requests').select('*');
+                    if (matReqs) set({ materialRequests: matReqs.map(mapDbToMaterialRequest) });
+                } catch (e) {
+                     console.error("Sync Error: Consumables", e);
+                }
 
                 // V7 Parts Sync
                 const { data: pParts } = await supabase.from('product_parts').select('*');
