@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, XCircle, Printer, Eye } from "lucide-react";
+import { CheckCircle, XCircle, Printer, Eye, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { MaterialRequest } from "@/types";
+import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
@@ -144,6 +145,21 @@ export function MaterialWarehouseView() {
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Gestão de Pedidos (Armazém)</CardTitle>
                 <div className="flex gap-2 items-center">
+                    <Button variant="outline" size="sm" onClick={() => {
+                        const ws = XLSX.utils.json_to_sheet(filtered.map(r => ({
+                            ID: r.id,
+                            Area: r.area,
+                            Status: r.status,
+                            Date: new Date(r.requestDate).toLocaleDateString(),
+                            Items: r.items.length,
+                            Total: r.totalCost
+                        })));
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
+                        XLSX.writeFile(wb, "Pedidos_Material.xlsx");
+                    }}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar Excel
+                    </Button>
                     <div className="flex gap-2">
                         <Button variant={filterStatus === 'pending' ? 'default' : 'outline'} onClick={() => setFilterStatus('pending')}>Pendentes</Button>
                         <Button variant={filterStatus === 'all' ? 'default' : 'outline'} onClick={() => setFilterStatus('all')}>Todos</Button>

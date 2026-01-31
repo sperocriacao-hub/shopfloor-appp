@@ -5,7 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer } from "lucide-react";
+import { FileSpreadsheet, Printer } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -67,6 +69,27 @@ export function PPIReports() {
         }
     };
 
+    const handleExport = () => {
+        const ws = XLSX.utils.json_to_sheet(filteredRequests.map(req => {
+            const empName = req.employeeId ? employees.find(e => e.id === req.employeeId)?.name : '-';
+            const assetName = req.assetId ? assets.find(a => a.id === req.assetId)?.name : '-';
+
+            return {
+                Date: format(new Date(req.requestDate), 'dd/MM/yyyy HH:mm'),
+                Employee: empName,
+                Area: assetName,
+                Item: req.itemName,
+                PartNumber: req.partNumber,
+                Quantity: req.quantity,
+                Status: req.status,
+                Notes: req.notes
+            };
+        }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Relatório PPI");
+        XLSX.writeFile(wb, "Relatorio_PPI.xlsx");
+    };
+
     return (
         <div className="space-y-4">
             {/* Filters Bar */}
@@ -120,7 +143,10 @@ export function PPIReports() {
                     </Select>
                 </div>
 
-                <Button variant="outline" onClick={handlePrint} className="ml-auto">
+                <Button variant="outline" onClick={handleExport} className="ml-auto">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar Excel
+                </Button>
+                <Button variant="outline" onClick={handlePrint}>
                     <Printer className="mr-2 h-4 w-4" /> Imprimir
                 </Button>
             </div>

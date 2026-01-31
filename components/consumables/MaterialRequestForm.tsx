@@ -35,17 +35,28 @@ export function MaterialRequestForm({ onSuccess }: { onSuccess: () => void }) {
     // Mock Product DB from transactions + products for auto-complete
     const productDb = useMemo(() => {
         const db = new Map<string, { desc: string, cost: number }>();
-        // Add from Products
-        products.forEach(p => {
-            // Assuming product name is part number or related
-            db.set(p.name, { desc: p.description, cost: 0 });
-        });
-        // Add from History
+
+        // 1. Add from History (Consumables) - HIGH PRIORITY
+        // Uses the most recent cost found for that part number
         consumableTransactions.forEach(tx => {
             if (tx.partNumber) {
+                // We overwrite if exists, or check dates if we want latest. 
+                // Since iterating array, last one wins if we use set. 
+                // Assuming transactions might be unsorted, but usually we want specific logic.
+                // Simple logic: If it exists, we stick with it or update it? 
+                // Let's assume the list is somewhat ordered or we just grab one.
                 db.set(tx.partNumber, { desc: tx.partDescription || "", cost: tx.unitCost });
             }
         });
+
+        // 2. Add from Products (Backfill if missing) - LOW PRIORITY
+        products.forEach(p => {
+            // Only add if not already present from history (so we don't overwrite real consumable data with generic product data)
+            if (!db.has(p.name)) {
+                db.set(p.name, { desc: p.description, cost: 0 });
+            }
+        });
+
         return db;
     }, [products, consumableTransactions]);
 
