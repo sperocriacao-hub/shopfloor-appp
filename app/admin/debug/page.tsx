@@ -11,7 +11,6 @@ export default function DebugPersistencePage() {
     const store = useShopfloorStore();
     const [status, setStatus] = useState<any>({});
     const [loading, setLoading] = useState(false);
-    const [loading, setLoading] = useState(false);
     // const supabase = createClientComponentClient(); -> Removed
 
     // Auto-hydrate on mount
@@ -48,7 +47,6 @@ export default function DebugPersistencePage() {
                 results[t] = { ok: false, error: String(e) };
             }
         }
-        setStatus(results);
         setStatus(results);
         setLoading(false);
     };
