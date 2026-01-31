@@ -370,7 +370,16 @@ export default function AdminPage() {
                         <CardContent>
                             <div className="space-y-4">
                                 <Button onClick={async () => {
-                                    const tables = ['employees', 'consumable_transactions', 'cost_center_mappings', 'material_requests', 'mold_maintenance_orders'];
+                                    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                                    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+                                    if (!url || !key) {
+                                        toast.error("ERRO CRÍTICO: Variáveis de Ambiente do Supabase não encontradas!");
+                                        alert("Faltam as variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no Vercel/Ambiente.");
+                                        return;
+                                    }
+
+                                    const tables = ['employees', 'consumable_transactions', 'cost_center_mappings', 'material_requests', 'mold_maintenance_orders', 'mold_geometries'];
                                     let hasError = false;
                                     for (const t of tables) {
                                         const { error } = await supabase.from(t).select('id').limit(1);

@@ -37,7 +37,7 @@ export function Sidebar() {
     // --- Global Auth Guard ---
     useEffect(() => {
         // If no user and NOT on login page, redirect to login
-        if (!currentUser && pathname !== '/login') {
+        if (!currentUser && pathname !== '/login' && pathname !== '/admin/debug') {
             router.push('/login');
         }
     }, [currentUser, pathname, router]);
