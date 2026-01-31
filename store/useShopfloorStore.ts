@@ -16,6 +16,7 @@ import {
     UserSettings, UserPermissions, AuditLog, EmployeeWithPermissions, AppModule
 } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 // Helper to create assets
 const createAsset = (idSuffix: string, name: string, area: string, subarea: string | undefined): Asset => ({
@@ -1053,7 +1054,10 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 const { error } = await supabase.from('cost_center_mappings').insert({
                     id: mapping.id, customer_code: mapping.customerCode, description: mapping.description, mapped_area: mapping.mappedArea
                 });
-                if (error) console.error("Error adding CC mapping:", error);
+                if (error) {
+                    console.error("Error adding CC mapping:", error);
+                    toast.error("Erro ao salvar Centro de Custo: " + error.message);
+                }
             },
 
             updateCostCenterMapping: async (id, updates) => {
@@ -1097,7 +1101,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 }));
 
                 const { error } = await supabase.from('consumable_transactions').insert(dbTransactions);
-                if (error) console.error("Error importing consumables:", error);
+                if (error) {
+                    console.error("Error importing consumables:", error);
+                    toast.error("Erro ao importar Lote: " + error.message);
+                } else {
+                    toast.success("Importação concluída com sucesso!");
+                }
 
             },
 
@@ -1426,6 +1435,24 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 set(state => {
                     return { materialRequests: [req, ...state.materialRequests] };
                 });
+
+                // Persist
+                const { error } = await supabase.from('material_requests').insert({
+                    id: req.id,
+                    area: req.area,
+                    status: req.status,
+                    request_date: req.requestDate,
+                    items: req.items,
+                    total_cost: req.totalCost
+                });
+
+                if (error) {
+                    console.error("Error adding material request:", error);
+                    toast.error("Erro ao salvar Pedido: " + error.message);
+                } else {
+                    toast.success("Pedido salvo com sucesso!");
+                }
+
                 get().logAudit('CREATE_REQUEST', 'consumables', `Created Material Request for ${req.area}`);
             },
 
@@ -1514,10 +1541,10 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     // Mapped via specific function if needed, or generic
                     // Check if mapDbToMaintenanceOrder exists? If not, we skip or map manually
                     // Assuming types match generic
-                    
+
                     // const { data: pins } = await supabase.from('maintenance_pins').select('*');
                     // const { data: geoms } = await supabase.from('mold_geometries').select('*');
-                    
+
                 } catch (e) {
                     console.error("Sync Error: Molds V8", e);
                 }
@@ -1564,7 +1591,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     const { data: matReqs } = await supabase.from('material_requests').select('*');
                     if (matReqs) set({ materialRequests: matReqs.map(mapDbToMaterialRequest) });
                 } catch (e) {
-                     console.error("Sync Error: Consumables", e);
+                    console.error("Sync Error: Consumables", e);
                 }
 
                 // V7 Parts Sync
@@ -1673,7 +1700,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 });
                 // Persist to DB
                 supabase.from('employees').update({ permissions }).eq('id', userId).then(({ error }) => {
-                    if (error) console.error("Failed to persist permissions:", error);
+                    if (error) {
+                        console.error("Failed to persist permissions:", error);
+                        toast.error("Erro ao salvar Permissões: " + error.message);
+                    } else {
+                        toast.success("Permissões atualizadas.");
+                    }
                 });
                 get().logAudit('UPDATE_PERMISSIONS', 'admin', `Permissions updated for user ${userId}`);
             },
@@ -1694,7 +1726,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // Persist
                 const newSettings = { ...currentUser.settings, ...settings };
                 supabase.from('employees').update({ settings: newSettings }).eq('id', currentUser.id).then(({ error }) => {
-                    if (error) console.error("Failed to persist settings:", error);
+                    if (error) {
+                        console.error("Failed to persist settings:", error);
+                        toast.error("Erro ao salvar Configurações: " + error.message);
+                    } else {
+                        toast.success("Configurações salvas.");
+                    }
                 });
             },
             logAudit: (action, module, description) => {

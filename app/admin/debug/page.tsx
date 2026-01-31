@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export default function DebugPersistencePage() {
     const store = useShopfloorStore();
@@ -15,7 +16,7 @@ export default function DebugPersistencePage() {
     const checkTables = async () => {
         setLoading(true);
         const tables = [
-            'employees', 'assets', 'products', 'orders', 
+            'employees', 'assets', 'products', 'orders',
             'mold_maintenance_orders', 'mold_geometries', 'maintenance_pins',
             'consumable_transactions', 'cost_center_mappings', 'material_requests', 'ppe_requests'
         ];
@@ -31,6 +32,33 @@ export default function DebugPersistencePage() {
             }
         }
         setStatus(results);
+        setStatus(results);
+        setLoading(false);
+    };
+
+    const checkWrite = async () => {
+        setLoading(true);
+        try {
+            // Attempt to write to audit_logs or a safe table
+            const { error } = await supabase.from('audit_logs').insert({
+                id: `test-write-${Date.now()}`,
+                action: 'TEST_WRITE',
+                module: 'debug',
+                description: 'Testing write permissions via Admin Debug',
+                timestamp: new Date().toISOString(),
+                user_id: 'debug-user',
+                user_name: 'Debug User'
+            });
+
+            if (error) {
+                toast.error(`Falha de Escrita: ${error.message}`);
+                console.error("Write Test Error:", error);
+            } else {
+                toast.success("Teste de Escrita: SUCESSO! (Tabela audit_logs)");
+            }
+        } catch (e: any) {
+            toast.error(`Exceção de Escrita: ${e.message}`);
+        }
         setLoading(false);
     };
 
@@ -41,7 +69,10 @@ export default function DebugPersistencePage() {
 
             <div className="flex gap-4">
                 <Button onClick={checkTables} disabled={loading}>
-                    {loading ? "Verificando..." : "Testar Conexão com Tabelas"}
+                    {loading ? "Verificando..." : "Testar LEITURA (Select)"}
+                </Button>
+                <Button onClick={checkWrite} disabled={loading} variant="destructive">
+                    {loading ? "Verificando..." : "Testar ESCRITA (Insert)"}
                 </Button>
                 <Button variant="outline" onClick={() => store.syncData()}>
                     Forçar Sincronização (Store)
