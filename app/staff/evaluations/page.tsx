@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { HardHat, Shield, Activity, TrendingUp, CheckCircle, AlertTriangle, Save, Check, ChevronsUpDown, Search } from "lucide-react";
+import { HardHat, Shield, Activity, TrendingUp, CheckCircle, Save, Check, ChevronsUpDown, Search, AlertOctagon } from "lucide-react";
 import { motion } from "framer-motion";
 import { DailyEvaluation, Employee } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -29,7 +28,7 @@ const PILLARS = [
 
 export default function DailyEvaluationsPage() {
     const { employees, currentUser, addEvaluation, dailyEvaluations } = useShopfloorStore();
-    const [selectedArea, setSelectedArea] = useState<string>("All");
+    const [selectedArea, setSelectedArea] = useState<string | null>(null);
     const [openCombobox, setOpenCombobox] = useState(false);
 
     // Evaluation State: { [employeeId]: Partial<DailyEvaluation> }
@@ -38,33 +37,38 @@ export default function DailyEvaluationsPage() {
     // Track saved state for visual feedback: { [employeeId]: boolean }
     const [savedStates, setSavedStates] = useState<Record<string, boolean>>({});
 
-    // Load existing evaluations for today
+    // Memoize areas to avoid recalculation
+    const areas = useMemo(() =>
+        Array.from(new Set(employees.map(e => e.area).filter(Boolean))).sort(),
+        [employees]);
+
+    // Optimize: Filter first, then load data for ONLY those employees
+    const filteredEmployees = useMemo(() => {
+        if (!selectedArea) return [];
+        return employees
+            .filter(e => e.hrStatus === 'active' && e.area === selectedArea)
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [employees, selectedArea]);
+
+    // Load existing evaluations ONLY when filtered list changes (i.e. Area selected)
     useEffect(() => {
+        if (filteredEmployees.length === 0) return;
+
         const today = new Date().toISOString().split('T')[0];
-        const todaysEvals = dailyEvaluations.filter(e => e.date === today);
+        // Optimization: Filter from store only relevant evals
+        const relevantEmpIds = new Set(filteredEmployees.map(e => e.id));
+        const todaysEvals = dailyEvaluations.filter(e => e.date === today && relevantEmpIds.has(e.employeeId));
 
-        if (todaysEvals.length > 0) {
-            const initialState: Record<string, Partial<DailyEvaluation>> = {};
-            todaysEvals.forEach(e => {
-                initialState[e.employeeId] = { ...e };
-            });
-            setEvaluations(prev => ({ ...prev, ...initialState }));
+        const initialState: Record<string, Partial<DailyEvaluation>> = {};
+        todaysEvals.forEach(e => {
+            initialState[e.employeeId] = { ...e };
+        });
 
-            // Mark loaded ones as "saved" initially? No, user might want to edit.
-            // But if they match DB, they are technically saved.
-            // Let's just leave savedState false until they click save again to confirm changes.
-        }
-    }, [dailyEvaluations]);
-
-    // Filter employees present (active)
-    const activeEmployees = employees.filter(e => e.hrStatus === 'active');
-
-    // Unique Areas
-    const areas = ["All", ...Array.from(new Set(employees.map(e => e.area).filter(Boolean))).sort()];
-
-    const filteredEmployees = selectedArea === "All"
-        ? activeEmployees
-        : activeEmployees.filter(e => e.area === selectedArea);
+        // Preserve existing local edits if any (though typically user switching area resets visual state)
+        // Be careful not to overwrite user work if they switch back and forth. 
+        // For simplicity/perf: We merge.
+        setEvaluations(prev => ({ ...prev, ...initialState }));
+    }, [filteredEmployees, dailyEvaluations]); // Depend on filteredEmployees to trigger on area switch
 
     const handleScoreChange = (employeeId: string, pillarKey: string, value: number) => {
         setEvaluations(prev => ({
@@ -74,7 +78,6 @@ export default function DailyEvaluationsPage() {
                 [pillarKey]: value
             }
         }));
-        // Reset saved state on change
         setSavedStates(prev => ({ ...prev, [employeeId]: false }));
     };
 
@@ -91,12 +94,10 @@ export default function DailyEvaluationsPage() {
 
     const calculateDailyScore = (evalData: Partial<DailyEvaluation> | undefined) => {
         if (!evalData) return 0;
-
         const sum = PILLARS.reduce((acc, p) => {
             const val = (evalData as any)[p.key];
             return acc + (val !== undefined ? val : 3);
         }, 0);
-
         return (sum / 7).toFixed(1);
     };
 
@@ -108,10 +109,8 @@ export default function DailyEvaluationsPage() {
 
     const submitEvaluation = (employee: Employee) => {
         const evalData = evaluations[employee.id];
-
-        // Construct full object
         const newEval: DailyEvaluation = {
-            id: evalData?.id || `eval-${Date.now()}-${employee.id}`, // Reuse ID if exists (update)
+            id: evalData?.id || `eval-${Date.now()}-${employee.id}`,
             employeeId: employee.id,
             supervisorId: currentUser?.id,
             date: new Date().toISOString().split('T')[0],
@@ -127,67 +126,56 @@ export default function DailyEvaluationsPage() {
         };
 
         addEvaluation(newEval);
-
         toast.success(`Avaliação de ${employee.name} salva!`);
         setSavedStates(prev => ({ ...prev, [employee.id]: true }));
     };
 
     return (
         <div className="p-6 space-y-6 max-w-[1400px] mx-auto pb-32">
-            <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm border gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4 sticky top-4 z-10">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Avaliação Diária</h1>
-                    <p className="text-slate-500">Supervisão • {new Date().toLocaleDateString()}</p>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Avaliação Diária de Equipe</h1>
+                    <p className="text-slate-500 text-sm">Selecione a área para iniciar as avaliações.</p>
                 </div>
 
-                {/* Area Selector Combobox */}
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                    <span className="text-sm font-medium text-slate-600 hidden md:block">Filtrar por Área:</span>
+                {/* Area Selector Combobox - Fixed Styles */}
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <span className="text-sm font-semibold text-slate-700 hidden md:block uppercase tracking-wider text-xs">Área:</span>
                     <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={openCombobox}
-                                className="w-full md:w-[250px] justify-between"
+                                className="w-full md:w-[300px] justify-between bg-white text-slate-900 border-slate-300 hover:bg-slate-50 hover:text-slate-900 shadow-sm"
                             >
-                                {selectedArea === "All" ? "Todas as Áreas" : selectedArea}
+                                {selectedArea ? (
+                                    <span className="font-semibold">{selectedArea}</span>
+                                ) : (
+                                    <span className="text-slate-400">Selecione uma área...</span>
+                                )}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
-                            <Command>
-                                <CommandInput placeholder="Buscar área..." />
-                                <CommandList>
+                        <PopoverContent className="w-[300px] p-0 bg-white border-slate-200 shadow-lg">
+                            <Command className="bg-white">
+                                <CommandInput placeholder="Buscar área..." className="h-9" />
+                                <CommandList className="max-h-[300px] overflow-y-auto custom-scrollbar">
                                     <CommandEmpty>Nenhuma área encontrada.</CommandEmpty>
                                     <CommandGroup>
-                                        <CommandItem
-                                            value="All"
-                                            onSelect={() => {
-                                                setSelectedArea("All");
-                                                setOpenCombobox(false);
-                                            }}
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    selectedArea === "All" ? "opacity-100" : "opacity-0"
-                                                )}
-                                            />
-                                            Todas as Áreas
-                                        </CommandItem>
-                                        {areas.filter(a => a !== "All").map((area) => (
+                                        {areas.map((area) => (
                                             <CommandItem
                                                 key={area}
                                                 value={area}
-                                                onSelect={(currentValue) => {
-                                                    setSelectedArea(area); // Use exact area name from list
+                                                onSelect={() => {
+                                                    setSelectedArea(area);
                                                     setOpenCombobox(false);
                                                 }}
+                                                className="cursor-pointer hover:bg-slate-100"
                                             >
                                                 <Check
                                                     className={cn(
-                                                        "mr-2 h-4 w-4",
+                                                        "mr-2 h-4 w-4 text-blue-600",
                                                         selectedArea === area ? "opacity-100" : "opacity-0"
                                                     )}
                                                 />
@@ -202,99 +190,124 @@ export default function DailyEvaluationsPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredEmployees.map(employee => {
-                    const evalData = evaluations[employee.id] || {};
-                    // If no data, use 3 defaults for calc to match UI slider default
-                    const currentScore = calculateDailyScore(evalData);
-                    const scoreStatus = getScoreColor(Number(currentScore));
-                    const isSaved = savedStates[employee.id];
+            {/* Empty State */}
+            {!selectedArea && (
+                <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 rounded-xl border border-dashed border-slate-300">
+                    <Search className="w-16 h-16 text-slate-300 mb-4" />
+                    <h3 className="text-xl font-semibold text-slate-700">Nenhuma área selecionada</h3>
+                    <p className="text-slate-500 max-w-md text-center">
+                        Para otimizar o desempenho, selecione uma área acima para carregar a lista de colaboradores e iniciar as avaliações.
+                    </p>
+                </div>
+            )}
 
-                    return (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.2 }}
-                            key={employee.id}
-                        >
-                            <Card className={`border-t-4 transition-all duration-300 ${isSaved ? 'border-t-green-500 shadow-md ring-1 ring-green-100' : 'border-t-blue-500 hover:shadow-lg'}`}>
-                                <CardHeader className="flex flex-row justify-between items-start pb-2">
-                                    <div>
-                                        <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                            <span className="text-slate-400 font-mono text-sm">#{employee.workerNumber || 'N/A'}</span>
-                                            {employee.name}
-                                        </CardTitle>
-                                        <Badge variant="secondary" className="mt-1">
-                                            {employee.workstation || employee.jobTitle}
-                                        </Badge>
-                                    </div>
-                                    <div className={`flex flex-col items-center justify-center h-14 w-14 rounded-full border-2 ${scoreStatus} shadow-sm transition-colors duration-500`}>
-                                        <span className="text-xl font-bold">{currentScore}</span>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-4 pt-2">
-                                    <div className="grid gap-4">
-                                        {PILLARS.map(pillar => {
-                                            const Icon = pillar.icon;
-                                            const value = (evalData as any)[pillar.key] ?? 3; // Default 3
+            {/* Grid */}
+            {selectedArea && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredEmployees.map(employee => {
+                        const evalData = evaluations[employee.id] || {};
+                        const currentScore = calculateDailyScore(evalData);
+                        const scoreStatus = getScoreColor(Number(currentScore));
+                        const isSaved = savedStates[employee.id];
 
-                                            return (
-                                                <div key={pillar.key} className="space-y-1">
-                                                    <div className="flex justify-between text-xs font-medium text-slate-600">
-                                                        <span className="flex items-center gap-1">
-                                                            <Icon className={`w-3 h-3 ${pillar.color}`} /> {pillar.label}
-                                                        </span>
-                                                        <span className={
-                                                            value < 2.5 ? "text-red-600" : value >= 3.5 ? "text-green-600" : "text-yellow-600"
-                                                        }>{value.toFixed(1)}</span>
+                        return (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                key={employee.id}
+                            >
+                                <Card className={`border-t-4 transition-all duration-300 shadow-sm ${isSaved
+                                    ? 'border-t-green-500 ring-2 ring-green-100 bg-white'
+                                    : 'border-t-blue-500 hover:shadow-lg bg-white'
+                                    }`}>
+                                    <CardHeader className="flex flex-row justify-between items-start pb-2">
+                                        <div>
+                                            <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                                <span className="text-slate-400 font-mono text-sm bg-slate-100 px-1.5 py-0.5 rounded">
+                                                    {employee.workerNumber ? `#${employee.workerNumber}` : 'N/A'}
+                                                </span>
+                                                <span className="truncate max-w-[180px]" title={employee.name}>{employee.name}</span>
+                                            </CardTitle>
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200">
+                                                    {employee.workstation || employee.jobTitle}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                        <div className={`flex flex-col items-center justify-center h-12 w-12 rounded-full border-2 ${scoreStatus} shadow-sm`}>
+                                            <span className="text-lg font-bold">{currentScore}</span>
+                                        </div>
+                                    </CardHeader>
+
+                                    <CardContent className="space-y-4 pt-0">
+                                        {/* Quick KPI Visualization */}
+                                        <div className="grid gap-4 bg-slate-50/50 p-3 rounded-lg border border-slate-100 mt-2">
+                                            {PILLARS.map(pillar => {
+                                                const Icon = pillar.icon;
+                                                const value = (evalData as any)[pillar.key] ?? 3;
+                                                return (
+                                                    <div key={pillar.key} className="space-y-1.5">
+                                                        <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                                            <span className="flex items-center gap-1.5">
+                                                                <Icon className={`w-3.5 h-3.5 ${pillar.color}`} />
+                                                                {pillar.label}
+                                                            </span>
+                                                            <span className={cn(
+                                                                "font-bold text-sm",
+                                                                value < 2.5 ? "text-red-600" : value >= 3.5 ? "text-green-600" : "text-yellow-600"
+                                                            )}>{value.toFixed(1)}</span>
+                                                        </div>
+                                                        <Slider
+                                                            value={[value]}
+                                                            max={4}
+                                                            min={1}
+                                                            step={0.5}
+                                                            onValueChange={(val) => handleScoreChange(employee.id, pillar.key, val[0])}
+                                                            className="py-1 cursor-pointer"
+                                                        />
                                                     </div>
-                                                    <Slider
-                                                        value={[value]}
-                                                        max={4}
-                                                        min={1}
-                                                        step={0.5}
-                                                        onValueChange={(val) => handleScoreChange(employee.id, pillar.key, val[0])}
-                                                        className="py-1"
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
 
-                                    <div className="pt-2 border-t">
-                                        <Textarea
-                                            placeholder="Observação rápida (opcional)..."
-                                            className="h-20 text-sm resize-none focus:ring-blue-200 transaction-all"
-                                            value={evalData.notes || ""}
-                                            onChange={(e) => handleNoteChange(employee.id, e.target.value)}
-                                        />
-                                    </div>
+                                        <div className="pt-2">
+                                            <Textarea
+                                                placeholder="Observações do supervisor..."
+                                                className="h-20 text-sm resize-none border-slate-200 focus:border-blue-400 focus:ring-blue-100"
+                                                value={evalData.notes || ""}
+                                                onChange={(e) => handleNoteChange(employee.id, e.target.value)}
+                                            />
+                                        </div>
 
-                                    <Button
-                                        className={cn(
-                                            "w-full transition-all duration-300",
-                                            isSaved
-                                                ? "bg-green-600 hover:bg-green-700 text-white"
-                                                : "bg-slate-900 hover:bg-slate-800 text-white"
-                                        )}
-                                        onClick={() => submitEvaluation(employee)}
-                                    >
-                                        {isSaved ? (
-                                            <>
-                                                <Check className="w-4 h-4 mr-2" /> Salvo!
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save className="w-4 h-4 mr-2" /> Salvar Avaliação
-                                            </>
-                                        )}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    );
-                })}
-            </div>
+                                        <Button
+                                            className={cn(
+                                                "w-full font-semibold shadow-sm transition-all duration-200",
+                                                isSaved
+                                                    ? "bg-green-600 hover:bg-green-700 text-white shadow-green-200"
+                                                    : "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-200"
+                                            )}
+                                            onClick={() => submitEvaluation(employee)}
+                                        >
+                                            {isSaved ? (
+                                                <span className="flex items-center animate-in fade-in zoom-in duration-300">
+                                                    <Check className="w-5 h-5 mr-2" />
+                                                    Avaliação Salva
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center">
+                                                    <Save className="w-4 h-4 mr-2" />
+                                                    Salvar Avaliação
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

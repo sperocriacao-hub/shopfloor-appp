@@ -1,245 +1,340 @@
 "use client";
 
 import { useShopfloorStore } from "@/store/useShopfloorStore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Users, Briefcase, Award, Pencil, Trash2, Download, Upload, UserX } from "lucide-react";
+import { Plus, Search, Users, Briefcase, Award, TrendingUp, AlertTriangle, ArrowRight, ClipboardCheck, UserX, CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { downloadStaffTemplate, parseStaffExcel } from "@/lib/excel-staff";
+import { DailyEvaluation } from "@/types";
+
+// Pillars Configuration (Match Store)
+const PILLARS = [
+    { key: 'hstScore', label: 'HST', color: 'bg-orange-500', text: 'text-orange-600' },
+    { key: 'epiScore', label: 'EPI', color: 'bg-blue-500', text: 'text-blue-600' },
+    { key: 'postCleaningScore', label: 'Limpeza (5S)', color: 'bg-green-500', text: 'text-green-600' },
+    { key: 'qualityScore', label: 'Qualidade', color: 'bg-purple-500', text: 'text-purple-600' },
+    { key: 'efficiencyScore', label: 'Eficiência', color: 'bg-red-500', text: 'text-red-600' },
+    { key: 'objectivesScore', label: 'Objetivos', color: 'bg-indigo-500', text: 'text-indigo-600' },
+    { key: 'attitudeScore', label: 'Atitude', color: 'bg-pink-500', text: 'text-pink-600' },
+] as const;
 
 export default function StaffPage() {
     const router = useRouter();
-    const { employees, removeEmployee, addEmployee, absenteeismRecords } = useShopfloorStore();
+    const { employees, dailyEvaluations, absenteeismRecords } = useShopfloorStore();
     const [searchTerm, setSearchTerm] = useState("");
-    const [showInactive, setShowInactive] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleExport = () => {
-        downloadStaffTemplate();
-    };
+    // --- KPI CALCULATIONS ---
 
-    const handleImportClick = () => {
-        fileInputRef.current?.click();
-    };
+    // 1. Pillar Ranking (Global)
+    const pillarStats = useMemo(() => {
+        const stats = PILLARS.map(p => ({ ...p, total: 0, count: 0, average: 0 }));
+        if (dailyEvaluations.length === 0) return stats;
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            try {
-                const newStaff = await parseStaffExcel(e.target.files[0]);
-                // Add imported employees
-                newStaff.forEach(emp => {
-                    addEmployee({
-                        id: `emp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                        ...emp as any // Type assertion for simplified import
-                    });
+        // Consider last 30 days only for relevance? Or all? Let's do all for V1.
+        dailyEvaluations.forEach(ev => {
+            stats.forEach(s => {
+                const val = (ev as any)[s.key];
+                if (typeof val === 'number') {
+                    s.total += val;
+                    s.count++;
+                }
+            });
+        });
+
+        stats.forEach(s => {
+            s.average = s.count > 0 ? s.total / s.count : 0;
+        });
+
+        // Sort ascending (Lowest first)
+        return stats.sort((a, b) => a.average - b.average);
+    }, [dailyEvaluations]);
+
+    // 2. Organization Index (5S)
+    const organizationIndex = useMemo(() => {
+        const cleaningStats = pillarStats.find(p => p.key === 'postCleaningScore');
+        return cleaningStats ? cleaningStats.average.toFixed(1) : "0.0";
+    }, [pillarStats]);
+
+    // 3. Technical Performance Index (Quality + Efficiency + Objectives)
+    const technicalIndex = useMemo(() => {
+        const techPillars = ['qualityScore', 'efficiencyScore', 'objectivesScore'];
+        const relevant = pillarStats.filter(p => techPillars.includes(p.key));
+        const sum = relevant.reduce((acc, curr) => acc + curr.average, 0);
+        return relevant.length > 0 ? (sum / relevant.length).toFixed(1) : "0.0";
+    }, [pillarStats]);
+
+    // 4. Low Performance Alerts (< 2.0 for 3 consecutive days)
+    const lowPerformanceAlerts = useMemo(() => {
+        // Group evals by employee
+        const byEmployee: Record<string, DailyEvaluation[]> = {};
+        dailyEvaluations.forEach(ev => {
+            if (!byEmployee[ev.employeeId]) byEmployee[ev.employeeId] = [];
+            byEmployee[ev.employeeId].push(ev);
+        });
+
+        const alerts: { id: string, name: string, area: string, avg: number }[] = [];
+
+        Object.keys(byEmployee).forEach(empId => {
+            // Sort by date desc
+            const empEvals = byEmployee[empId].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            if (empEvals.length >= 3) {
+                // Check last 3
+                const last3 = empEvals.slice(0, 3);
+                // Calculate daily averages
+                const averages = last3.map(ev => {
+                    const sum = PILLARS.reduce((acc, p) => acc + ((ev as any)[p.key] || 0), 0);
+                    return sum / PILLARS.length;
                 });
-                alert(`${newStaff.length} funcionários importados com sucesso para o Supabase! 🚀`);
-            } catch (error) {
-                alert("Erro ao importar arquivo via Excel.");
-                console.error(error);
-            }
-            // Reset input
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-    };
 
+                // Check if ALL 3 are < 2.0
+                if (averages.every(avg => avg < 2.0)) {
+                    const emp = employees.find(e => e.id === empId);
+                    if (emp) {
+                        alerts.push({
+                            id: empId,
+                            name: emp.name,
+                            area: emp.area || "N/A",
+                            avg: averages[0] // Current avg
+                        });
+                    }
+                }
+            }
+        });
+        return alerts;
+    }, [dailyEvaluations, employees]);
+
+
+    // Filter for directory list
     const filteredEmployees = (employees || []).filter(e => {
         const matchesSearch = (e.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             (e.workerNumber || "").includes(searchTerm) ||
             (e.area || "").toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesStatus = showInactive ? true : e.hrStatus !== 'terminated';
-        return matchesSearch && matchesStatus;
+        return matchesSearch && e.hrStatus === 'active';
     });
 
-    const handleDelete = (id: string, name: string) => {
-        if (confirm(`Tem certeza que deseja excluir o funcionário ${name}?`)) {
-            // Basic validation simulation (Check if linked... omitted for prototype)
-            removeEmployee(id);
-        }
-    };
-
-    const getIluoColor = (level: string) => {
-        switch (level) {
-            case 'I': return 'bg-red-100 text-red-800';
-            case 'L': return 'bg-yellow-100 text-yellow-800';
-            case 'U': return 'bg-blue-100 text-blue-800';
-            case 'O': return 'bg-green-100 text-green-800';
-            default: return 'bg-slate-100 text-slate-800';
-        }
-    };
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+            {/* Header & Main Call to Action */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-blue-900">Gestão de RH</h1>
-                    <p className="text-slate-500">Controle de eficácia, absentismo e skills.</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">RH & Segurança</h1>
+                    <p className="text-slate-500 mt-1">Visão geral de desempenho, higiene e segurança da fábrica.</p>
                 </div>
-                <div className="flex gap-2">
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        accept=".xlsx,.xls"
-                    />
-                    <Button variant="outline" onClick={() => router.push('/staff/org-chart')} className="border-slate-200 text-slate-700 hover:bg-slate-50">
-                        <Users className="mr-2 h-4 w-4" /> Organograma
-                    </Button>
-                    <Button variant="outline" onClick={() => router.push('/staff/absenteeism')} className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
-                        <UserX className="mr-2 h-4 w-4" /> Absentismo
-                    </Button>
-                    <Button variant="outline" onClick={handleExport} className="border-blue-200 text-blue-700 hover:bg-blue-50">
-                        <Download className="mr-2 h-4 w-4" /> Modelo
-                    </Button>
-                    <Button variant="outline" onClick={handleImportClick} className="border-green-200 text-green-700 hover:bg-green-50">
-                        <Upload className="mr-2 h-4 w-4" /> Importar
-                    </Button>
-                    <Button onClick={() => router.push('/staff/new')} className="bg-blue-600 hover:bg-blue-700">
-                        <Plus className="mr-2 h-4 w-4" /> Novo
+                <div className="flex gap-3">
+                    <Button
+                        onClick={() => router.push('/staff/evaluations')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all px-6 h-12 text-lg"
+                    >
+                        <ClipboardCheck className="mr-2 h-5 w-5" />
+                        Efetuar Avaliações
                     </Button>
                 </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
-                <Card className="bg-blue-50 border-blue-100">
+            {/* Top KPIs Row */}
+            <div className="grid gap-6 md:grid-cols-4">
+                {/* Organization Index */}
+                <Card className="bg-white border-slate-200">
                     <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-blue-900">Total Funcionários</CardTitle>
-                        <Users className="h-4 w-4 text-blue-500" />
+                        <CardTitle className="text-sm font-medium text-slate-500">Índice de Organização (5S)</CardTitle>
+                        <Award className="h-4 w-4 text-green-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-blue-700">{(employees || []).length}</div>
+                        <div className="text-3xl font-bold text-slate-900">{organizationIndex}</div>
+                        <p className="text-xs text-slate-500 mt-1">Média de Limpeza do Posto</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-green-50 border-green-100">
+
+                {/* Technical Performance */}
+                <Card className="bg-white border-slate-200">
                     <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-green-900">Presentes Hoje</CardTitle>
-                        <Briefcase className="h-4 w-4 text-green-500" />
+                        <CardTitle className="text-sm font-medium text-slate-500">Performance Técnica</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-blue-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-700">
+                        <div className="text-3xl font-bold text-slate-900">{technicalIndex}</div>
+                        <p className="text-xs text-slate-500 mt-1">Qualidade + Eficiência + Objetivos</p>
+                    </CardContent>
+                </Card>
+
+                {/* Present Employees */}
+                <Card className="bg-white border-slate-200">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                        <CardTitle className="text-sm font-medium text-slate-500">Colaboradores Presentes</CardTitle>
+                        <Briefcase className="h-4 w-4 text-purple-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold text-slate-900">
                             {(employees || []).filter(e => {
-                                // Must be active
                                 if (e.hrStatus !== 'active') return false;
-                                // Must NOT have a full day absence/sick leave TODAY
                                 const today = new Date().toISOString().split('T')[0];
                                 const hasAbsence = (absenteeismRecords || []).some(r =>
-                                    r.employeeId === e.id &&
-                                    r.date === today &&
-                                    (r.type === 'Full Day' || r.type === 'Sick Leave' || r.type === 'Vacation')
+                                    r.employeeId === e.id && r.date === today && (r.type === 'Full Day' || r.type === 'Sick Leave')
                                 );
                                 return !hasAbsence;
                             }).length}
                         </div>
-                        <p className="text-xs text-green-600 pt-1">Calculado com base nos registros de hoje</p>
+                        <p className="text-xs text-slate-500 mt-1">Disponíveis no chão de fábrica</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-purple-50 border-purple-100">
+
+                {/* Total Staff */}
+                <Card className="bg-slate-50 border-slate-200">
                     <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-purple-900">Matriz de Talentos</CardTitle>
-                        <Award className="h-4 w-4 text-purple-500" />
+                        <CardTitle className="text-sm font-medium text-slate-500">Total HC</CardTitle>
+                        <Users className="h-4 w-4 text-slate-400" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-purple-700">{(employees || []).filter(e => e.iluo === 'O' || e.iluo === 'U').length} <span className="text-sm font-normal text-purple-600">(U/O Level)</span></div>
+                        <div className="text-3xl font-bold text-slate-700">{employees.length}</div>
+                        <Button variant="link" onClick={() => router.push('/staff/org-chart')} className="px-0 text-xs h-auto text-blue-600">
+                            Ver Organograma <ArrowRight className="ml-1 w-3 h-3" />
+                        </Button>
                     </CardContent>
                 </Card>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center space-x-2">
-                        <Search className="h-4 w-4 text-slate-400" />
-                        <input
-                            placeholder="Buscar por nome, número ou área..."
-                            className="flex-1 bg-transparent border-none outline-none text-sm"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        <label className="flex items-center space-x-2 text-sm text-slate-600 px-3 border-l">
-                            <input
-                                type="checkbox"
-                                checked={showInactive}
-                                onChange={(e) => setShowInactive(e.target.checked)}
-                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span>Ver Inativos</span>
-                        </label>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
-                        <table className="min-w-full text-sm">
-                            <thead className="bg-slate-50 text-slate-700">
-                                <tr>
-                                    <th className="px-4 py-3 text-left font-medium">Nº</th>
-                                    <th className="px-4 py-3 text-left font-medium">Nome</th>
-                                    <th className="px-4 py-3 text-left font-medium">Área / Posto</th>
-                                    <th className="px-4 py-3 text-left font-medium">Turno</th>
-                                    <th className="px-4 py-3 text-left font-medium">Contrato</th>
-                                    <th className="px-4 py-3 text-left font-medium">ILUO</th>
-                                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                                    <th className="px-4 py-3 text-right font-medium">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {filteredEmployees.map((emp) => (
-                                    <tr key={emp.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-mono">{emp.workerNumber || "-"}</td>
-                                        <td className="px-4 py-3 font-medium text-blue-900">{emp.name || "Sem Nome"}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="text-slate-900">{emp.area}</div>
-                                            <div className="text-xs text-slate-500">{emp.workstation}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-600">{emp.shift}</td>
-                                        <td className="px-4 py-3 text-slate-600">
-                                            {emp.contractType}
-                                            <span className="block text-xs text-slate-400">
-                                                {(emp.admissionDate || "").split('-').reverse().join('/')}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={cn("inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold", getIluoColor(emp.iluo))}>
-                                                {emp.iluo}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={cn(
-                                                "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
-                                                emp.hrStatus === 'active' ? "bg-green-100 text-green-700" :
-                                                    emp.hrStatus === 'vacation' ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"
-                                            )}>
-                                                {emp.hrStatus === 'active' ? 'Ativo' :
-                                                    emp.hrStatus === 'vacation' ? 'Férias' : 'Ausente'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right space-x-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-slate-500 hover:text-blue-600"
-                                                onClick={() => router.push(`/staff/${emp.id}`)}
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-slate-500 hover:text-red-600"
-                                                onClick={() => handleDelete(emp.id, emp.name)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </td>
+            <div className="grid gap-6 md:grid-cols-2">
+                {/* 1. Ranking de Pilares (Main KPI) */}
+                <Card className="col-span-1">
+                    <CardHeader>
+                        <CardTitle className="text-lg font-bold text-slate-800">Ranking de Desempenho (Pilares)</CardTitle>
+                        <CardDescription>Identificação de áreas críticas (Menor pontuação no topo)</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {pillarStats.map((stat, index) => (
+                            <div key={stat.key} className="space-y-1">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${index === 0 ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                                        {stat.label}
+                                    </span>
+                                    <span className={cn("font-bold", stat.average < 2.5 ? "text-red-600" : "text-slate-700")}>
+                                        {stat.average.toFixed(2)}
+                                    </span>
+                                </div>
+                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div
+                                        className={cn("h-full rounded-full transition-all duration-1000", stat.color)}
+                                        style={{ width: `${(stat.average / 4) * 100}%` }}
+                                    ></div>
+                                </div>
+                                {index === 0 && (
+                                    <p className="text-xs text-red-500 flex items-center mt-1">
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        Atenção Crítica: Formação recomendada neste pilar.
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+
+                {/* 2. Low Performance Alerts & Quick Actions */}
+                <div className="space-y-6">
+                    {/* Alerts */}
+                    <Card className="border-red-100 bg-red-50/30">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-lg font-bold text-red-900 flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                                Alertas de Baixo Desempenho
+                            </CardTitle>
+                            <CardDescription className="text-red-700">
+                                Colaboradores com média &lt; 2.0 por 3 dias consecutivos.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {lowPerformanceAlerts.length === 0 ? (
+                                <div className="flex items-center justify-center p-6 text-slate-500 italic text-sm border border-dashed rounded bg-white/50">
+                                    <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                                    Nenhum alerta crítico detectado.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {lowPerformanceAlerts.map(alert => (
+                                        <div key={alert.id} className="flex items-center justify-between bg-white p-3 rounded border border-red-200 shadow-sm">
+                                            <div>
+                                                <p className="font-bold text-slate-800">{alert.name}</p>
+                                                <p className="text-xs text-slate-500">{alert.area}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-red-600 font-bold text-lg">{alert.avg.toFixed(1)}</span>
+                                                <p className="text-[10px] text-slate-400">Média (3d)</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Quick Access List (Mini Directory) */}
+                    <Card>
+                        <CardHeader className="pb-3 border-b">
+                            <div className="flex justify-between items-center">
+                                <CardTitle className="text-md font-semibold text-slate-800">Diretório Rápido</CardTitle>
+                                <div className="relative w-[180px]">
+                                    <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                                    <input
+                                        placeholder="Buscar..."
+                                        className="w-full pl-8 h-8 text-xs bg-slate-50 border rounded outline-none focus:ring-1 focus:ring-blue-200"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0 max-h-[300px] overflow-y-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-slate-50 text-xs text-slate-500 uppercase sticky top-0">
+                                    <tr>
+                                        <th className="px-4 py-2">Nome</th>
+                                        <th className="px-4 py-2">Área</th>
+                                        <th className="px-4 py-2 text-right">Ação</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-        </div >
+                                </thead>
+                                <tbody className="divide-y">
+                                    {filteredEmployees.slice(0, 10).map(emp => (
+                                        <tr key={emp.id} className="hover:bg-slate-50">
+                                            <td className="px-4 py-2 font-medium text-slate-700 truncate max-w-[120px]">{emp.name}</td>
+                                            <td className="px-4 py-2 text-slate-500 text-xs">{emp.area}</td>
+                                            <td className="px-4 py-2 text-right">
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => router.push(`/staff/${emp.id}`)}>
+                                                    <ArrowRight className="w-3 h-3" />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredEmployees.length === 0 && (
+                                        <tr><td colSpan={3} className="p-4 text-center text-slate-400">Nenhum encontrado.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                            {filteredEmployees.length > 10 && (
+                                <div className="p-2 text-center text-xs text-slate-400 border-t">
+                                    + {filteredEmployees.length - 10} outros funcionários...
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+
+            {/* Action Bar Footer */}
+            <div className="flex gap-4 p-4 rounded-lg bg-slate-100 border border-slate-200 overflow-x-auto">
+                <Button variant="outline" onClick={() => router.push('/staff/absenteeism')} className="bg-white">
+                    <UserX className="mr-2 h-4 w-4" /> Gestão de Absentismo
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/staff/new')} className="bg-white">
+                    <Plus className="mr-2 h-4 w-4" /> Novo Funcionário
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/staff/org-chart')} className="bg-white">
+                    <Users className="mr-2 h-4 w-4" /> Organograma
+                </Button>
+            </div>
+        </div>
     );
 }
