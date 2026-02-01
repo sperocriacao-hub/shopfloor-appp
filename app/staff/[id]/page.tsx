@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Save, Shield } from "lucide-react";
 import { AppModule, UserPermissions } from "@/types";
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from "recharts";
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 const ALL_MODULES: AppModule[] = [
     'dashboard', 'orders', 'assets', 'products', 'engineering',
@@ -481,57 +481,113 @@ export default function EditStaffPage() {
                     </Card>
                 )}
 
-                {/* 7. Desempenho & HST (Radar Chart) */}
+                {/* 7. Desempenho & HST (Radar, Trends & Alerts) */}
                 <Card>
                     <CardHeader>
-                        <h3 className="font-semibold text-slate-900 border-b pb-2">7. Desempenho & HST (Média Recente)</h3>
+                        <h3 className="font-semibold text-slate-900 border-b pb-2">7. Desempenho & HST</h3>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[400px] w-full flex items-center justify-center">
-                            {(() => {
-                                const empEvals = dailyEvaluations.filter(e => e.employeeId === params.id);
-                                if (empEvals.length === 0) return <p className="text-slate-500">Sem avaliações registradas.</p>;
+                        {(() => {
+                            const empEvals = dailyEvaluations.filter(e => e.employeeId === params.id);
+                            if (empEvals.length === 0) return <p className="text-slate-500 py-8 text-center">Ainda sem avaliações registradas para gerar métricas.</p>;
 
-                                const total = empEvals.length;
-                                const avg = {
-                                    hst: empEvals.reduce((sum, e) => sum + e.hstScore, 0) / total,
-                                    epi: empEvals.reduce((sum, e) => sum + e.epiScore, 0) / total,
-                                    cleaning: empEvals.reduce((sum, e) => sum + e.postCleaningScore, 0) / total,
-                                    quality: empEvals.reduce((sum, e) => sum + e.qualityScore, 0) / total,
-                                    efficiency: empEvals.reduce((sum, e) => sum + e.efficiencyScore, 0) / total,
-                                    objectives: empEvals.reduce((sum, e) => sum + e.objectivesScore, 0) / total,
-                                    attitude: empEvals.reduce((sum, e) => sum + e.attitudeScore, 0) / total,
+                            const total = empEvals.length;
+                            const avg = {
+                                hst: empEvals.reduce((sum, e) => sum + e.hstScore, 0) / total,
+                                epi: empEvals.reduce((sum, e) => sum + e.epiScore, 0) / total,
+                                cleaning: empEvals.reduce((sum, e) => sum + e.postCleaningScore, 0) / total,
+                                quality: empEvals.reduce((sum, e) => sum + e.qualityScore, 0) / total,
+                                efficiency: empEvals.reduce((sum, e) => sum + e.efficiencyScore, 0) / total,
+                                objectives: empEvals.reduce((sum, e) => sum + e.objectivesScore, 0) / total,
+                                attitude: empEvals.reduce((sum, e) => sum + e.attitudeScore, 0) / total,
+                            };
+
+                            const overallAvg = Object.values(avg).reduce((a, b) => a + b, 0) / 7;
+
+                            // Radar Data
+                            const radarData = [
+                                { subject: 'HST', A: avg.hst, fullMark: 4 },
+                                { subject: 'EPI', A: avg.epi, fullMark: 4 },
+                                { subject: '5S', A: avg.cleaning, fullMark: 4 },
+                                { subject: 'Quali', A: avg.quality, fullMark: 4 },
+                                { subject: 'Efic', A: avg.efficiency, fullMark: 4 },
+                                { subject: 'Obj', A: avg.objectives, fullMark: 4 },
+                                { subject: 'Post', A: avg.attitude, fullMark: 4 },
+                            ];
+
+                            // Trend Data (Last 30 Days)
+                            const sortedEvals = [...empEvals].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(-30);
+                            const trendData = sortedEvals.map(ev => {
+                                const dayAvg = (ev.hstScore + ev.epiScore + ev.postCleaningScore + ev.qualityScore + ev.efficiencyScore + ev.objectivesScore + ev.attitudeScore) / 7;
+                                return {
+                                    date: new Date(ev.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' }),
+                                    score: Number(dayAvg.toFixed(1)),
+                                    hst: ev.hstScore
                                 };
+                            });
 
-                                const data = [
-                                    { subject: 'HST', A: avg.hst, fullMark: 4 },
-                                    { subject: 'EPI', A: avg.epi, fullMark: 4 },
-                                    { subject: 'Limpeza', A: avg.cleaning, fullMark: 4 },
-                                    { subject: 'Qualidade', A: avg.quality, fullMark: 4 },
-                                    { subject: 'Eficiência', A: avg.efficiency, fullMark: 4 },
-                                    { subject: 'Objetivos', A: avg.objectives, fullMark: 4 },
-                                    { subject: 'Atitude', A: avg.attitude, fullMark: 4 },
-                                ];
+                            return (
+                                <div className="space-y-6">
+                                    {/* Score / Recognition Badges */}
+                                    <div className="flex flex-wrap gap-4 justify-between items-center bg-slate-50 p-4 rounded-lg border">
+                                        <div className="flex items-center gap-6">
+                                            <div className="text-center">
+                                                <p className="text-xs text-slate-500 uppercase tracking-wide">Média Geral</p>
+                                                <p className={`text-3xl font-bold ${overallAvg >= 3.5 ? 'text-green-600' : overallAvg < 2.5 ? 'text-red-500' : 'text-yellow-600'}`}>
+                                                    {overallAvg.toFixed(1)}
+                                                </p>
+                                            </div>
 
-                                return (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
-                                            <PolarGrid />
-                                            <PolarAngleAxis dataKey="subject" />
-                                            <PolarRadiusAxis angle={30} domain={[0, 4]} />
-                                            <Radar
-                                                name="Média do Colaborador"
-                                                dataKey="A"
-                                                stroke="#2563eb"
-                                                fill="#3b82f6"
-                                                fillOpacity={0.6}
-                                            />
-                                            <Legend />
-                                        </RadarChart>
-                                    </ResponsiveContainer>
-                                );
-                            })()}
-                        </div>
+                                            {overallAvg >= 3.8 && (
+                                                <div className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-bold border border-yellow-300 flex items-center gap-2 animate-pulse">
+                                                    ★ Star Performer
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            {avg.epi < 2.5 && (
+                                                <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-bold border border-red-300 flex items-center gap-2">
+                                                    <Shield className="w-4 h-4" /> Alerta EPI
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[350px]">
+                                        {/* Chart 1: Radar */}
+                                        <div className="w-full h-full">
+                                            <h4 className="text-sm font-semibold text-center text-slate-500 mb-2">Perfil de Competências</h4>
+                                            <ResponsiveContainer width="100%" height="90%">
+                                                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                                                    <PolarGrid />
+                                                    <PolarAngleAxis dataKey="subject" />
+                                                    <PolarRadiusAxis angle={30} domain={[0, 4]} />
+                                                    <Radar name="Employee" dataKey="A" stroke="#2563eb" fill="#3b82f6" fillOpacity={0.6} />
+                                                    <Tooltip />
+                                                </RadarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+
+                                        {/* Chart 2: Trends */}
+                                        <div className="w-full h-full">
+                                            <h4 className="text-sm font-semibold text-center text-slate-500 mb-2">Evolução (30 Dias)</h4>
+                                            <ResponsiveContainer width="100%" height="90%">
+                                                <LineChart data={trendData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                                    <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
+                                                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                                                    <YAxis domain={[0, 4]} />
+                                                    <Tooltip />
+                                                    <Legend />
+                                                    <Line type="monotone" dataKey="score" stroke="#2563eb" name="Geral" strokeWidth={2} dot={{ r: 2 }} />
+                                                    <Line type="monotone" dataKey="hst" stroke="#f97316" name="HST" strokeWidth={2} strokeDasharray="3 3" dot={{ r: 2 }} />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </CardContent>
                 </Card>
 

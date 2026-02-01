@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Shield, AlertTriangle, FileCheck, ClipboardList, Plus, Search, Calendar } from "lucide-react";
-import { SafetyIncident } from "@/types";
+import { Shield, AlertTriangle, FileCheck, ClipboardList, Plus, Search, Calendar, ChevronRight, Settings } from "lucide-react";
+import { SafetyIncident, Certification, EmployeeCertification } from "@/types";
 
 export default function HSTPage() {
+    const router = useRouter();
     const {
         employees,
         certifications,
@@ -39,6 +41,17 @@ export default function HSTPage() {
         status: 'open'
     });
     const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+
+    // Cert Management State
+    const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+    const [certForm, setCertForm] = useState<Partial<Certification>>({ validityMonths: 12, riskLevel: 'low' });
+
+    // Assign Cert State
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [assignForm, setAssignForm] = useState<{ empId: string, certId: string, date: string }>({ empId: "", certId: "", date: "" });
+
+    // Derived Areas
+    const areas = Array.from(new Set(employees.map(e => e.area).filter(Boolean))).sort();
 
     // Filter Logic
     const activeIncidents = safetyIncidents.filter(i => i.status !== 'closed');
@@ -68,6 +81,43 @@ export default function HSTPage() {
         toast.success("Incidente reportado com sucesso.");
         setIsIncidentModalOpen(false);
         setIncidentForm({ type: 'near_miss', severity: 'low', status: 'open' });
+    };
+
+    const handleCreateCert = () => {
+        if (!certForm.name || !certForm.validityMonths) return;
+        const newCert: Certification = {
+            id: `cert-${Date.now()}`,
+            name: certForm.name,
+            description: certForm.description,
+            validityMonths: Number(certForm.validityMonths),
+            riskLevel: certForm.riskLevel as any || 'low'
+        };
+        addCertification(newCert);
+        toast.success("Certificação criada!");
+        setIsCertModalOpen(false);
+    };
+
+    const handleAssignCert = () => {
+        if (!assignForm.empId || !assignForm.certId || !assignForm.date) return;
+
+        // Calculate expiry
+        const certDef = certifications.find(c => c.id === assignForm.certId);
+        const issueDate = new Date(assignForm.date);
+        const expiryDate = new Date(issueDate);
+        if (certDef) expiryDate.setMonth(expiryDate.getMonth() + certDef.validityMonths);
+
+        const newAssignment: EmployeeCertification = {
+            id: `ec-${Date.now()}`,
+            employeeId: assignForm.empId,
+            certificationId: assignForm.certId,
+            issueDate: assignForm.date,
+            expiryDate: expiryDate.toISOString().split('T')[0],
+            status: 'active'
+        };
+
+        assignCertification(newAssignment);
+        toast.success("Certificação atribuída!");
+        setIsAssignModalOpen(false);
     };
 
     return (
@@ -146,8 +196,8 @@ export default function HSTPage() {
                             <CardContent>
                                 <div className="space-y-4">
                                     {safetyIncidents.slice(0, 5).map(incident => (
-                                        <div key={incident.id} className="flex items-center justify-between border-b pb-2 last:border-0">
-                                            <div>
+                                        <div key={incident.id} className="flex items-center justify-between border-b pb-2 last:border-0 group cursor-pointer hover:bg-slate-50 transition-colors p-2 rounded" onClick={() => router.push(`/staff/hst/incidents/${incident.id}`)}>
+                                            <div className="flex-1">
                                                 <p className="font-medium text-sm">{incident.description}</p>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <Badge variant={incident.severity === 'critical' ? 'destructive' : 'outline'}>
@@ -156,9 +206,7 @@ export default function HSTPage() {
                                                     <span className="text-xs text-slate-500">{new Date(incident.createdAt || "").toLocaleDateString()}</span>
                                                 </div>
                                             </div>
-                                            <Badge variant={incident.status === 'closed' ? 'secondary' : 'default'}>
-                                                {incident.status}
-                                            </Badge>
+                                            <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-blue-500" />
                                         </div>
                                     ))}
                                     {safetyIncidents.length === 0 && <p className="text-sm text-slate-500">Nenhum incidente registrado.</p>}
@@ -170,19 +218,27 @@ export default function HSTPage() {
 
                 {/* CERTIFICATIONS MATRIX */}
                 <TabsContent value="certifications" className="space-y-4">
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setIsCertModalOpen(true)}>
+                            <Settings className="w-4 h-4 mr-2" /> Gerir Certificações
+                        </Button>
+                        <Button size="sm" onClick={() => setIsAssignModalOpen(true)}>
+                            <Plus className="w-4 h-4 mr-2" /> Atribuir Formação
+                        </Button>
+                    </div>
                     <Card>
                         <CardHeader>
                             <CardTitle>Matriz de Aptidão</CardTitle>
                             <CardDescription>Status das formações por colaborador</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="rounded-md border">
+                            <div className="rounded-md border overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Colaborador</TableHead>
+                                            <TableHead className="min-w-[200px]">Colaborador</TableHead>
                                             {certifications.map(cert => (
-                                                <TableHead key={cert.id} className="text-center">{cert.name}</TableHead>
+                                                <TableHead key={cert.id} className="text-center min-w-[100px]">{cert.name}</TableHead>
                                             ))}
                                         </TableRow>
                                     </TableHeader>
@@ -197,11 +253,18 @@ export default function HSTPage() {
                                                     return (
                                                         <TableCell key={cert.id} className="text-center">
                                                             {empCert ? (
-                                                                <Badge variant={isExpired ? "destructive" : "default"} className="w-6 h-6 p-0 rounded-full flex items-center justify-center">
-                                                                    {isExpired ? "!" : "✓"}
-                                                                </Badge>
+                                                                <div className="flex flex-col items-center">
+                                                                    <Badge variant={isExpired ? "destructive" : "default"} className={`w-6 h-6 p-0 rounded-full flex items-center justify-center ${!isExpired && "bg-green-500 hover:bg-green-600"}`}>
+                                                                        {isExpired ? "!" : "✓"}
+                                                                    </Badge>
+                                                                    {empCert.expiryDate && (
+                                                                        <span className="text-[10px] text-slate-400 mt-1">
+                                                                            {new Date(empCert.expiryDate).toLocaleDateString(undefined, { month: '2-digit', year: '2-digit' })}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             ) : (
-                                                                <span className="text-slate-300">-</span>
+                                                                <span className="text-slate-200">·</span>
                                                             )}
                                                         </TableCell>
                                                     );
@@ -230,6 +293,7 @@ export default function HSTPage() {
                                         <TableHead>Descrição</TableHead>
                                         <TableHead>Severidade</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Ações</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -244,6 +308,11 @@ export default function HSTPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="capitalize">{inc.status}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button size="sm" variant="outline" onClick={() => router.push(`/staff/hst/incidents/${inc.id}`)}>
+                                                    Analisar 8D
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -259,6 +328,7 @@ export default function HSTPage() {
                     <DialogHeader>
                         <DialogTitle>Reportar Incidente de Segurança</DialogTitle>
                     </DialogHeader>
+                    {/* ... Same Form Content ... */}
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -267,9 +337,7 @@ export default function HSTPage() {
                                     value={incidentForm.type}
                                     onValueChange={(val) => setIncidentForm(p => ({ ...p, type: val as any }))}
                                 >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="accident">Acidente</SelectItem>
                                         <SelectItem value="incident">Incidente</SelectItem>
@@ -283,9 +351,7 @@ export default function HSTPage() {
                                     value={incidentForm.severity}
                                     onValueChange={(val) => setIncidentForm(p => ({ ...p, severity: val as any }))}
                                 >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="low">Baixa</SelectItem>
                                         <SelectItem value="medium">Média</SelectItem>
@@ -305,11 +371,18 @@ export default function HSTPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Área / Local</Label>
-                            <Input
-                                placeholder="Ex: Linha de Montagem A"
-                                value={incidentForm.area || ""}
-                                onChange={e => setIncidentForm(p => ({ ...p, area: e.target.value }))}
-                            />
+                            <Select
+                                value={incidentForm.area}
+                                onValueChange={(val) => setIncidentForm(p => ({ ...p, area: val }))}
+                            >
+                                <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
+                                <SelectContent>
+                                    {areas.map(area => (
+                                        <SelectItem key={area} value={area}>{area}</SelectItem>
+                                    ))}
+                                    <SelectItem value="Outro">Outro / Externo</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
                             <Label>Causa Raiz (Se conhecida)</Label>
@@ -324,6 +397,81 @@ export default function HSTPage() {
                         <Button variant="outline" onClick={() => setIsIncidentModalOpen(false)}>Cancelar</Button>
                         <Button variant="destructive" onClick={handleReportIncident}>Reportar</Button>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* CREATE CERT MODAL */}
+            <Dialog open={isCertModalOpen} onOpenChange={setIsCertModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Criar Nova Certificação</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Nome da Formação</Label>
+                            <Input
+                                placeholder="Ex: Operação de Empilhador"
+                                value={certForm.name || ""}
+                                onChange={e => setCertForm(p => ({ ...p, name: e.target.value }))}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Validade (Meses)</Label>
+                                <Input type="number" value={certForm.validityMonths} onChange={e => setCertForm(p => ({ ...p, validityMonths: Number(e.target.value) }))} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Nível de Risco</Label>
+                                <Select value={certForm.riskLevel} onValueChange={v => setCertForm(p => ({ ...p, riskLevel: v as any }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">Baixo</SelectItem>
+                                        <SelectItem value="medium">Médio</SelectItem>
+                                        <SelectItem value="high">Alto</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+                    <Button onClick={handleCreateCert}>Criar Certificação</Button>
+                </DialogContent>
+            </Dialog>
+
+            {/* ASSIGN CERT MODAL */}
+            <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Atribuir Formação a Colaborador</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Colaborador</Label>
+                            <Select value={assignForm.empId} onValueChange={v => setAssignForm(p => ({ ...p, empId: v }))}>
+                                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectContent className="max-h-[300px]">
+                                    {employees.filter(e => e.hrStatus === 'active').sort((a, b) => a.name.localeCompare(b.name)).map(e => (
+                                        <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Certificação</Label>
+                            <Select value={assignForm.certId} onValueChange={v => setAssignForm(p => ({ ...p, certId: v }))}>
+                                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectContent>
+                                    {certifications.map(c => (
+                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Data de Emissão</Label>
+                            <Input type="date" value={assignForm.date} onChange={e => setAssignForm(p => ({ ...p, date: e.target.value }))} />
+                        </div>
+                    </div>
+                    <Button onClick={handleAssignCert}>Atribuir</Button>
                 </DialogContent>
             </Dialog>
         </div>
