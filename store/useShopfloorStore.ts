@@ -13,7 +13,8 @@ import {
     ProductPart, OrderPart,
     RfidReader, IotEvent,
     MaintenanceOrder, MaintenancePin, MoldGeometry,
-    UserSettings, UserPermissions, AuditLog, EmployeeWithPermissions, AppModule
+    UserSettings, UserPermissions, AuditLog, EmployeeWithPermissions, AppModule,
+    DailyEvaluation, Certification, EmployeeCertification, SafetyIncident, SafetyInspection
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
