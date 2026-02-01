@@ -83,7 +83,7 @@ export default function IncidentDetailsPage() {
             status: 'investigating' // Auto move to investigating
         };
 
-        updateIncident(updatedIncident);
+        updateIncident(incident.id, updatedIncident);
         toast.success("Análise salva com sucesso!");
         router.push('/staff/hst');
     };

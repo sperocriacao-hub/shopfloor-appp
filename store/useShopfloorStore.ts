@@ -312,6 +312,7 @@ interface ShopfloorState {
     addCertification: (certification: Certification) => void;
     assignCertification: (empCert: EmployeeCertification) => void;
     reportIncident: (incident: SafetyIncident) => void;
+    updateIncident: (id: string, updates: Partial<SafetyIncident>) => void;
     addInspection: (inspection: SafetyInspection) => void;
 
     // --- Shopfloor V9: IAM Actions ---
@@ -1139,7 +1140,6 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 } else {
                     toast.success("Importação concluída com sucesso!");
                 }
-
             },
 
             addPpeRequest: async (req) => {
@@ -1557,6 +1557,17 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     reported_by: incident.reportedBy
                 });
                 if (error) console.error("Error reporting incident:", error);
+            },
+
+            updateIncident: async (id, updates) => {
+                set(s => ({
+                    safetyIncidents: s.safetyIncidents.map(i => i.id === id ? { ...i, ...updates } : i)
+                }));
+                const { error } = await supabase.from('safety_incidents').update(updates).eq('id', id);
+                if (error) {
+                    console.error("Failed to update incident:", error);
+                    toast.error("Erro ao atualizar incidente: " + error.message);
+                }
             },
 
             addInspection: async (inspection) => {
