@@ -562,3 +562,63 @@ export interface EmployeeWithPermissions extends Employee {
     settings?: UserSettings;
     pinHash?: string; // For PIN login
 }
+// --- Shopfloor V13: HR & HST ---
+export interface DailyEvaluation {
+    id: string;
+    employeeId: string;
+    supervisorId?: string;
+    date: string;
+    hstScore: number;
+    epiScore: number;
+    postCleaningScore: number;
+    qualityScore: number;
+    efficiencyScore: number;
+    objectivesScore: number;
+    attitudeScore: number;
+    notes?: string;
+    createdAt?: string;
+}
+
+export interface Certification {
+    id: string;
+    name: string;
+    description?: string;
+    validityMonths: number;
+    riskLevel: 'low' | 'medium' | 'high';
+    requiredForStations?: string[];
+}
+
+export interface EmployeeCertification {
+    id: string;
+    employeeId: string;
+    certificationId: string;
+    issueDate: string;
+    expiryDate?: string;
+    status: 'active' | 'expired' | 'suspended';
+    pdfUrl?: string;
+}
+
+export interface SafetyIncident {
+    id: string;
+    description: string;
+    type: 'accident' | 'incident' | 'near_miss';
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    area?: string;
+    images?: string[];
+    rootCause?: string;
+    actionsTaken?: string;
+    status: 'open' | 'investigating' | 'closed';
+    reportedBy?: string;
+    createdAt?: string;
+    resolvedAt?: string;
+}
+
+export interface SafetyInspection {
+    id: string;
+    date: string;
+    area: string;
+    inspectorId?: string;
+    overallScore?: number;
+    checklistData?: Record<string, any>;
+    createdAt?: string;
+}

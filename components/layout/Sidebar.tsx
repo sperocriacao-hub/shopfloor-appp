@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2, Smartphone, UserCheck, ClipboardCheck } from 'lucide-react';
+import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2, Smartphone, UserCheck, ClipboardCheck, Shield } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,8 @@ export function Sidebar() {
         { name: 'Engenharia Avançada', href: '/engineering', icon: Microscope, module: 'engineering' }, // Changed to Microscope (Wrench used in Admin)
         { name: 'Materiais (AS400)', href: '/consumables', icon: BarChart2, module: 'consumables' }, // Changed to BarChart2
         { name: 'Recursos Humanos', href: '/staff', icon: Users, module: 'staff' },
+        { name: 'Avaliações Diárias', href: '/staff/evaluations', icon: UserCheck, module: 'staff' }, // Linked to staff module perms for now or supervisor
+        { name: 'HST & Segurança', href: '/staff/hst', icon: Shield, module: 'staff' },
         { name: 'Qualidade', href: '/quality', icon: ClipboardCheck, module: 'quality' },
         { name: 'Ferramentaria', href: '/tools', icon: Hammer, module: 'tools' }, // Changed to Hammer
         { name: 'Moldes', href: '/molds', icon: Anchor, module: 'molds' },

@@ -1,0 +1,331 @@
+"use client";
+
+import { useState } from "react";
+import { useShopfloorStore } from "@/store/useShopfloorStore";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { Shield, AlertTriangle, FileCheck, ClipboardList, Plus, Search, Calendar } from "lucide-react";
+import { SafetyIncident } from "@/types";
+
+export default function HSTPage() {
+    const {
+        employees,
+        certifications,
+        employeeCertifications,
+        safetyIncidents,
+        safetyInspections,
+        addCertification,
+        assignCertification,
+        reportIncident,
+        addInspection,
+        currentUser
+    } = useShopfloorStore();
+
+    const [activeTab, setActiveTab] = useState("overview");
+
+    // Incident Form State
+    const [incidentForm, setIncidentForm] = useState<Partial<SafetyIncident>>({
+        type: 'near_miss',
+        severity: 'low',
+        status: 'open'
+    });
+    const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+
+    // Filter Logic
+    const activeIncidents = safetyIncidents.filter(i => i.status !== 'closed');
+    const recentInspections = safetyInspections.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+
+    const handleReportIncident = () => {
+        if (!incidentForm.description || !incidentForm.type || !incidentForm.severity) {
+            toast.error("Preencha os campos obrigatórios.");
+            return;
+        }
+
+        const newIncident: SafetyIncident = {
+            id: `inc-${Date.now()}`,
+            description: incidentForm.description || "",
+            type: incidentForm.type as any,
+            severity: incidentForm.severity as any,
+            area: incidentForm.area,
+            rootCause: incidentForm.rootCause,
+            actionsTaken: incidentForm.actionsTaken,
+            status: 'open',
+            reportedBy: currentUser?.id,
+            createdAt: new Date().toISOString(),
+            images: incidentForm.images || []
+        };
+
+        reportIncident(newIncident);
+        toast.success("Incidente reportado com sucesso.");
+        setIsIncidentModalOpen(false);
+        setIncidentForm({ type: 'near_miss', severity: 'low', status: 'open' });
+    };
+
+    return (
+        <div className="p-6 space-y-6 max-w-[1600px] mx-auto pb-32">
+            <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                        <Shield className="h-8 w-8 text-blue-600" />
+                        Higiene e Segurança no Trabalho (HST)
+                    </h1>
+                    <p className="text-slate-500">Gestão de Certificações, Incidentes e Inspeções</p>
+                </div>
+                <div className="flex gap-2">
+                    <Button variant="destructive" onClick={() => setIsIncidentModalOpen(true)}>
+                        <AlertTriangle className="mr-2 h-4 w-4" /> Reportar Incidente
+                    </Button>
+                </div>
+            </div>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+                    <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+                    <TabsTrigger value="certifications">Matriz de Aptidão</TabsTrigger>
+                    <TabsTrigger value="incidents">Incidentes</TabsTrigger>
+                    <TabsTrigger value="inspections">Inspeções Diárias</TabsTrigger>
+                </TabsList>
+
+                {/* OVERVIEW TAB */}
+                <TabsContent value="overview" className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Incidentes Ativos</CardTitle>
+                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{activeIncidents.length}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    {activeIncidents.filter(i => i.severity === 'critical').length} Críticos
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Certificações a Expirar</CardTitle>
+                                <FileCheck className="h-4 w-4 text-yellow-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">
+                                    {employeeCertifications.filter(ec => ec.status === 'active').length}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Total Ativas
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Inspeções Realizadas</CardTitle>
+                                <ClipboardList className="h-4 w-4 text-blue-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{safetyInspections.length}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    Última: {recentInspections[0]?.date || "N/A"}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Incidentes Recentes</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {safetyIncidents.slice(0, 5).map(incident => (
+                                        <div key={incident.id} className="flex items-center justify-between border-b pb-2 last:border-0">
+                                            <div>
+                                                <p className="font-medium text-sm">{incident.description}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <Badge variant={incident.severity === 'critical' ? 'destructive' : 'outline'}>
+                                                        {incident.severity}
+                                                    </Badge>
+                                                    <span className="text-xs text-slate-500">{new Date(incident.createdAt || "").toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                            <Badge variant={incident.status === 'closed' ? 'secondary' : 'default'}>
+                                                {incident.status}
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                    {safetyIncidents.length === 0 && <p className="text-sm text-slate-500">Nenhum incidente registrado.</p>}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                {/* CERTIFICATIONS MATRIX */}
+                <TabsContent value="certifications" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Matriz de Aptidão</CardTitle>
+                            <CardDescription>Status das formações por colaborador</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Colaborador</TableHead>
+                                            {certifications.map(cert => (
+                                                <TableHead key={cert.id} className="text-center">{cert.name}</TableHead>
+                                            ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {employees.filter(e => e.hrStatus === 'active').map(emp => (
+                                            <TableRow key={emp.id}>
+                                                <TableCell className="font-medium">{emp.name}</TableCell>
+                                                {certifications.map(cert => {
+                                                    const empCert = employeeCertifications.find(ec => ec.employeeId === emp.id && ec.certificationId === cert.id);
+                                                    const isExpired = empCert?.expiryDate && new Date(empCert.expiryDate) < new Date();
+
+                                                    return (
+                                                        <TableCell key={cert.id} className="text-center">
+                                                            {empCert ? (
+                                                                <Badge variant={isExpired ? "destructive" : "default"} className="w-6 h-6 p-0 rounded-full flex items-center justify-center">
+                                                                    {isExpired ? "!" : "✓"}
+                                                                </Badge>
+                                                            ) : (
+                                                                <span className="text-slate-300">-</span>
+                                                            )}
+                                                        </TableCell>
+                                                    );
+                                                })}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* INCIDENTS TAB */}
+                <TabsContent value="incidents">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Histórico de Incidentes</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Data</TableHead>
+                                        <TableHead>Tipo</TableHead>
+                                        <TableHead>Descrição</TableHead>
+                                        <TableHead>Severidade</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {safetyIncidents.map(inc => (
+                                        <TableRow key={inc.id}>
+                                            <TableCell>{new Date(inc.createdAt || "").toLocaleDateString()}</TableCell>
+                                            <TableCell className="capitalize">{inc.type.replace('_', ' ')}</TableCell>
+                                            <TableCell>{inc.description}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={inc.severity === 'critical' ? 'destructive' : inc.severity === 'high' ? 'destructive' : 'outline'}>
+                                                    {inc.severity}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="capitalize">{inc.status}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+
+            {/* REPORT INCIDENT MODAL */}
+            <Dialog open={isIncidentModalOpen} onOpenChange={setIsIncidentModalOpen}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>Reportar Incidente de Segurança</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Tipo</Label>
+                                <Select
+                                    value={incidentForm.type}
+                                    onValueChange={(val) => setIncidentForm(p => ({ ...p, type: val as any }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="accident">Acidente</SelectItem>
+                                        <SelectItem value="incident">Incidente</SelectItem>
+                                        <SelectItem value="near_miss">Near Miss (Quase Acidente)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Severidade</Label>
+                                <Select
+                                    value={incidentForm.severity}
+                                    onValueChange={(val) => setIncidentForm(p => ({ ...p, severity: val as any }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">Baixa</SelectItem>
+                                        <SelectItem value="medium">Média</SelectItem>
+                                        <SelectItem value="high">Alta</SelectItem>
+                                        <SelectItem value="critical">Crítica</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Descrição do Ocorrido</Label>
+                            <Textarea
+                                placeholder="Descreva o que aconteceu em detalhes..."
+                                value={incidentForm.description || ""}
+                                onChange={e => setIncidentForm(p => ({ ...p, description: e.target.value }))}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Área / Local</Label>
+                            <Input
+                                placeholder="Ex: Linha de Montagem A"
+                                value={incidentForm.area || ""}
+                                onChange={e => setIncidentForm(p => ({ ...p, area: e.target.value }))}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Causa Raiz (Se conhecida)</Label>
+                            <Textarea
+                                placeholder="Por que aconteceu?"
+                                value={incidentForm.rootCause || ""}
+                                onChange={e => setIncidentForm(p => ({ ...p, rootCause: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsIncidentModalOpen(false)}>Cancelar</Button>
+                        <Button variant="destructive" onClick={handleReportIncident}>Reportar</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

@@ -300,6 +300,19 @@ interface ShopfloorState {
     updateMaintenancePin: (id: string, updates: Partial<MaintenancePin>) => void;
     setMoldGeometries: (geometries: MoldGeometry[]) => void;
 
+    // --- Shopfloor V13: HR & HST ---
+    dailyEvaluations: DailyEvaluation[];
+    certifications: Certification[];
+    employeeCertifications: EmployeeCertification[];
+    safetyIncidents: SafetyIncident[];
+    safetyInspections: SafetyInspection[];
+
+    addEvaluation: (evaluation: DailyEvaluation) => void;
+    addCertification: (certification: Certification) => void;
+    assignCertification: (empCert: EmployeeCertification) => void;
+    reportIncident: (incident: SafetyIncident) => void;
+    addInspection: (inspection: SafetyInspection) => void;
+
     // --- Shopfloor V9: IAM Actions ---
     currentUser: EmployeeWithPermissions | null;
     auditLogs: AuditLog[];
@@ -597,6 +610,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
             // Shopfloor V9 (IAM)
             currentUser: null,
             auditLogs: [],
+            // V13 HR/HST
+            dailyEvaluations: [],
+            certifications: [],
+            employeeCertifications: [],
+            safetyIncidents: [],
+            safetyInspections: [],
 
             // Execution Data
             orders: [],
@@ -1475,6 +1494,83 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // Mock persist via update if needed or just sync
             },
 
+            // --- Shopfloor V13: HR & HST Actions ---
+            addEvaluation: async (evaluation) => {
+                set(s => ({ dailyEvaluations: [...s.dailyEvaluations, evaluation] }));
+                const { error } = await supabase.from('daily_evaluations').insert({
+                    id: evaluation.id,
+                    employee_id: evaluation.employeeId,
+                    supervisor_id: evaluation.supervisorId,
+                    date: evaluation.date,
+                    hst_score: evaluation.hstScore,
+                    epi_score: evaluation.epiScore,
+                    post_cleaning_score: evaluation.postCleaningScore,
+                    quality_score: evaluation.qualityScore,
+                    efficiency_score: evaluation.efficiencyScore,
+                    objectives_score: evaluation.objectivesScore,
+                    attitude_score: evaluation.attitudeScore,
+                    notes: evaluation.notes
+                });
+                if (error) console.error("Error adding evaluation:", error);
+            },
+
+            addCertification: async (cert) => {
+                set(s => ({ certifications: [...s.certifications, cert] }));
+                const { error } = await supabase.from('certifications').insert({
+                    id: cert.id,
+                    name: cert.name,
+                    description: cert.description,
+                    validity_months: cert.validityMonths,
+                    risk_level: cert.riskLevel,
+                    required_for_stations: cert.requiredForStations
+                });
+                if (error) console.error("Error adding certification:", error);
+            },
+
+            assignCertification: async (empCert) => {
+                set(s => ({ employeeCertifications: [...s.employeeCertifications, empCert] }));
+                const { error } = await supabase.from('employee_certifications').insert({
+                    id: empCert.id,
+                    employee_id: empCert.employeeId,
+                    certification_id: empCert.certificationId,
+                    issue_date: empCert.issueDate,
+                    expiry_date: empCert.expiryDate,
+                    status: empCert.status,
+                    pdf_url: empCert.pdfUrl
+                });
+                if (error) console.error("Error assigning certification:", error);
+            },
+
+            reportIncident: async (incident) => {
+                set(s => ({ safetyIncidents: [...s.safetyIncidents, incident] }));
+                const { error } = await supabase.from('safety_incidents').insert({
+                    id: incident.id,
+                    description: incident.description,
+                    type: incident.type,
+                    severity: incident.severity,
+                    area: incident.area,
+                    images: incident.images,
+                    root_cause: incident.rootCause,
+                    actions_taken: incident.actionsTaken,
+                    status: incident.status,
+                    reported_by: incident.reportedBy
+                });
+                if (error) console.error("Error reporting incident:", error);
+            },
+
+            addInspection: async (inspection) => {
+                set(s => ({ safetyInspections: [...s.safetyInspections, inspection] }));
+                const { error } = await supabase.from('safety_inspections').insert({
+                    id: inspection.id,
+                    date: inspection.date,
+                    area: inspection.area,
+                    inspector_id: inspection.inspectorId,
+                    overall_score: inspection.overallScore,
+                    checklist_data: inspection.checklistData
+                });
+                if (error) console.error("Error adding inspection:", error);
+            },
+
             syncData: async () => {
                 console.log("[ShopfloorStore] Syncing data from DB...");
                 // Employees
@@ -1549,9 +1645,95 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     const { data: moldLogs } = await supabase.from('mold_maintenance_logs').select('*');
                     if (moldLogs) set({ moldMaintenanceLogs: moldLogs.map(mapDbToMoldMaintenanceLog) });
 
-                    // New Tables V8 (Maintenance)
-                    const { data: moldOrders } = await supabase.from('mold_maintenance_orders').select('*'); // Check table name
-                    // Mapped via specific function if needed, or generic
+                    // V13 HR/HST Sync
+                    try {
+                        const { data: evals } = await supabase.from('daily_evaluations').select('*');
+                        if (evals && evals.length > 0) {
+                            set({
+                                dailyEvaluations: evals.map(e => ({
+                                    id: e.id,
+                                    employeeId: e.employee_id,
+                                    supervisorId: e.supervisor_id,
+                                    date: e.date,
+                                    hstScore: e.hst_score,
+                                    epiScore: e.epi_score,
+                                    postCleaningScore: e.post_cleaning_score,
+                                    qualityScore: e.quality_score,
+                                    efficiencyScore: e.efficiency_score,
+                                    objectivesScore: e.objectives_score,
+                                    attitudeScore: e.attitude_score,
+                                    notes: e.notes,
+                                    createdAt: e.created_at
+                                }))
+                            });
+                        }
+
+                        const { data: certs } = await supabase.from('certifications').select('*');
+                        if (certs && certs.length > 0) {
+                            set({
+                                certifications: certs.map(c => ({
+                                    id: c.id,
+                                    name: c.name,
+                                    description: c.description,
+                                    validityMonths: c.validity_months,
+                                    riskLevel: c.risk_level,
+                                    requiredForStations: c.required_for_stations
+                                }))
+                            });
+                        }
+
+                        const { data: empCerts } = await supabase.from('employee_certifications').select('*');
+                        if (empCerts && empCerts.length > 0) {
+                            set({
+                                employeeCertifications: empCerts.map(ec => ({
+                                    id: ec.id,
+                                    employeeId: ec.employee_id,
+                                    certificationId: ec.certification_id,
+                                    issueDate: ec.issue_date,
+                                    expiryDate: ec.expiry_date,
+                                    status: ec.status,
+                                    pdfUrl: ec.pdf_url
+                                }))
+                            });
+                        }
+
+                        const { data: incidents } = await supabase.from('safety_incidents').select('*');
+                        if (incidents && incidents.length > 0) {
+                            set({
+                                safetyIncidents: incidents.map(i => ({
+                                    id: i.id,
+                                    description: i.description,
+                                    type: i.type,
+                                    severity: i.severity,
+                                    area: i.area,
+                                    images: i.images,
+                                    rootCause: i.root_cause,
+                                    actionsTaken: i.actions_taken,
+                                    status: i.status,
+                                    reportedBy: i.reported_by,
+                                    createdAt: i.created_at,
+                                    resolvedAt: i.resolved_at
+                                }))
+                            });
+                        }
+
+                        const { data: inspections } = await supabase.from('safety_inspections').select('*');
+                        if (inspections && inspections.length > 0) {
+                            set({
+                                safetyInspections: inspections.map(i => ({
+                                    id: i.id,
+                                    date: i.date,
+                                    area: i.area,
+                                    inspectorId: i.inspector_id,
+                                    overallScore: i.overall_score,
+                                    checklistData: i.checklist_data,
+                                    createdAt: i.created_at
+                                }))
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Sync Error: V13 HR/HST", e);
+                    }
                     // Check if mapDbToMaintenanceOrder exists? If not, we skip or map manually
                     // Assuming types match generic
 

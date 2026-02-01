@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Save, Shield } from "lucide-react";
 import { AppModule, UserPermissions } from "@/types";
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from "recharts";
 
 const ALL_MODULES: AppModule[] = [
     'dashboard', 'orders', 'assets', 'products', 'engineering',
@@ -23,7 +24,7 @@ const DEFAULT_PERMISSIONS: UserPermissions = {
 export default function EditStaffPage() {
     const router = useRouter();
     const params = useParams();
-    const { employees, updateEmployee, assets } = useShopfloorStore();
+    const { employees, updateEmployee, assets, dailyEvaluations } = useShopfloorStore();
     const [isLoading, setIsLoading] = useState(false);
 
     // Derive unique areas from assets
@@ -479,6 +480,60 @@ export default function EditStaffPage() {
                         </CardContent>
                     </Card>
                 )}
+
+                {/* 7. Desempenho & HST (Radar Chart) */}
+                <Card>
+                    <CardHeader>
+                        <h3 className="font-semibold text-slate-900 border-b pb-2">7. Desempenho & HST (Média Recente)</h3>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[400px] w-full flex items-center justify-center">
+                            {(() => {
+                                const empEvals = dailyEvaluations.filter(e => e.employeeId === params.id);
+                                if (empEvals.length === 0) return <p className="text-slate-500">Sem avaliações registradas.</p>;
+
+                                const total = empEvals.length;
+                                const avg = {
+                                    hst: empEvals.reduce((sum, e) => sum + e.hstScore, 0) / total,
+                                    epi: empEvals.reduce((sum, e) => sum + e.epiScore, 0) / total,
+                                    cleaning: empEvals.reduce((sum, e) => sum + e.postCleaningScore, 0) / total,
+                                    quality: empEvals.reduce((sum, e) => sum + e.qualityScore, 0) / total,
+                                    efficiency: empEvals.reduce((sum, e) => sum + e.efficiencyScore, 0) / total,
+                                    objectives: empEvals.reduce((sum, e) => sum + e.objectivesScore, 0) / total,
+                                    attitude: empEvals.reduce((sum, e) => sum + e.attitudeScore, 0) / total,
+                                };
+
+                                const data = [
+                                    { subject: 'HST', A: avg.hst, fullMark: 4 },
+                                    { subject: 'EPI', A: avg.epi, fullMark: 4 },
+                                    { subject: 'Limpeza', A: avg.cleaning, fullMark: 4 },
+                                    { subject: 'Qualidade', A: avg.quality, fullMark: 4 },
+                                    { subject: 'Eficiência', A: avg.efficiency, fullMark: 4 },
+                                    { subject: 'Objetivos', A: avg.objectives, fullMark: 4 },
+                                    { subject: 'Atitude', A: avg.attitude, fullMark: 4 },
+                                ];
+
+                                return (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                                            <PolarGrid />
+                                            <PolarAngleAxis dataKey="subject" />
+                                            <PolarRadiusAxis angle={30} domain={[0, 4]} />
+                                            <Radar
+                                                name="Média do Colaborador"
+                                                dataKey="A"
+                                                stroke="#2563eb"
+                                                fill="#3b82f6"
+                                                fillOpacity={0.6}
+                                            />
+                                            <Legend />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                );
+                            })()}
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <div className="flex justify-end pb-10 gap-3">
                     <Button type="button" variant="outline" onClick={() => router.push('/staff')}>
