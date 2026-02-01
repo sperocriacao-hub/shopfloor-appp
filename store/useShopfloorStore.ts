@@ -899,6 +899,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
             },
 
             updateEmployee: async (id, updates) => {
+                console.log(`[ShopfloorStore] Updating employee ${id}`, updates);
                 set((state) => ({
                     employees: state.employees.map(e => e.id === id ? { ...e, ...updates } : e)
                 }));
@@ -913,9 +914,12 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.hrStatus) toUpdate.status = updates.hrStatus;
                 if (updates.contractStartDate) toUpdate.contract_start_date = updates.contractStartDate;
                 if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
-                if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
                 if (updates.systemAccess) toUpdate.system_access = updates.systemAccess;
                 if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
+                // IAM V9
+                if (updates.role) toUpdate.role = updates.role;
+                if (updates.permissions) toUpdate.permissions = updates.permissions;
+                if (updates.settings) toUpdate.settings = updates.settings;
 
                 if (Object.keys(toUpdate).length > 0) {
                     const { error } = await supabase.from('employees').update(toUpdate).eq('id', id);
@@ -1472,6 +1476,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
             },
 
             syncData: async () => {
+                console.log("[ShopfloorStore] Syncing data from DB...");
                 // Employees
                 try {
                     const { data: emps, error } = await supabase.from('employees').select('*');

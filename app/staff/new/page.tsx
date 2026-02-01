@@ -6,6 +6,7 @@ import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Save } from "lucide-react";
+import { AppModule, UserPermissions } from "@/types";
 
 export default function NewStaffPage() {
     const router = useRouter();
@@ -39,7 +40,12 @@ export default function NewStaffPage() {
         hasSystemAccess: false,
         systemRole: "operator",
         username: "",
-        password: ""
+        password: "",
+        permissions: {
+            dashboard: 'read', orders: 'none', assets: 'none', products: 'none',
+            engineering: 'none', consumables: 'none', staff: 'none', quality: 'none',
+            tools: 'none', molds: 'none', supervisor: 'none', mobile: 'none', admin: 'none'
+        } as UserPermissions
     });
 
     // Derive workstations based on selected area
@@ -63,6 +69,22 @@ export default function NewStaffPage() {
         }
     };
 
+    const ALL_MODULES: AppModule[] = [
+        'dashboard', 'orders', 'assets', 'products', 'engineering',
+        'consumables', 'staff', 'quality', 'tools', 'molds',
+        'supervisor', 'mobile', 'admin'
+    ];
+
+    const handlePermissionChange = (module: AppModule, level: 'none' | 'read' | 'write' | 'admin') => {
+        setFormData(prev => ({
+            ...prev,
+            permissions: {
+                ...prev.permissions,
+                [module]: level
+            }
+        }));
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -77,7 +99,8 @@ export default function NewStaffPage() {
                     username: formData.username,
                     password: formData.password,
                     role: formData.systemRole as any
-                } : undefined
+                } : undefined,
+                permissions: formData.permissions
             });
             router.push("/staff");
         }, 500);
@@ -369,6 +392,52 @@ export default function NewStaffPage() {
                         </CardContent>
                     )}
                 </Card>
+
+                {/* 6. Matriz de Permissões (Copy from Edit Page) */}
+                {formData.hasSystemAccess && (
+                    <Card className="border-blue-300 ring-4 ring-blue-50">
+                        <CardHeader>
+                            <h3 className="font-semibold text-slate-900 border-b pb-2">
+                                6. Matriz de Permissões
+                            </h3>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left font-medium py-2 text-slate-500">Módulo</th>
+                                            <th className="text-center font-medium py-2 text-slate-500">Sem Acesso</th>
+                                            <th className="text-center font-medium py-2 text-slate-500">Leitura</th>
+                                            <th className="text-center font-medium py-2 text-slate-500">Escrita</th>
+                                            <th className="text-center font-medium py-2 text-slate-500">Admin</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {ALL_MODULES.map(module => (
+                                            <tr key={module} className="hover:bg-slate-50">
+                                                <td className="py-2 text-slate-700 font-medium capitalize">{module}</td>
+                                                {(['none', 'read', 'write', 'admin'] as const).map(level => (
+                                                    <td key={level} className="text-center py-2">
+                                                        <label className="cursor-pointer flex justify-center w-full h-full items-center">
+                                                            <input
+                                                                type="radio"
+                                                                name={`perm_${module}`}
+                                                                checked={formData.permissions ? formData.permissions[module] === level : level === 'none'}
+                                                                onChange={() => handlePermissionChange(module, level)}
+                                                                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                                            />
+                                                        </label>
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="flex justify-end pb-10">
                     <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700 min-w-[200px]" disabled={isLoading}>
