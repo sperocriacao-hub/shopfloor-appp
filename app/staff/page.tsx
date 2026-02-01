@@ -3,11 +3,11 @@
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Users, Briefcase, Award, TrendingUp, AlertTriangle, ArrowRight, ClipboardCheck, UserX, CheckCircle } from "lucide-react";
+import { Plus, Search, Users, Briefcase, Award, TrendingUp, AlertTriangle, ArrowRight, ClipboardCheck, UserX, CheckCircle, Trophy, Star, Medal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { DailyEvaluation } from "@/types";
+import { DailyEvaluation, Employee } from "@/types";
 
 // Pillars Configuration (Match Store)
 const PILLARS = [
@@ -32,7 +32,6 @@ export default function StaffPage() {
         const stats = PILLARS.map(p => ({ ...p, total: 0, count: 0, average: 0 }));
         if (dailyEvaluations.length === 0) return stats;
 
-        // Consider last 30 days only for relevance? Or all? Let's do all for V1.
         dailyEvaluations.forEach(ev => {
             stats.forEach(s => {
                 const val = (ev as any)[s.key];
@@ -47,17 +46,15 @@ export default function StaffPage() {
             s.average = s.count > 0 ? s.total / s.count : 0;
         });
 
-        // Sort ascending (Lowest first)
         return stats.sort((a, b) => a.average - b.average);
     }, [dailyEvaluations]);
 
-    // 2. Organization Index (5S)
+    // 2. Organization & Tech Indices
     const organizationIndex = useMemo(() => {
         const cleaningStats = pillarStats.find(p => p.key === 'postCleaningScore');
         return cleaningStats ? cleaningStats.average.toFixed(1) : "0.0";
     }, [pillarStats]);
 
-    // 3. Technical Performance Index (Quality + Efficiency + Objectives)
     const technicalIndex = useMemo(() => {
         const techPillars = ['qualityScore', 'efficiencyScore', 'objectivesScore'];
         const relevant = pillarStats.filter(p => techPillars.includes(p.key));

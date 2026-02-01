@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { HardHat, Shield, Activity, TrendingUp, CheckCircle, Save, Check, ChevronsUpDown, Search, AlertOctagon } from "lucide-react";
+import { HardHat, Shield, Activity, TrendingUp, CheckCircle, Save, Check, ChevronsUpDown, Search, AlertOctagon, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { DailyEvaluation, Employee } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -133,9 +133,14 @@ export default function DailyEvaluationsPage() {
     return (
         <div className="p-6 space-y-6 max-w-[1400px] mx-auto pb-32">
             <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4 sticky top-4 z-10">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Avaliação Diária de Equipe</h1>
-                    <p className="text-slate-500 text-sm">Selecione a área para iniciar as avaliações.</p>
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
+                        <ArrowLeft className="w-5 h-5 text-slate-500" />
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Avaliação Diária de Equipe</h1>
+                        <p className="text-slate-500 text-sm">Selecione a área para iniciar as avaliações.</p>
+                    </div>
                 </div>
 
                 {/* Area Selector Combobox - Fixed Styles */}
