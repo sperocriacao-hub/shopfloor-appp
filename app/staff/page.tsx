@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { DailyEvaluation, Employee } from "@/types";
+import { FactoryHeatmap } from "@/components/staff/FactoryHeatmap";
 
 // Pillars Configuration (Match Store)
 const PILLARS = [
@@ -267,6 +268,11 @@ export default function StaffPage() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Heatmap Section */}
+                    <div className="mt-8 col-span-full">
+                        <FactoryHeatmap />
+                    </div>
 
                     {/* Quick Access List (Mini Directory) */}
                     <Card>
