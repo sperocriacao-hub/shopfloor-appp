@@ -70,8 +70,8 @@ export default function HSTPage() {
             type: incidentForm.type as any,
             severity: incidentForm.severity as any,
             area: incidentForm.area,
-            rootCause: incidentForm.rootCause,
-            actionsTaken: incidentForm.actionsTaken,
+            rootCauses: incidentForm.rootCauses || [],
+            correctiveActions: incidentForm.correctiveActions,
             status: 'open',
             reportedBy: currentUser?.id,
             createdAt: new Date().toISOString(),
@@ -428,8 +428,8 @@ export default function HSTPage() {
                             <Label>Causa Raiz (Se conhecida)</Label>
                             <Textarea
                                 placeholder="Por que aconteceu?"
-                                value={incidentForm.rootCause || ""}
-                                onChange={e => setIncidentForm(p => ({ ...p, rootCause: e.target.value }))}
+                                value={incidentForm.rootCauses?.[0] || ""}
+                                onChange={e => setIncidentForm(p => ({ ...p, rootCauses: [e.target.value] }))}
                             />
                         </div>
                     </div>
