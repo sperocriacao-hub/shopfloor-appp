@@ -72,7 +72,7 @@ export function FactoryHeatmap() {
             const avg = count > 0 ? totalScore / count : 0;
 
             // Find worst pillar if 'all' is selected
-            let worstPillar = null;
+            let worstPillar: HeatmapPillar | null = null;
             if (selectedPillar === 'all') {
                 let minAvg = 5;
                 PILLARS.forEach(p => {
@@ -154,9 +154,9 @@ export function FactoryHeatmap() {
                                                 <span className="opacity-80">Crítico:</span>
                                                 <span className={cn(
                                                     "font-bold px-1.5 rounded text-[10px]",
-                                                    (stat.criticalPillar?.score ?? 0) < 2.5 ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
+                                                    ((stat.criticalPillar as any)?.score ?? 0) < 2.5 ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
                                                 )}>
-                                                    {stat.criticalPillar?.short} ({(stat.criticalPillar?.score ?? 0).toFixed(1)})
+                                                    {(stat.criticalPillar as any)?.short} ({((stat.criticalPillar as any)?.score ?? 0).toFixed(1)})
                                                 </span>
                                             </div>
                                         )}

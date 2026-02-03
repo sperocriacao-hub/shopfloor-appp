@@ -1551,10 +1551,14 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     severity: incident.severity,
                     area: incident.area,
                     images: incident.images,
-                    root_cause: incident.rootCause,
-                    actions_taken: incident.actionsTaken,
+                    root_cause: incident.rootCauses?.[0] || null, // Legacy support
+                    root_causes: incident.rootCauses, // New array column
+                    actions_taken: incident.correctiveActions, // Legacy support
+                    corrective_actions: incident.correctiveActions, // New column
                     status: incident.status,
-                    reported_by: incident.reportedBy
+                    reported_by: incident.reportedBy,
+                    containment_actions: incident.containmentActions,
+                    verification: incident.verification
                 });
                 if (error) console.error("Error reporting incident:", error);
             },
@@ -1563,10 +1567,28 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 set(s => ({
                     safetyIncidents: s.safetyIncidents.map(i => i.id === id ? { ...i, ...updates } : i)
                 }));
-                const { error } = await supabase.from('safety_incidents').update(updates).eq('id', id);
-                if (error) {
-                    console.error("Failed to update incident:", error);
-                    toast.error("Erro ao atualizar incidente: " + error.message);
+
+                const dbUpdates: any = {};
+                if (updates.status) dbUpdates.status = updates.status;
+                if (updates.rootCauses) {
+                    dbUpdates.root_causes = updates.rootCauses;
+                    dbUpdates.root_cause = updates.rootCauses[0] || null;
+                }
+                if (updates.correctiveActions) {
+                    dbUpdates.corrective_actions = updates.correctiveActions;
+                    dbUpdates.actions_taken = updates.correctiveActions;
+                }
+                if (updates.containmentActions) dbUpdates.containment_actions = updates.containmentActions;
+                if (updates.verification) dbUpdates.verification = updates.verification;
+                if (updates.resolvedAt) dbUpdates.resolved_at = updates.resolvedAt;
+                if (updates.closedAt) dbUpdates.closed_at = updates.closedAt;
+
+                if (Object.keys(dbUpdates).length > 0) {
+                    const { error } = await supabase.from('safety_incidents').update(dbUpdates).eq('id', id);
+                    if (error) {
+                        console.error("Failed to update incident:", error);
+                        toast.error("Erro ao atualizar incidente: " + error.message);
+                    }
                 }
             },
 
@@ -1718,13 +1740,18 @@ export const useShopfloorStore = create<ShopfloorState>()(
                                     type: i.type,
                                     severity: i.severity,
                                     area: i.area,
+                                    location: i.area || "General", // Map area to location
                                     images: i.images,
-                                    rootCause: i.root_cause,
-                                    actionsTaken: i.actions_taken,
+                                    rootCauses: i.root_causes || (i.root_cause ? [i.root_cause] : []), // Handle both new and legacy
+                                    correctiveActions: i.corrective_actions || i.actions_taken, // Handle both new and legacy
+                                    containmentActions: i.containment_actions,
+                                    verification: i.verification,
                                     status: i.status,
                                     reportedBy: i.reported_by,
+                                    date: i.created_at, // Use created_at as date
                                     createdAt: i.created_at,
-                                    resolvedAt: i.resolved_at
+                                    resolvedAt: i.resolved_at,
+                                    closedAt: i.closed_at
                                 }))
                             });
                         }
