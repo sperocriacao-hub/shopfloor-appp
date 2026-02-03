@@ -73,7 +73,9 @@ export default function HSTPage() {
             rootCauses: incidentForm.rootCauses || [],
             correctiveActions: incidentForm.correctiveActions,
             status: 'open',
-            reportedBy: currentUser?.id,
+            reportedBy: currentUser?.id || "system",
+            date: new Date().toISOString(),
+            location: incidentForm.area || "General", // Compatibility with type
             createdAt: new Date().toISOString(),
             images: incidentForm.images || []
         };
