@@ -154,9 +154,9 @@ export function FactoryHeatmap() {
                                                 <span className="opacity-80">Crítico:</span>
                                                 <span className={cn(
                                                     "font-bold px-1.5 rounded text-[10px]",
-                                                    stat.criticalPillar.score < 2.5 ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
+                                                    (stat.criticalPillar?.score ?? 0) < 2.5 ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
                                                 )}>
-                                                    {stat.criticalPillar.short} ({stat.criticalPillar.score.toFixed(1)})
+                                                    {stat.criticalPillar?.short} ({(stat.criticalPillar?.score ?? 0).toFixed(1)})
                                                 </span>
                                             </div>
                                         )}

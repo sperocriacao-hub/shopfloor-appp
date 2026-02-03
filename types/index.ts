@@ -601,14 +601,20 @@ export interface EmployeeCertification {
 export interface SafetyIncident {
     id: string;
     description: string;
-    type: 'accident' | 'incident' | 'near_miss';
+    type: 'accident' | 'incident' | 'near_miss' | 'hazard';
     severity: 'low' | 'medium' | 'high' | 'critical';
-    area?: string;
-    images?: string[];
-    rootCause?: string;
-    actionsTaken?: string;
+    date: string;
+    location: string; // was area in one, location in schema
+    area?: string; // keeping for compatibility if needed, or unify to location/area
+    reportedBy: string;
     status: 'open' | 'investigating' | 'closed';
-    reportedBy?: string;
+    images: string[];
+    // 8D Methodology Fields
+    containmentActions?: string;
+    rootCauses?: string[]; // 5 Whys
+    correctiveActions?: string;
+    verification?: string;
+    closedAt?: string;
     createdAt?: string;
     resolvedAt?: string;
 }

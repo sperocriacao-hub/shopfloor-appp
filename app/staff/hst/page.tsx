@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Shield, AlertTriangle, FileCheck, ClipboardList, Plus, Search, Calendar, ChevronRight, Settings } from "lucide-react";
 import { SafetyIncident, Certification, EmployeeCertification } from "@/types";
+import { InspectionChecklist } from "@/components/staff/InspectionChecklist";
 
 export default function HSTPage() {
     const router = useRouter();
@@ -320,6 +321,45 @@ export default function HSTPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+
+
+                {/* INSPECTIONS TAB */}
+                <TabsContent value="inspections" className="space-y-4">
+                    <InspectionChecklist />
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Histórico de Inspeções</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Data</TableHead>
+                                        <TableHead>Área</TableHead>
+                                        <TableHead>Inspetor</TableHead>
+                                        <TableHead>Score</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {safetyInspections.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(insp => (
+                                        <TableRow key={insp.id}>
+                                            <TableCell>{new Date(insp.date).toLocaleDateString()}</TableCell>
+                                            <TableCell>{insp.area}</TableCell>
+                                            <TableCell>{employees.find(e => e.id === insp.inspectorId)?.name || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={insp.overallScore && insp.overallScore < 80 ? 'destructive' : 'default'} className={insp.overallScore && insp.overallScore >= 90 ? 'bg-green-600' : ''}>
+                                                    {insp.overallScore?.toFixed(0)}%
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {safetyInspections.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-slate-500">Nenhuma inspeção registrada.</TableCell></TableRow>}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
             </Tabs>
 
             {/* REPORT INCIDENT MODAL */}
@@ -474,6 +514,6 @@ export default function HSTPage() {
                     <Button onClick={handleAssignCert}>Atribuir</Button>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

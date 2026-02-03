@@ -28,26 +28,17 @@ export default function IncidentDetailsPage() {
     // Initialize from existing data
     useEffect(() => {
         if (!initialIncident) {
-            // Wait for sync, or redirect if not found after timeout?
-            // For now, rely on syncData being fast or user entering from list
+            // Wait for sync or handle not found
         } else {
             setIncident(initialIncident);
-            // Parse rootCause if it's stored as JSON or delimited string?
-            // The schema says `root_cause: text`. Let's assume user writes free text or we format it.
-            // Let's check schema: `root_cause TEXT`.
-            // For UI, we split into 5 inputs. If stored as "1. Why... 2. Why...", we might want to just parse it or keep one big text area.
-            // User requested "5 Whys" specifically.
-            // Let's manage 5 inputs locally and join them on save.
-            if (initialIncident.rootCause) {
-                // Try to split if it follows our pattern
-                if (initialIncident.rootCause.includes("1. ")) {
-                    // Primitive parser
-                    // For now, just load into the first box if it doesn't match?
-                    // Better: Just use a single text area if it's already set, OR provide the 5 inputs for editing.
-                }
+            if (initialIncident.rootCauses && initialIncident.rootCauses.length > 0) {
+                // Pad to 5 if needed, or just take what we have
+                const loadedWhys = [...initialIncident.rootCauses];
+                while (loadedWhys.length < 5) loadedWhys.push("");
+                setWhys(loadedWhys);
             }
-            if (initialIncident.actionsTaken) {
-                setActions(initialIncident.actionsTaken);
+            if (initialIncident.correctiveActions) {
+                setActions(initialIncident.correctiveActions);
             }
         }
     }, [initialIncident]);
@@ -70,16 +61,15 @@ export default function IncidentDetailsPage() {
     const handleSave = () => {
         if (!incident) return;
 
-        // Join Whys
-        const rootCauseText = whys
-            .map((w, i) => w.trim() ? `${i + 1}. ${w.trim()}` : null)
-            .filter(Boolean)
-            .join("\n");
+        // Filter empty whys for storage, but maybe keep them for editing? 
+        // Store as array of strings
+        const updatedRootCauses = whys.map(w => w.trim()).filter(Boolean);
 
         const updatedIncident: SafetyIncident = {
             ...incident,
-            rootCause: rootCauseText || incident.rootCause, // Keep old if not editing? Or overwrite.
-            actionsTaken: actions,
+            rootCauses: updatedRootCauses,
+            correctiveActions: actions,
+            // Keep actionsTaken for compatibility if needed, or deprecate
             status: 'investigating' // Auto move to investigating
         };
 
@@ -152,12 +142,7 @@ export default function IncidentDetailsPage() {
                         </div>
                     ))}
 
-                    {incident.rootCause && (
-                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                            <strong>Análise Salva Anteriormente:</strong>
-                            <pre className="whitespace-pre-wrap font-sans mt-1">{incident.rootCause}</pre>
-                        </div>
-                    )}
+
                 </CardContent>
             </Card>
 
