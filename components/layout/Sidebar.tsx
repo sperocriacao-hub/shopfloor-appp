@@ -52,7 +52,7 @@ export function Sidebar() {
         { name: 'Engenharia Avançada', href: '/engineering', icon: Microscope, module: 'engineering' }, // Changed to Microscope (Wrench used in Admin)
         { name: 'Materiais (AS400)', href: '/consumables', icon: BarChart2, module: 'consumables' }, // Changed to BarChart2
         { name: 'Recursos Humanos', href: '/staff', icon: Users, module: 'staff' },
-        { name: 'Avaliações Diárias', href: '/staff/evaluations', icon: UserCheck, module: 'staff' }, // Linked to staff module perms for now or supervisor
+
         { name: 'HST & Segurança', href: '/staff/hst', icon: Shield, module: 'staff' },
         { name: 'Qualidade', href: '/quality', icon: ClipboardCheck, module: 'quality' },
         { name: 'Ferramentaria', href: '/tools', icon: Hammer, module: 'tools' }, // Changed to Hammer

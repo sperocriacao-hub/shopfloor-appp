@@ -3,11 +3,12 @@
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Users, Briefcase, Award, TrendingUp, AlertTriangle, ArrowRight, ClipboardCheck, UserX, CheckCircle, Trophy, Star, Medal } from "lucide-react";
+import { Plus, Search, Users, Briefcase, Award, TrendingUp, AlertTriangle, ArrowRight, ClipboardCheck, UserX, CheckCircle, Trophy, Star, Medal, UserPlus, Network, CalendarX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { DailyEvaluation, Employee } from "@/types";
+import { Badge } from "@/components/ui/badge";
 import { FactoryHeatmap } from "@/components/staff/FactoryHeatmap";
 
 // Pillars Configuration (Match Store)
@@ -104,6 +105,49 @@ export default function StaffPage() {
         return alerts;
     }, [dailyEvaluations, employees]);
 
+    // 5. Top Performers Logic
+    const topPerformers = useMemo(() => {
+        const byEmployee: Record<string, { total: number; count: number }> = {};
+
+        // Calculate average for all
+        dailyEvaluations.forEach(ev => {
+            const sum = PILLARS.reduce((acc, p) => acc + ((ev as any)[p.key] || 0), 0);
+            const avg = sum / PILLARS.length;
+
+            if (!byEmployee[ev.employeeId]) {
+                byEmployee[ev.employeeId] = { total: 0, count: 0 };
+            }
+            byEmployee[ev.employeeId].total += avg;
+            byEmployee[ev.employeeId].count++;
+        });
+
+        // Map to array with full employee details
+        const scoredEmployees = Object.keys(byEmployee).map(empId => {
+            const emp = employees.find(e => e.id === empId);
+            const { total, count } = byEmployee[empId];
+            return {
+                ...emp,
+                score: count > 0 ? total / count : 0,
+                evalCount: count
+            }
+        }).filter(e => e.score > 0 && e.evalCount >= 3); // Min 3 evals to consider
+
+        // Group by Area
+        const byArea: Record<string, typeof scoredEmployees> = {};
+        scoredEmployees.forEach(e => {
+            const area = e.area || "Geral";
+            if (!byArea[area]) byArea[area] = [];
+            byArea[area].push(e);
+        });
+
+        // Sort each area
+        Object.keys(byArea).forEach(area => {
+            byArea[area].sort((a, b) => b.score - a.score);
+        });
+
+        return byArea;
+    }, [dailyEvaluations, employees]);
+
 
     // Filter for directory list
     const filteredEmployees = (employees || []).filter(e => {
@@ -122,13 +166,44 @@ export default function StaffPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">RH & Segurança</h1>
                     <p className="text-slate-500 mt-1">Visão geral de desempenho, higiene e segurança da fábrica.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
+                    <Button
+                        onClick={() => router.push('/staff/absenteeism')}
+                        variant="outline"
+                        className="shadow-sm h-12 px-4"
+                    >
+                        <CalendarX className="mr-2 h-4 w-4" />
+                        Gestão de Absentismo
+                    </Button>
+                    <Button
+                        onClick={() => router.push('/staff/org-chart')}
+                        variant="outline"
+                        className="shadow-sm h-12 px-4"
+                    >
+                        <Network className="mr-2 h-4 w-4" />
+                        Organograma
+                    </Button>
                     <Button
                         onClick={() => router.push('/staff/evaluations')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all px-6 h-12 text-lg"
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all px-6 h-12"
                     >
                         <ClipboardCheck className="mr-2 h-5 w-5" />
                         Efetuar Avaliações
+                    </Button>
+                    <Button
+                        onClick={() => router.push('/staff/list')}
+                        variant="outline"
+                        className="shadow-sm h-12 px-4"
+                    >
+                        <Users className="mr-2 h-4 w-4" />
+                        Gerir Equipa
+                    </Button>
+                    <Button
+                        onClick={() => router.push('/staff/new')}
+                        className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all px-6 h-12"
+                    >
+                        <UserPlus className="mr-2 h-5 w-5" />
+                        Novo Funcionário
                     </Button>
                 </div>
             </div>
@@ -274,6 +349,61 @@ export default function StaffPage() {
                         <FactoryHeatmap />
                     </div>
 
+                    {/* Top Performers Section */}
+                    <div className="mt-8 col-span-full space-y-6">
+                        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <Trophy className="w-6 h-6 text-yellow-500" />
+                            Melhores Profissionais (Top 3 por Área)
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {Object.entries(topPerformers).map(([area, performers]) => {
+                                const top3 = performers.slice(0, 3);
+                                if (top3.length === 0) return null;
+
+                                return (
+                                    <Card key={area} className="border-slate-200 overflow-hidden">
+                                        <CardHeader className="bg-slate-50 py-3 border-b">
+                                            <div className="flex justify-between items-center">
+                                                <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700">{area}</CardTitle>
+                                                <Badge variant="outline" className="bg-white text-xs font-normal">
+                                                    Funcionário do Mês
+                                                </Badge>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="p-0">
+                                            {top3.map((emp, idx) => (
+                                                <div key={emp.id} className={cn(
+                                                    "flex items-center gap-3 p-3 border-b last:border-0 hover:bg-slate-50 transition-colors",
+                                                    idx === 0 ? "bg-yellow-50/50" : ""
+                                                )}>
+                                                    <div className={cn(
+                                                        "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0",
+                                                        idx === 0 ? "bg-yellow-100 text-yellow-700 border border-yellow-200" :
+                                                            idx === 1 ? "bg-slate-100 text-slate-700 border border-slate-200" :
+                                                                "bg-orange-50 text-orange-700 border border-orange-200"
+                                                    )}>
+                                                        {idx + 1}º
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-semibold text-sm truncate text-slate-900">{emp.name}</p>
+                                                        <p className="text-xs text-slate-500 truncate">{emp.role}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="font-bold text-blue-700">{emp.score.toFixed(2)}</span>
+                                                        <div className="flex text-[10px] text-slate-400 gap-0.5 justify-end">
+                                                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </CardContent>
+                                    </Card>
+                                )
+                            })}
+                        </div>
+                    </div>
+
                     {/* Quick Access List (Mini Directory) */}
                     <Card>
                         <CardHeader className="pb-3 border-b">
@@ -305,8 +435,8 @@ export default function StaffPage() {
                                             <td className="px-4 py-2 font-medium text-slate-700 truncate max-w-[120px]">{emp.name}</td>
                                             <td className="px-4 py-2 text-slate-500 text-xs">{emp.area}</td>
                                             <td className="px-4 py-2 text-right">
-                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => router.push(`/staff/${emp.id}`)}>
-                                                    <ArrowRight className="w-3 h-3" />
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => router.push(`/staff/${emp.id}`)} title="Ver Perfil">
+                                                    <Search className="w-4 h-4 text-slate-400" />
                                                 </Button>
                                             </td>
                                         </tr>
@@ -326,18 +456,7 @@ export default function StaffPage() {
                 </div>
             </div>
 
-            {/* Action Bar Footer */}
-            <div className="flex gap-4 p-4 rounded-lg bg-slate-100 border border-slate-200 overflow-x-auto">
-                <Button variant="outline" onClick={() => router.push('/staff/absenteeism')} className="bg-white">
-                    <UserX className="mr-2 h-4 w-4" /> Gestão de Absentismo
-                </Button>
-                <Button variant="outline" onClick={() => router.push('/staff/new')} className="bg-white">
-                    <Plus className="mr-2 h-4 w-4" /> Novo Funcionário
-                </Button>
-                <Button variant="outline" onClick={() => router.push('/staff/org-chart')} className="bg-white">
-                    <Users className="mr-2 h-4 w-4" /> Organograma
-                </Button>
-            </div>
+
         </div>
     );
 }
