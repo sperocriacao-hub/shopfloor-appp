@@ -166,45 +166,55 @@ export default function StaffPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">RH & Segurança</h1>
                     <p className="text-slate-500 mt-1">Visão geral de desempenho, higiene e segurança da fábrica.</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                    <Button
-                        onClick={() => router.push('/staff/absenteeism')}
-                        variant="outline"
-                        className="shadow-sm h-12 px-4"
-                    >
-                        <CalendarX className="mr-2 h-4 w-4" />
-                        Gestão de Absentismo
-                    </Button>
-                    <Button
-                        onClick={() => router.push('/staff/org-chart')}
-                        variant="outline"
-                        className="shadow-sm h-12 px-4"
-                    >
-                        <Network className="mr-2 h-4 w-4" />
-                        Organograma
-                    </Button>
-                    <Button
-                        onClick={() => router.push('/staff/evaluations')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all px-6 h-12"
-                    >
-                        <ClipboardCheck className="mr-2 h-5 w-5" />
-                        Efetuar Avaliações
-                    </Button>
-                    <Button
-                        onClick={() => router.push('/staff/list')}
-                        variant="outline"
-                        className="shadow-sm h-12 px-4"
-                    >
-                        <Users className="mr-2 h-4 w-4" />
-                        Gerir Equipa
-                    </Button>
-                    <Button
-                        onClick={() => router.push('/staff/new')}
-                        className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all px-6 h-12"
-                    >
-                        <UserPlus className="mr-2 h-5 w-5" />
-                        Novo Funcionário
-                    </Button>
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Navigation / Management Group */}
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={() => router.push('/staff/absenteeism')}
+                            variant="outline"
+                            className="h-10 px-4 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
+                        >
+                            <CalendarX className="mr-2 h-4 w-4" />
+                            Absentismo
+                        </Button>
+                        <Button
+                            onClick={() => router.push('/staff/org-chart')}
+                            variant="outline"
+                            className="h-10 px-4 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
+                        >
+                            <Network className="mr-2 h-4 w-4" />
+                            Organograma
+                        </Button>
+                        <Button
+                            onClick={() => router.push('/staff/list')}
+                            variant="outline"
+                            className="h-10 px-4 bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
+                        >
+                            <Users className="mr-2 h-4 w-4" />
+                            Gerir Equipa
+                        </Button>
+                    </div>
+
+                    {/* Separator for larger screens */}
+                    <div className="hidden md:block h-8 w-px bg-slate-200 mx-1"></div>
+
+                    {/* Primary Actions Group */}
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={() => router.push('/staff/evaluations')}
+                            className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow transition-all font-medium"
+                        >
+                            <ClipboardCheck className="mr-2 h-4 w-4" />
+                            Avaliar
+                        </Button>
+                        <Button
+                            onClick={() => router.push('/staff/new')}
+                            className="h-10 px-5 bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow transition-all font-medium"
+                        >
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Novo
+                        </Button>
+                    </div>
                 </div>
             </div>
 
