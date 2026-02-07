@@ -45,22 +45,30 @@ export function Sidebar() {
     // Map routes to Permission Modules
     // Map routes to Permission Modules
     const navItems = [
-        { name: 'Dashboard', href: '/', icon: Home, module: 'dashboard' },
-        { name: 'Ordens de Produção', href: '/orders', icon: Activity, module: 'orders' },
-        { name: 'Biblioteca de Ativos', href: '/assets', icon: Boxes, module: 'assets' },
-        { name: 'Produtos & Roteiros', href: '/products', icon: Package, module: 'products' }, // Changed to Package
-        { name: 'Engenharia Avançada', href: '/engineering', icon: Microscope, module: 'engineering' }, // Changed to Microscope (Wrench used in Admin)
-        { name: 'Materiais (AS400)', href: '/consumables', icon: BarChart2, module: 'consumables' }, // Changed to BarChart2
-        { name: 'Recursos Humanos', href: '/staff', icon: Users, module: 'staff' },
+        // --- Operacional ---
+        { name: 'Dashboard', href: '/', icon: Home, module: 'dashboard', section: 'Operacional' },
+        { name: 'Supervisor', href: '/supervisor', icon: UserCheck, module: 'supervisor', section: 'Operacional' },
 
-        { name: 'HST & Segurança', href: '/staff/hst', icon: Shield, module: 'staff' },
-        { name: 'Qualidade', href: '/quality', icon: ClipboardCheck, module: 'quality' },
-        { name: 'Ferramentaria', href: '/tools', icon: Hammer, module: 'tools' }, // Changed to Hammer
-        { name: 'Moldes', href: '/molds', icon: Anchor, module: 'molds' },
-        { name: 'Supervisor', href: '/supervisor', icon: UserCheck, module: 'supervisor' }, // Changed to UserCheck
-        { name: 'App Mobile', href: '/mobile', icon: Smartphone, module: 'mobile' }, // Changed to Smartphone
-        { name: 'Admin / Suporte', href: '/admin', icon: Wrench, module: 'admin' },
-        { name: 'Modo Shopfloor (Legacy)', href: '/shopfloor', icon: Ship, module: 'legacy' },
+        // --- Produção ---
+        { name: 'Ordens de Produção', href: '/orders', icon: Activity, module: 'orders', section: 'Produção' },
+        { name: 'Produtos & Roteiros', href: '/products', icon: Package, module: 'products', section: 'Produção' },
+        { name: 'Engenharia', href: '/engineering', icon: Microscope, module: 'engineering', section: 'Produção' },
+        { name: 'Materiais', href: '/consumables', icon: BarChart2, module: 'consumables', section: 'Produção' },
+
+        // --- Recursos ---
+        { name: 'Recursos Humanos', href: '/staff', icon: Users, module: 'staff', section: 'Recursos' },
+        { name: 'HST & Segurança', href: '/staff/hst', icon: Shield, module: 'staff', section: 'Recursos' },
+
+        // --- Qualidade & Manutenção ---
+        { name: 'Qualidade', href: '/quality', icon: ClipboardCheck, module: 'quality', section: 'Qualidade & Manutenção' },
+        { name: 'Ferramentaria', href: '/tools', icon: Hammer, module: 'tools', section: 'Qualidade & Manutenção' },
+        { name: 'Moldes', href: '/molds', icon: Anchor, module: 'molds', section: 'Qualidade & Manutenção' },
+        { name: 'Ativos', href: '/assets', icon: Boxes, module: 'assets', section: 'Qualidade & Manutenção' },
+
+        // --- Sistema ---
+        { name: 'App Mobile', href: '/mobile', icon: Smartphone, module: 'mobile', section: 'Sistema' },
+        { name: 'Admin / Suporte', href: '/admin', icon: Wrench, module: 'admin', section: 'Sistema' },
+        { name: 'Modo Shopfloor', href: '/shopfloor', icon: Ship, module: 'legacy', section: 'Sistema' },
     ];
 
     // Filter items based on permissions
@@ -103,31 +111,47 @@ export function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 space-y-1 px-2 py-4 overflow-x-hidden">
-                {visibleItems.map((item) => {
+                {visibleItems.map((item, index) => {
                     const isActive = pathname === item.href;
+
+                    // Check if we need a section header
+                    const prevItem = visibleItems[index - 1];
+                    const showSection = !prevItem || prevItem.section !== item.section;
+
                     return (
-                        <Link
-                            key={item.name}
-                            href={item.href}
-                            className={cn(
-                                "group flex items-center rounded-md px-2 py-3 text-sm font-medium transition-colors mb-1",
-                                isActive ? "bg-blue-800 text-white shadow-sm" : "text-blue-100 hover:bg-blue-800/50 hover:text-white",
-                                isCollapsed ? "justify-center" : "justify-start"
+                        <div key={item.name}>
+                            {!isCollapsed && showSection && (
+                                <div className="px-4 py-2 mt-2 mb-1 text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                                    {item.section}
+                                </div>
                             )}
-                            title={isCollapsed ? item.name : undefined}
-                        >
-                            <item.icon
+                            {/* Separator for collapsed mode if section changes (optional, maybe just a line) */}
+                            {isCollapsed && showSection && index !== 0 && (
+                                <div className="my-2 border-t border-blue-800 mx-2"></div>
+                            )}
+
+                            <Link
+                                href={item.href}
                                 className={cn(
-                                    "flex-shrink-0 transition-colors",
-                                    isCollapsed ? "h-6 w-6" : "mr-3 h-5 w-5",
-                                    isActive ? "text-white" : "text-blue-300 group-hover:text-white"
+                                    "group flex items-center rounded-md px-2 py-2 text-sm font-medium transition-colors mb-0.5 mx-1",
+                                    isActive ? "bg-blue-800 text-white shadow-sm" : "text-blue-100 hover:bg-blue-800/50 hover:text-white",
+                                    isCollapsed ? "justify-center" : "justify-start"
                                 )}
-                                aria-hidden="true"
-                            />
-                            {!isCollapsed && (
-                                <span className="truncate">{item.name}</span>
-                            )}
-                        </Link>
+                                title={isCollapsed ? item.name : undefined}
+                            >
+                                <item.icon
+                                    className={cn(
+                                        "flex-shrink-0 transition-colors",
+                                        isCollapsed ? "h-6 w-6" : "mr-3 h-4 w-4",
+                                        isActive ? "text-white" : "text-blue-300 group-hover:text-white"
+                                    )}
+                                    aria-hidden="true"
+                                />
+                                {!isCollapsed && (
+                                    <span className="truncate">{item.name}</span>
+                                )}
+                            </Link>
+                        </div>
                     );
                 })}
             </nav>

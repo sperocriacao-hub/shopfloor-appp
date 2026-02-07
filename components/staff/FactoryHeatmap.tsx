@@ -26,8 +26,15 @@ const PILLARS: HeatmapPillar[] = [
     { key: 'attitudeScore', label: 'Atitude', short: 'ATIT' },
 ] as const;
 
-export function FactoryHeatmap() {
+import { DailyEvaluation } from "@/types";
+
+interface FactoryHeatmapProps {
+    data?: DailyEvaluation[];
+}
+
+export function FactoryHeatmap({ data }: FactoryHeatmapProps) {
     const { employees, dailyEvaluations } = useShopfloorStore();
+    const sourceData = data || dailyEvaluations;
     const [selectedPillar, setSelectedPillar] = useState<string>("all");
 
     // 1. Group Data by Area
@@ -38,10 +45,10 @@ export function FactoryHeatmap() {
             const areaEmps = employees.filter(e => e.area === area);
             const empIds = areaEmps.map(e => e.id);
 
-            // Get evaluations for these employees (last 30 days logic could apply here, using all for now)
-            const areaEvals = dailyEvaluations.filter(ev => empIds.includes(ev.employeeId));
+            // Get evaluations for these employees
+            const areaEvals = sourceData.filter(ev => empIds.includes(ev.employeeId));
 
-            if (areaEvals.length === 0) return { area, score: 0, count: 0, criticalPillar: null };
+            if (areaEvals.length === 0) return { area, score: 0, count: 0, criticalPillar: null, empCount: areaEmps.length };
 
             let totalScore = 0;
             let count = 0;
@@ -86,7 +93,7 @@ export function FactoryHeatmap() {
 
             return { area, score: avg, count: areaEvals.length, criticalPillar: worstPillar, empCount: areaEmps.length };
         }).sort((a, b) => a.score - b.score); // Worst first
-    }, [employees, dailyEvaluations, selectedPillar]);
+    }, [employees, sourceData, selectedPillar]);
 
     const getStatusColor = (score: number) => {
         if (score === 0) return "bg-slate-100 border-slate-200 text-slate-400";

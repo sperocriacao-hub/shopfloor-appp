@@ -1606,279 +1606,225 @@ export const useShopfloorStore = create<ShopfloorState>()(
             },
 
             syncData: async () => {
-                console.log("[ShopfloorStore] Syncing data from DB...");
-                // Employees
-                try {
-                    const { data: emps, error } = await supabase.from('employees').select('*');
-                    if (error) throw error;
-                    if (emps) set({ employees: emps.map(mapDbToEmployee) });
-                } catch (e) { console.error("Sync Error: Employees", e); }
+                const start = performance.now();
+                console.log("[ShopfloorStore] Syncing data from DB (Parallelized)...");
 
-                // Absenteeism
-                const { data: recs } = await supabase.from('absenteeism_records').select('*');
-                if (recs) set({ absenteeismRecords: recs.map(mapDbToAbsenteeism) });
+                // Helper for safe fetching (prevents one failure from blocking all)
+                const fetchSafe = async (table: string, query = '*') => {
+                    const { data, error } = await supabase.from(table).select(query);
+                    if (error) {
+                        console.warn(`[Sync] Error fetching ${table}:`, error.message);
+                        return null;
+                    }
+                    return data;
+                };
 
-                // Assets
-                const { data: assets } = await supabase.from('assets').select('*');
-                if (assets) set({ assets: assets.map(mapDbToAsset) });
+                // Helper for ordering/limiting
+                const fetchOrdered = async (table: string, orderCol: string, limit: number) => {
+                    const { data, error } = await supabase.from(table).select('*').order(orderCol, { ascending: false }).limit(limit);
+                    if (error) return null;
+                    return data;
+                };
 
-                // Products
-                // Products & Routings (Derived from Products)
-                const { data: products } = await supabase.from('products').select('*');
+                // Parallel Execution
+                const [
+                    employees, absenteeism, assets, products, orders, events,
+                    productOptions, optionTasks, taskExecutions, orderIssues,
+                    qualityCases, qualityActions, scrapReports,
+                    moldCompatibility, moldLogs,
+                    dailyEvaluations, certifications, employeeCertifications, safetyIncidents, safetyInspections,
+                    alerts,
+                    tools, toolTxs, toolMaint,
+                    costCenterMappings, ppeRequests, consumableTransactions, materialRequests,
+                    productParts, orderParts,
+                    lines, rules,
+                    optPivot, assetPivot
+                ] = await Promise.all([
+                    fetchSafe('employees'), // 0
+                    fetchSafe('absenteeism_records'), // 1
+                    fetchSafe('assets'), // 2
+                    fetchSafe('products'), // 3
+                    fetchSafe('orders'), // 4
+                    fetchSafe('events'), // 5
+                    fetchSafe('product_options'), // 6
+                    fetchSafe('option_tasks'), // 7
+                    fetchSafe('task_executions'), // 8
+                    fetchSafe('order_issues'), // 9
+                    fetchSafe('quality_cases'), // 10
+                    fetchSafe('quality_actions'), // 11
+                    fetchSafe('scrap_reports'), // 12
+                    fetchSafe('mold_compatibility'), // 13
+                    fetchSafe('mold_maintenance_logs'), // 14
+                    fetchSafe('daily_evaluations'), // 15
+                    fetchSafe('certifications'), // 16
+                    fetchSafe('employee_certifications'), // 17
+                    fetchSafe('safety_incidents'), // 18
+                    fetchSafe('safety_inspections'), // 19
+                    // Alerts: active only or recent? Original was 'open', 'acknowledged'.
+                    // Use standard select with filter:
+                    supabase.from('alerts').select('*').in('status', ['open', 'acknowledged']).then(r => r.data), // 20
+                    fetchSafe('tools'), // 21
+                    fetchSafe('tool_transactions'), // 22
+                    fetchSafe('tool_maintenance'), // 23
+                    fetchSafe('cost_center_mappings'), // 24
+                    fetchSafe('ppe_requests'), // 25
+                    fetchOrdered('consumable_transactions', 'date', 2000), // 26
+                    fetchSafe('material_requests'), // 27
+                    fetchSafe('product_parts'), // 28
+                    fetchSafe('order_parts'), // 29
+                    fetchSafe('production_lines'), // 30
+                    fetchSafe('sequencing_rules'), // 31
+                    fetchSafe('production_order_options'), // 32
+                    fetchSafe('production_order_assets'), // 33
+                ]);
+
+                // Construct Update Object
+                const stateUpdates: Partial<ShopfloorStore> = {};
+
+                // --- Core ---
+                if (employees) stateUpdates.employees = employees.map(mapDbToEmployee);
+                if (absenteeism) stateUpdates.absenteeismRecords = absenteeism.map(mapDbToAbsenteeism);
+                if (assets) stateUpdates.assets = assets.map(mapDbToAsset);
+
+                // --- Products & Routings ---
                 if (products) {
-                    set({ products: products.map(mapDbToProduct) });
-
-                    // Generate routings from product operations
-                    const derivedRoutings: Routing[] = products
-                        .filter(p => p.operations && Array.isArray(p.operations))
-                        .map(p => ({
+                    stateUpdates.products = products.map(mapDbToProduct);
+                    stateUpdates.routings = products
+                        .filter((p: any) => p.operations && Array.isArray(p.operations))
+                        .map((p: any) => ({
                             id: `rt-${p.id}`,
                             productModelId: p.id,
                             operations: p.operations
                         }));
-
-                    set({ routings: derivedRoutings }); // Always update routings
                 }
 
-                // Orders
-                const { data: orders } = await supabase.from('orders').select('*');
-                if (orders) set({ orders: orders.map(mapDbToOrder) });
-
-                // Events
-                const { data: events } = await supabase.from('events').select('*');
-                if (events) set({ events: events.map(mapDbToEvent) });
-
-                // Shopfloor 3.0 Data Sync
-                const { data: opts } = await supabase.from('product_options').select('*');
-                if (opts) set({ productOptions: opts.map(mapDbToOption) });
-
-                const { data: tasks } = await supabase.from('option_tasks').select('*');
-                if (tasks) set({ optionTasks: tasks.map(mapDbToTask) });
-
-                const { data: execs } = await supabase.from('task_executions').select('*');
-                if (execs) set({ taskExecutions: execs.map(mapDbToExecution) });
-
-                const { data: issues } = await supabase.from('order_issues').select('*');
-                if (issues) set({ orderIssues: issues.map(mapDbToIssue) });
-
-                // V5 Sync
-                const { data: qCases } = await supabase.from('quality_cases').select('*');
-                if (qCases) set({ qualityCases: qCases.map(mapDbToQualityCase) });
-
-                const { data: qActions } = await supabase.from('quality_actions').select('*');
-                if (qActions) set({ qualityActions: qActions.map(mapDbToQualityAction) });
-
-                const { data: scrap } = await supabase.from('scrap_reports').select('*');
-                if (scrap) set({ scrapReports: scrap.map(mapDbToScrapReport) });
-
-                // V8 Molds Sync (Shopfloor 3.0)
-                try {
-                    const { data: moldComp } = await supabase.from('mold_compatibility').select('*');
-                    if (moldComp) set({ moldCompatibility: moldComp.map(mapDbToMoldCompatibility) });
-
-                    const { data: moldLogs } = await supabase.from('mold_maintenance_logs').select('*');
-                    if (moldLogs) set({ moldMaintenanceLogs: moldLogs.map(mapDbToMoldMaintenanceLog) });
-
-                    // V13 HR/HST Sync
-                    try {
-                        const { data: evals } = await supabase.from('daily_evaluations').select('*');
-                        if (evals && evals.length > 0) {
-                            set({
-                                dailyEvaluations: evals.map(e => ({
-                                    id: e.id,
-                                    employeeId: e.employee_id,
-                                    supervisorId: e.supervisor_id,
-                                    date: e.date,
-                                    hstScore: e.hst_score,
-                                    epiScore: e.epi_score,
-                                    postCleaningScore: e.post_cleaning_score,
-                                    qualityScore: e.quality_score,
-                                    efficiencyScore: e.efficiency_score,
-                                    objectivesScore: e.objectives_score,
-                                    attitudeScore: e.attitude_score,
-                                    notes: e.notes,
-                                    createdAt: e.created_at
-                                }))
-                            });
-                        }
-
-                        const { data: certs } = await supabase.from('certifications').select('*');
-                        if (certs && certs.length > 0) {
-                            set({
-                                certifications: certs.map(c => ({
-                                    id: c.id,
-                                    name: c.name,
-                                    description: c.description,
-                                    validityMonths: c.validity_months,
-                                    riskLevel: c.risk_level,
-                                    requiredForStations: c.required_for_stations
-                                }))
-                            });
-                        }
-
-                        const { data: empCerts } = await supabase.from('employee_certifications').select('*');
-                        if (empCerts && empCerts.length > 0) {
-                            set({
-                                employeeCertifications: empCerts.map(ec => ({
-                                    id: ec.id,
-                                    employeeId: ec.employee_id,
-                                    certificationId: ec.certification_id,
-                                    issueDate: ec.issue_date,
-                                    expiryDate: ec.expiry_date,
-                                    status: ec.status,
-                                    pdfUrl: ec.pdf_url
-                                }))
-                            });
-                        }
-
-                        const { data: incidents } = await supabase.from('safety_incidents').select('*');
-                        if (incidents && incidents.length > 0) {
-                            set({
-                                safetyIncidents: incidents.map(i => ({
-                                    id: i.id,
-                                    description: i.description,
-                                    type: i.type,
-                                    severity: i.severity,
-                                    area: i.area,
-                                    location: i.area || "General", // Map area to location
-                                    images: i.images,
-                                    rootCauses: i.root_causes || (i.root_cause ? [i.root_cause] : []), // Handle both new and legacy
-                                    correctiveActions: i.corrective_actions || i.actions_taken, // Handle both new and legacy
-                                    containmentActions: i.containment_actions,
-                                    verification: i.verification,
-                                    status: i.status,
-                                    reportedBy: i.reported_by,
-                                    date: i.created_at, // Use created_at as date
-                                    createdAt: i.created_at,
-                                    resolvedAt: i.resolved_at,
-                                    closedAt: i.closed_at
-                                }))
-                            });
-                        }
-
-                        const { data: inspections } = await supabase.from('safety_inspections').select('*');
-                        if (inspections && inspections.length > 0) {
-                            set({
-                                safetyInspections: inspections.map(i => ({
-                                    id: i.id,
-                                    date: i.date,
-                                    area: i.area,
-                                    inspectorId: i.inspector_id,
-                                    overallScore: i.overall_score,
-                                    checklistData: i.checklist_data,
-                                    createdAt: i.created_at
-                                }))
-                            });
-                        }
-                    } catch (e) {
-                        console.error("Sync Error: V13 HR/HST", e);
-                    }
-                    // Check if mapDbToMaintenanceOrder exists? If not, we skip or map manually
-                    // Assuming types match generic
-
-                    // const { data: pins } = await supabase.from('maintenance_pins').select('*');
-                    // const { data: geoms } = await supabase.from('mold_geometries').select('*');
-
-                } catch (e) {
-                    console.error("Sync Error: Molds V8", e);
-                }
-
-                // Andon Alerts
-                const { data: alerts } = await supabase.from('alerts').select('*').in('status', ['open', 'acknowledged']); // Only active alerts? Or all? Let's keep active for performance, or recent.
-                // For simplicity, let's fetch all relevant ones.
-                if (alerts) set({ alerts: alerts.map(mapDbToAlert) });
-
-                // V7 Tools Sync
-                const { data: tools } = await supabase.from('tools').select('*');
-                if (tools) set({
-                    tools: tools.map((t: any) => ({
-                        id: t.id, code: t.code, name: t.name, category: t.category,
-                        status: t.status, condition: t.condition, currentHolderId: t.current_holder_id,
-                        location: t.location, purchaseDate: t.purchase_date, lastMaintenance: t.last_maintenance
-                    }))
-                });
-
-                const { data: toolTxs } = await supabase.from('tool_transactions').select('*');
-                if (toolTxs) set({
-                    toolTransactions: toolTxs.map((t: any) => ({
-                        id: t.id, toolId: t.tool_id, employeeId: t.employee_id,
-                        action: t.action, signature: t.signature, notes: t.notes,
-                        createdAt: t.created_at, createdBy: t.created_by
-                    }))
-                });
-
-                // Tool Maintenance
-                const { data: toolMaint } = await supabase.from('tool_maintenance').select('*');
-                if (toolMaint) set({ toolMaintenances: toolMaint.map(mapDbToToolMaintenance) });
-
-                // Consumables (Shopfloor V11/V12)
-                try {
-                    const { data: ccMap } = await supabase.from('cost_center_mappings').select('*');
-                    if (ccMap) set({ costCenterMappings: ccMap.map(mapDbToCostCenter) });
-
-                    const { data: ppiReqs } = await supabase.from('ppe_requests').select('*');
-                    if (ppiReqs) set({ ppeRequests: ppiReqs.map(mapDbToPpeRequest) });
-
-                    const { data: consTx } = await supabase.from('consumable_transactions').select('*').order('date', { ascending: false }).limit(2000);
-                    if (consTx) set({ consumableTransactions: consTx.map(mapDbToConsumable).reverse() });
-
-                    const { data: matReqs } = await supabase.from('material_requests').select('*');
-                    if (matReqs) set({ materialRequests: matReqs.map(mapDbToMaterialRequest) });
-                } catch (e) {
-                    console.error("Sync Error: Consumables", e);
-                }
-
-                // V7 Parts Sync
-                const { data: pParts } = await supabase.from('product_parts').select('*');
-                if (pParts) set({
-                    productParts: pParts.map(p => ({
-                        id: p.id, productModelId: p.product_model_id, name: p.name,
-                        category: p.category, rfidRequired: p.rfid_required
-                    }))
-                });
-
-                const { data: oParts } = await supabase.from('order_parts').select('*');
-                if (oParts) set({
-                    orderParts: oParts.map(p => ({
-                        id: p.id, orderId: p.order_id, partDefinitionId: p.part_definition_id,
-                        rfidTag: p.rfid_tag, status: p.status, producedAt: p.produced_at
-                    }))
-                });
-
-                // Shopfloor V6 Sync
-                const { data: lines } = await supabase.from('production_lines').select('*');
-                if (lines) set({ productionLines: lines.map(mapDbToLine) });
-
-                const { data: rules } = await supabase.from('sequencing_rules').select('*');
-                if (rules) set({ sequencingRules: rules.map(mapDbToRule) });
-
-                // Fetch Order Options Pivot and Map to Orders
-                // Fetch Order Options Pivot and Map to Orders
-                const { data: pivot } = await supabase.from('production_order_options').select('*');
-                const { data: assetPivot } = await supabase.from('production_order_assets').select('*');
-
+                // --- Orders (Complex Logic) ---
                 if (orders) {
-                    const mappedOrders = orders.map(mapDbToOrder).map(o => {
-                        const myOptions = pivot ? pivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.option_id) : [];
-
+                    stateUpdates.orders = orders.map(mapDbToOrder).map(o => {
+                        const myOptions = optPivot ? optPivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.option_id) : [];
                         const myAssets = assetPivot
                             ? assetPivot.filter((p: any) => p.order_id === o.id).map((p: any) => p.asset_id)
                             : [];
 
-                        // Fallback to legacy assetId if no pivot data
-                        if (myAssets.length === 0 && o.assetId) {
-                            myAssets.push(o.assetId);
-                        }
+                        // Fallback logic
+                        if (myAssets.length === 0 && o.assetId) myAssets.push(o.assetId);
 
-                        return {
-                            ...o,
-                            selectedOptions: myOptions,
-                            assetIds: myAssets
-                        };
+                        return { ...o, selectedOptions: myOptions, assetIds: myAssets };
                     });
-
-                    set({ orders: mappedOrders });
                 }
+
+                // --- Events ---
+                if (events) stateUpdates.events = events.map(mapDbToEvent);
+
+                // --- Shopfloor 3.0 ---
+                if (productOptions) stateUpdates.productOptions = productOptions.map(mapDbToOption);
+                if (optionTasks) stateUpdates.optionTasks = optionTasks.map(mapDbToTask);
+                if (taskExecutions) stateUpdates.taskExecutions = taskExecutions.map(mapDbToExecution);
+                if (orderIssues) stateUpdates.orderIssues = orderIssues.map(mapDbToIssue);
+
+                // --- Quality ---
+                if (qualityCases) stateUpdates.qualityCases = qualityCases.map(mapDbToQualityCase);
+                if (qualityActions) stateUpdates.qualityActions = qualityActions.map(mapDbToQualityAction);
+                if (scrapReports) stateUpdates.scrapReports = scrapReports.map(mapDbToScrapReport);
+
+                // --- Molds ---
+                if (moldCompatibility) stateUpdates.moldCompatibility = moldCompatibility.map(mapDbToMoldCompatibility);
+                if (moldLogs) stateUpdates.moldMaintenanceLogs = moldLogs.map(mapDbToMoldMaintenanceLog);
+
+                // --- HR / HST ---
+                if (dailyEvaluations) {
+                    stateUpdates.dailyEvaluations = dailyEvaluations.map((e: any) => ({
+                        id: e.id,
+                        employeeId: e.employee_id,
+                        supervisorId: e.supervisor_id,
+                        date: e.date,
+                        hstScore: e.hst_score,
+                        epiScore: e.epi_score,
+                        postCleaningScore: e.post_cleaning_score,
+                        qualityScore: e.quality_score,
+                        efficiencyScore: e.efficiency_score,
+                        objectivesScore: e.objectives_score,
+                        attitudeScore: e.attitude_score,
+                        notes: e.notes,
+                        createdAt: e.created_at
+                    }));
+                }
+                if (certifications) {
+                    stateUpdates.certifications = certifications.map((c: any) => ({
+                        id: c.id, name: c.name, description: c.description,
+                        validityMonths: c.validity_months, riskLevel: c.risk_level, requiredForStations: c.required_for_stations
+                    }));
+                }
+                if (employeeCertifications) {
+                    stateUpdates.employeeCertifications = employeeCertifications.map((ec: any) => ({
+                        id: ec.id, employeeId: ec.employee_id, certificationId: ec.certification_id,
+                        issueDate: ec.issue_date, expiryDate: ec.expiry_date, status: ec.status, pdfUrl: ec.pdf_url
+                    }));
+                }
+                if (safetyIncidents) {
+                    stateUpdates.safetyIncidents = safetyIncidents.map((i: any) => ({
+                        id: i.id, description: i.description, type: i.type, severity: i.severity,
+                        area: i.area, location: i.area || "General", images: i.images,
+                        rootCauses: i.root_causes || (i.root_cause ? [i.root_cause] : []),
+                        correctiveActions: i.corrective_actions || i.actions_taken,
+                        containmentActions: i.containment_actions, verification: i.verification,
+                        status: i.status, reportedBy: i.reported_by, date: i.created_at, createdAt: i.created_at,
+                        resolvedAt: i.resolved_at, closedAt: i.closed_at
+                    }));
+                }
+                if (safetyInspections) {
+                    stateUpdates.safetyInspections = safetyInspections.map((i: any) => ({
+                        id: i.id, date: i.date, area: i.area, inspectorId: i.inspector_id,
+                        overallScore: i.overall_score, checklistData: i.checklist_data, createdAt: i.created_at
+                    }));
+                }
+
+                // --- Alerts, Tools, Consumables ---
+                if (alerts) stateUpdates.alerts = alerts.map(mapDbToAlert);
+
+                if (tools) {
+                    stateUpdates.tools = tools.map((t: any) => ({
+                        id: t.id, code: t.code, name: t.name, category: t.category,
+                        status: t.status, condition: t.condition, currentHolderId: t.current_holder_id,
+                        location: t.location, purchaseDate: t.purchase_date, lastMaintenance: t.last_maintenance
+                    }));
+                }
+                if (toolTxs) {
+                    stateUpdates.toolTransactions = toolTxs.map((t: any) => ({
+                        id: t.id, toolId: t.tool_id, employeeId: t.employee_id,
+                        action: t.action, signature: t.signature, notes: t.notes, createdAt: t.created_at, createdBy: t.created_by
+                    }));
+                }
+                if (toolMaint) stateUpdates.toolMaintenances = toolMaint.map(mapDbToToolMaintenance);
+
+                if (costCenterMappings) stateUpdates.costCenterMappings = costCenterMappings.map(mapDbToCostCenter);
+                if (ppeRequests) stateUpdates.ppeRequests = ppeRequests.map(mapDbToPpeRequest);
+                if (consumableTransactions) stateUpdates.consumableTransactions = consumableTransactions.map(mapDbToConsumable).reverse();
+                if (materialRequests) stateUpdates.materialRequests = materialRequests.map(mapDbToMaterialRequest);
+
+                // --- V7 Parts ---
+                if (productParts) {
+                    stateUpdates.productParts = productParts.map((p: any) => ({
+                        id: p.id, productModelId: p.product_model_id, name: p.name,
+                        category: p.category, rfidRequired: p.rfid_required
+                    }));
+                }
+                if (orderParts) {
+                    stateUpdates.orderParts = orderParts.map((p: any) => ({
+                        id: p.id, orderId: p.order_id, partDefinitionId: p.part_definition_id,
+                        rfidTag: p.rfid_tag, status: p.status, producedAt: p.produced_at
+                    }));
+                }
+
+                // --- Lines ---
+                if (lines) stateUpdates.productionLines = lines.map(mapDbToLine);
+                if (rules) stateUpdates.sequencingRules = rules.map(mapDbToRule);
+
+                // Apply Updates
+                set(stateUpdates);
+
+                const duration = (performance.now() - start).toFixed(2);
+                console.log(`[ShopfloorStore] Sync Complete in ${duration}ms (Parallel)`);
             },
 
             // --- V8: Mold Maintenance Actions ---

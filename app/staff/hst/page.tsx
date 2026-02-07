@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Shield, AlertTriangle, FileCheck, ClipboardList, Plus, Search, Calendar, ChevronRight, Settings } from "lucide-react";
 import { SafetyIncident, Certification, EmployeeCertification } from "@/types";
 import { InspectionChecklist } from "@/components/staff/InspectionChecklist";
+import { SafetyHeatmap } from "@/components/staff/SafetyHeatmap";
 
 export default function HSTPage() {
     const router = useRouter();
@@ -150,7 +151,22 @@ export default function HSTPage() {
 
                 {/* OVERVIEW TAB */}
                 <TabsContent value="overview" className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* KPIs ROW */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {/* Safety Score KPI */}
+                        <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-100">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-blue-700">Índice de Segurança</CardTitle>
+                                <Shield className="h-4 w-4 text-blue-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold text-blue-900">
+                                    {Math.max(0, 100 - (activeIncidents.length * 5)).toFixed(1)}%
+                                </div>
+                                <p className="text-xs text-blue-500 mt-1">Target: &gt;95%</p>
+                            </CardContent>
+                        </Card>
+
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Incidentes Ativos</CardTitle>
@@ -165,54 +181,58 @@ export default function HSTPage() {
                         </Card>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Certificações a Expirar</CardTitle>
+                                <CardTitle className="text-sm font-medium">Formações Vencidas</CardTitle>
                                 <FileCheck className="h-4 w-4 text-yellow-500" />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
-                                    {employeeCertifications.filter(ec => ec.status === 'active').length}
+                                    {employeeCertifications.filter(ec => ec.status === 'active' && ec.expiryDate && new Date(ec.expiryDate) < new Date()).length}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Total Ativas
+                                    Atenção Requerida
                                 </p>
                             </CardContent>
                         </Card>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Inspeções Realizadas</CardTitle>
-                                <ClipboardList className="h-4 w-4 text-blue-500" />
+                                <CardTitle className="text-sm font-medium">Inspeções (Semana)</CardTitle>
+                                <ClipboardList className="h-4 w-4 text-green-500" />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{safetyInspections.length}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    Última: {recentInspections[0]?.date || "N/A"}
+                                    Última: {recentInspections[0]?.date ? new Date(recentInspections[0].date).toLocaleDateString() : "N/A"}
                                 </p>
                             </CardContent>
                         </Card>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {/* Heatmap takes 2 cols */}
+                        <SafetyHeatmap />
+
+                        {/* Recent Incidents take 1 col */}
+                        <Card className="col-span-1">
                             <CardHeader>
-                                <CardTitle>Incidentes Recentes</CardTitle>
+                                <CardTitle className="text-base">Últimos Registos</CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {safetyIncidents.slice(0, 5).map(incident => (
-                                        <div key={incident.id} className="flex items-center justify-between border-b pb-2 last:border-0 group cursor-pointer hover:bg-slate-50 transition-colors p-2 rounded" onClick={() => router.push(`/staff/hst/incidents/${incident.id}`)}>
-                                            <div className="flex-1">
-                                                <p className="font-medium text-sm">{incident.description}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <Badge variant={incident.severity === 'critical' ? 'destructive' : 'outline'}>
+                            <CardContent className="px-2">
+                                <div className="space-y-2">
+                                    {safetyIncidents.slice(0, 6).map(incident => (
+                                        <div key={incident.id} className="flex items-center justify-between border-b border-slate-100 pb-2 last:border-0 hover:bg-slate-50 p-2 rounded cursor-pointer transition-colors" onClick={() => router.push(`/staff/hst/incidents/${incident.id}`)}>
+                                            <div className="flex flex-col gap-1 overflow-hidden">
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant={incident.severity === 'critical' || incident.severity === 'high' ? 'destructive' : 'outline'} className="text-[10px] h-5 px-1.5">
                                                         {incident.severity}
                                                     </Badge>
-                                                    <span className="text-xs text-slate-500">{new Date(incident.createdAt || "").toLocaleDateString()}</span>
+                                                    <span className="text-xs text-slate-400">{new Date(incident.createdAt || "").toLocaleDateString()}</span>
                                                 </div>
+                                                <span className="text-sm font-medium text-slate-700 truncate">{incident.description}</span>
                                             </div>
-                                            <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-blue-500" />
+                                            <ChevronRight className="h-4 w-4 text-slate-300" />
                                         </div>
                                     ))}
-                                    {safetyIncidents.length === 0 && <p className="text-sm text-slate-500">Nenhum incidente registrado.</p>}
+                                    {safetyIncidents.length === 0 && <div className="text-center py-8 text-slate-400 text-sm">Sem registos.</div>}
                                 </div>
                             </CardContent>
                         </Card>

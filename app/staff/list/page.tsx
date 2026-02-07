@@ -112,7 +112,7 @@ export default function StaffListPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => router.push(`/staff/${emp.id}`)}
+                                                onClick={() => router.push(`/staff/${emp.id}?mode=edit`)}
                                                 className="h-8 px-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                                             >
                                                 <UserCog className="mr-2 h-4 w-4" />

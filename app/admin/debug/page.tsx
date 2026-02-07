@@ -13,10 +13,21 @@ export default function DebugPersistencePage() {
     const [loading, setLoading] = useState(false);
     // const supabase = createClientComponentClient(); -> Removed
 
-    // Auto-hydrate on mount
+    // Auto-hydrate on mount & Security Check
     useEffect(() => {
         store.syncData();
     }, []);
+
+    // SECURITY CHECK
+    if (store.currentUser?.role !== 'admin') {
+        return (
+            <div className="p-8 flex flex-col items-center justify-center h-screen space-y-4">
+                <h1 className="text-2xl font-bold text-red-600">Acesso Restrito</h1>
+                <p>Esta página de diagnóstico é reservada para administradores.</p>
+                <Button variant="outline" onClick={() => window.history.back()}>Voltar</Button>
+            </div>
+        );
+    }
 
     const checkTables = async () => {
         setLoading(true);
@@ -54,15 +65,14 @@ export default function DebugPersistencePage() {
     const checkWrite = async () => {
         setLoading(true);
         try {
-            // Attempt to write to audit_logs or a safe table
-            const { error } = await supabase.from('audit_logs').insert({
-                id: `test-write-${Date.now()}`,
-                action: 'TEST_WRITE',
-                target_module: 'debug',
-                description: 'Testing write permissions via Admin Debug',
-                timestamp: new Date().toISOString(),
-                user_id: 'debug-user',
-                user_name: 'Debug User'
+            // Attempt to write to daily_evaluations (The Problematic Table)
+            const { error } = await supabase.from('daily_evaluations').insert({
+                employee_id: 'DEBUG_TEST',
+                date: new Date().toISOString().split('T')[0],
+                notes: 'Teste de Escrita Debug',
+                // scores
+                hst_score: 5,
+                quality_score: 5
             });
 
             if (error) {

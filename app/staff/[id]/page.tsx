@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Shield } from "lucide-react";
+import { ArrowLeft, Save, Shield, User, Lock } from "lucide-react";
 import { AppModule, UserPermissions } from "@/types";
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
@@ -24,6 +24,9 @@ const DEFAULT_PERMISSIONS: UserPermissions = {
 export default function EditStaffPage() {
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
+    const isEditMode = searchParams.get('mode') === 'edit';
+
     const { employees, updateEmployee, assets, dailyEvaluations } = useShopfloorStore();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -150,335 +153,373 @@ export default function EditStaffPage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 pb-20 fade-in animate-in">
             {/* Header */}
-            <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/staff')}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-blue-900">Editar Funcionário</h1>
-                    <p className="text-slate-500">Atualização de cadastro.</p>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                    <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-blue-900">
+                            {isEditMode ? 'Editar Funcionário' : formData.name || 'Perfil do Colaborador'}
+                        </h1>
+                        <p className="text-slate-500">
+                            {isEditMode ? 'Atualização de cadastro completo.' : 'Visão de Desempenho e HST.'}
+                        </p>
+                    </div>
                 </div>
+                {!isEditMode && (
+                    <div className="flex gap-2">
+                        <Button variant="secondary" size="sm" className="bg-slate-100 text-slate-500 cursor-not-allowed">
+                            <Lock className="w-3 h-3 mr-2" />
+                            Modo Leitura
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
-                {/* 1. Identificação - Read Only for some */}
-                <Card>
-                    <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">1. Identificação</h3></CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Nº Operário</label>
-                            <input
-                                required
-                                name="workerNumber"
-                                value={formData.workerNumber}
-                                onChange={handleChange}
-                                className="input-field bg-slate-50"
-                                readOnly // Usually ID shouldn't change easily
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Tag RFID / NFC</label>
-                            <input
-                                name="rfidTag"
-                                value={(formData as any).rfidTag || ""}
-                                onChange={handleChange}
-                                className="input-field font-mono"
-                                placeholder="ID do Cartão"
-                            />
-                        </div>
-                        <div className="md:col-span-2 space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Nome Completo *</label>
-                            <input
-                                required
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                className="input-field"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Data de Nascimento</label>
-                            <input
-                                type="date"
-                                name="birthday"
-                                value={formData.birthday}
-                                onChange={handleChange}
-                                className="input-field"
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 2. Estrutura */}
-                <Card>
-                    <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">2. Estrutura & Alocação</h3></CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Função (Job Title)</label>
-                            <input
-                                name="jobTitle"
-                                value={(formData as any).jobTitle || ""}
-                                onChange={handleChange}
-                                className="input-field"
-                                placeholder="Ex: Operador CNC, Soldador..."
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Área *</label>
-                            <select
-                                name="area"
-                                value={formData.area}
-                                onChange={handleChange}
-                                className="input-field"
-                                required
-                            >
-                                <option value="">Selecione...</option>
-                                {availableAreas.map(area => (
-                                    <option key={area} value={area}>{area}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Grupo</label>
-                            <input
-                                name="group"
-                                value={formData.group}
-                                onChange={handleChange}
-                                className="input-field"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Posto de Trabalho</label>
-                            <select
-                                name="workstation"
-                                value={formData.workstation}
-                                onChange={handleChange}
-                                className="input-field"
-                                disabled={!formData.area}
-                            >
-                                <option value="">Selecione...</option>
-                                {availableWorkstations.map(ws => (
-                                    <option key={ws} value={ws}>{ws}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Turno</label>
-                            <select name="shift" value={formData.shift} onChange={handleChange} className="input-field">
-                                <option value="Turno A">Turno A</option>
-                                <option value="Turno B">Turno B</option>
-                                <option value="Turno C">Turno C</option>
-                                <option value="Geral">Geral</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Supervisor</label>
-                            <input name="supervisor" value={formData.supervisor} onChange={handleChange} className="input-field" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Líder</label>
-                            <input name="leader" value={formData.leader} onChange={handleChange} className="input-field" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Gestor</label>
-                            <input
-                                name="manager"
-                                value={formData.manager || ''}
-                                onChange={handleChange}
-                                className="input-field"
-                                placeholder="Gerente de área..."
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 3. Contrato */}
-                <Card>
-                    <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">3. Dados Contratuais</h3></CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Tipo de Contrato</label>
-                            <select name="contractType" value={formData.contractType} onChange={handleChange} className="input-field">
-                                <option value="Determinado">Termo Determinado</option>
-                                <option value="Indeterminado">Termo Indeterminado</option>
-                                <option value="Temporário">Temporário</option>
-                                <option value="Estágio">Estágio</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Status Atual</label>
-                            <select name="hrStatus" value={formData.hrStatus} onChange={handleChange} className="input-field">
-                                <option value="active">Ativo</option>
-                                <option value="vacation">Férias</option>
-                                <option value="sick_leave">Baixa Médica</option>
-                                <option value="terminated">Desligado</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Data Admissão</label>
-                            <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleChange} className="input-field" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Início Contrato</label>
-                            <input type="date" name="contractStartDate" value={formData.contractStartDate} onChange={handleChange} className="input-field" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Data Rescisão</label>
-                            <input type="date" name="terminationDate" value={formData.terminationDate} onChange={handleChange} className="input-field" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 4. Desenvolvimento */}
-                <Card>
-                    <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">4. Desenvolvimento</h3></CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Matriz de Talentos</label>
-                            <input
-                                name="talentMatrix"
-                                value={formData.talentMatrix}
-                                onChange={handleChange}
-                                className="input-field"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Nível ILUO</label>
-                            <select name="iluo" value={formData.iluo} onChange={handleChange} className="input-field">
-                                <option value="I">I - Initiate</option>
-                                <option value="L">L - Learn</option>
-                                <option value="U">U - Understand</option>
-                                <option value="O">O - Optimize</option>
-                            </select>
-                        </div>
-                        <div className="md:col-span-2 space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Notas Adicionais (RH)</label>
-                            <textarea
-                                name="hrNotes"
-                                value={formData.hrNotes}
-                                onChange={handleChange}
-                                className="input-field h-24 pt-2"
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 5. Acesso ao Sistema */}
-                <Card className={formData.hasSystemAccess ? "border-blue-300 ring-4 ring-blue-50" : ""}>
-                    <CardHeader>
-                        <div className="flex items-center justify-between border-b pb-2">
-                            <h3 className="font-semibold text-slate-900">5. Acesso ao Sistema</h3>
-                            <label className="flex items-center space-x-2 cursor-pointer">
-                                <span className="text-sm text-slate-600">Conceder Acesso?</span>
-                                <input
-                                    type="checkbox"
-                                    name="hasSystemAccess"
-                                    checked={formData.hasSystemAccess}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, hasSystemAccess: e.target.checked }))}
-                                    className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                />
-                            </label>
-                        </div>
-                    </CardHeader>
-                    {formData.hasSystemAccess && (
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Perfil de Acesso (Role) *</label>
-                                <select
-                                    name="systemRole"
-                                    value={formData.systemRole}
-                                    onChange={handleChange}
-                                    className="input-field font-semibold text-blue-800"
-                                    required={formData.hasSystemAccess}
-                                >
-                                    <option value="operator">Operador (Tablet - Chão de Fábrica)</option>
-                                    <option value="leader">Líder (Gestão Turno, Absenteísmo)</option>
-                                    <option value="planner">Planejador (Ordens, Métodos)</option>
-                                    <option value="admin">Administrador (Total)</option>
-                                </select>
-                                <p className="text-xs text-slate-500">
-                                    {formData.systemRole === 'operator' && "Acesso limitado: Pode apenas Iniciar/Pausar/Finalizar suas próprias tarefas."}
-                                    {formData.systemRole === 'leader' && "Gerencia equipe: Lança faltas, valida horas e monitora status do turno."}
-                                    {formData.systemRole === 'planner' && "Backoffice: Cria ordens, define roteiros e visualiza KPIs."}
-                                </p>
+                {/* READ ONLY MODE: Show Minimal Info Header */}
+                {!isEditMode && (
+                    <Card className="bg-slate-50 border-slate-200">
+                        <CardContent className="pt-6 flex flex-col md:flex-row gap-6 items-center md:items-start text-center md:text-left">
+                            <div className="h-24 w-24 rounded-full bg-white border-4 border-white shadow-sm flex items-center justify-center text-3xl font-bold text-blue-600">
+                                {formData.name ? formData.name.charAt(0) : '?'}
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Usuário *</label>
-                                    <input
-                                        name="username"
-                                        value={formData.username}
-                                        onChange={handleChange}
-                                        className="input-field"
-                                        placeholder={formData.workerNumber || "user.name"}
-                                        required={formData.hasSystemAccess}
-                                    />
+                            <div className="flex-1 space-y-1">
+                                <h2 className="text-xl font-bold text-slate-900">{formData.name}</h2>
+                                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
+                                    <span className="flex items-center gap-1"><User className="w-4 h-4" /> {formData.jobTitle || 'N/A'}</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-white border text-xs font-semibold">{formData.area}</span>
+                                    <span>Nº {formData.workerNumber}</span>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Redefinir Senha</label>
-                                    <input
-                                        type="text"
-                                        name="password"
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        className="input-field font-mono"
-                                        placeholder="Manter atual"
-                                    />
-                                    <p className="text-[10px] text-slate-400">Deixe em branco para não alterar.</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    )}
-                </Card>
-
-
-                {/* 6. Matriz de Permissões */}
-                {formData.hasSystemAccess && (
-                    <Card className="border-blue-300 ring-4 ring-blue-50">
-                        <CardHeader>
-                            <h3 className="font-semibold text-slate-900 border-b pb-2 flex items-center gap-2">
-                                <Shield className="h-4 w-4 text-blue-600" /> 6. Matriz de Permissões
-                            </h3>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b">
-                                            <th className="text-left font-medium py-2 text-slate-500">Módulo</th>
-                                            <th className="text-center font-medium py-2 text-slate-500">Sem Acesso</th>
-                                            <th className="text-center font-medium py-2 text-slate-500">Leitura</th>
-                                            <th className="text-center font-medium py-2 text-slate-500">Escrita</th>
-                                            <th className="text-center font-medium py-2 text-slate-500">Admin</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {ALL_MODULES.map(module => (
-                                            <tr key={module} className="hover:bg-slate-50">
-                                                <td className="py-2 text-slate-700 font-medium capitalize">{module}</td>
-                                                {(['none', 'read', 'write', 'admin'] as const).map(level => (
-                                                    <td key={level} className="text-center py-2">
-                                                        <label className="cursor-pointer flex justify-center w-full h-full items-center">
-                                                            <input
-                                                                type="radio"
-                                                                name={`perm_${module}`}
-                                                                checked={formData.permissions[module] === level}
-                                                                onChange={() => handlePermissionChange(module, level)}
-                                                                className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                                                            />
-                                                        </label>
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
                             </div>
                         </CardContent>
                     </Card>
+                )}
+
+                {/* EDIT MODE: Show Full Details (Items 1-6) */}
+                {isEditMode && (
+                    <>
+                        {/* 1. Identificação - Read Only for some */}
+                        <Card>
+                            <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">1. Identificação</h3></CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Nº Operário</label>
+                                    <input
+                                        required
+                                        name="workerNumber"
+                                        value={formData.workerNumber}
+                                        onChange={handleChange}
+                                        className="input-field bg-slate-50"
+                                        readOnly // Usually ID shouldn't change easily
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Tag RFID / NFC</label>
+                                    <input
+                                        name="rfidTag"
+                                        value={(formData as any).rfidTag || ""}
+                                        onChange={handleChange}
+                                        className="input-field font-mono"
+                                        placeholder="ID do Cartão"
+                                    />
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Nome Completo *</label>
+                                    <input
+                                        required
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Data de Nascimento</label>
+                                    <input
+                                        type="date"
+                                        name="birthday"
+                                        value={formData.birthday}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* 2. Estrutura */}
+                        <Card>
+                            <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">2. Estrutura & Alocação</h3></CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Função (Job Title)</label>
+                                    <input
+                                        name="jobTitle"
+                                        value={(formData as any).jobTitle || ""}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        placeholder="Ex: Operador CNC, Soldador..."
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Área *</label>
+                                    <select
+                                        name="area"
+                                        value={formData.area}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        required
+                                    >
+                                        <option value="">Selecione...</option>
+                                        {availableAreas.map(area => (
+                                            <option key={area} value={area}>{area}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Grupo</label>
+                                    <input
+                                        name="group"
+                                        value={formData.group}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Posto de Trabalho</label>
+                                    <select
+                                        name="workstation"
+                                        value={formData.workstation}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        disabled={!formData.area}
+                                    >
+                                        <option value="">Selecione...</option>
+                                        {availableWorkstations.map(ws => (
+                                            <option key={ws} value={ws}>{ws}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Turno</label>
+                                    <select name="shift" value={formData.shift} onChange={handleChange} className="input-field">
+                                        <option value="Turno A">Turno A</option>
+                                        <option value="Turno B">Turno B</option>
+                                        <option value="Turno C">Turno C</option>
+                                        <option value="Geral">Geral</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Supervisor</label>
+                                    <input name="supervisor" value={formData.supervisor} onChange={handleChange} className="input-field" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Líder</label>
+                                    <input name="leader" value={formData.leader} onChange={handleChange} className="input-field" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Gestor</label>
+                                    <input
+                                        name="manager"
+                                        value={formData.manager || ''}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        placeholder="Gerente de área..."
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* 3. Contrato */}
+                        <Card>
+                            <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">3. Dados Contratuais</h3></CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Tipo de Contrato</label>
+                                    <select name="contractType" value={formData.contractType} onChange={handleChange} className="input-field">
+                                        <option value="Determinado">Termo Determinado</option>
+                                        <option value="Indeterminado">Termo Indeterminado</option>
+                                        <option value="Temporário">Temporário</option>
+                                        <option value="Estágio">Estágio</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Status Atual</label>
+                                    <select name="hrStatus" value={formData.hrStatus} onChange={handleChange} className="input-field">
+                                        <option value="active">Ativo</option>
+                                        <option value="vacation">Férias</option>
+                                        <option value="sick_leave">Baixa Médica</option>
+                                        <option value="terminated">Desligado</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Data Admissão</label>
+                                    <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleChange} className="input-field" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Início Contrato</label>
+                                    <input type="date" name="contractStartDate" value={formData.contractStartDate} onChange={handleChange} className="input-field" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Data Rescisão</label>
+                                    <input type="date" name="terminationDate" value={formData.terminationDate} onChange={handleChange} className="input-field" />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* 4. Desenvolvimento */}
+                        <Card>
+                            <CardHeader><h3 className="font-semibold text-slate-900 border-b pb-2">4. Desenvolvimento</h3></CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Matriz de Talentos</label>
+                                    <input
+                                        name="talentMatrix"
+                                        value={formData.talentMatrix}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Nível ILUO</label>
+                                    <select name="iluo" value={formData.iluo} onChange={handleChange} className="input-field">
+                                        <option value="I">I - Initiate</option>
+                                        <option value="L">L - Learn</option>
+                                        <option value="U">U - Understand</option>
+                                        <option value="O">O - Optimize</option>
+                                    </select>
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Notas Adicionais (RH)</label>
+                                    <textarea
+                                        name="hrNotes"
+                                        value={formData.hrNotes}
+                                        onChange={handleChange}
+                                        className="input-field h-24 pt-2"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* 5. Acesso ao Sistema */}
+                        <Card className={formData.hasSystemAccess ? "border-blue-300 ring-4 ring-blue-50" : ""}>
+                            <CardHeader>
+                                <div className="flex items-center justify-between border-b pb-2">
+                                    <h3 className="font-semibold text-slate-900">5. Acesso ao Sistema</h3>
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <span className="text-sm text-slate-600">Conceder Acesso?</span>
+                                        <input
+                                            type="checkbox"
+                                            name="hasSystemAccess"
+                                            checked={formData.hasSystemAccess}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, hasSystemAccess: e.target.checked }))}
+                                            className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                    </label>
+                                </div>
+                            </CardHeader>
+                            {formData.hasSystemAccess && (
+                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Perfil de Acesso (Role) *</label>
+                                        <select
+                                            name="systemRole"
+                                            value={formData.systemRole}
+                                            onChange={handleChange}
+                                            className="input-field font-semibold text-blue-800"
+                                            required={formData.hasSystemAccess}
+                                        >
+                                            <option value="operator">Operador (Tablet - Chão de Fábrica)</option>
+                                            <option value="leader">Líder (Gestão Turno, Absenteísmo)</option>
+                                            <option value="planner">Planejador (Ordens, Métodos)</option>
+                                            <option value="admin">Administrador (Total)</option>
+                                        </select>
+                                        <p className="text-xs text-slate-500">
+                                            {formData.systemRole === 'operator' && "Acesso limitado: Pode apenas Iniciar/Pausar/Finalizar suas próprias tarefas."}
+                                            {formData.systemRole === 'leader' && "Gerencia equipe: Lança faltas, valida horas e monitora status do turno."}
+                                            {formData.systemRole === 'planner' && "Backoffice: Cria ordens, define roteiros e visualiza KPIs."}
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-slate-700">Usuário *</label>
+                                            <input
+                                                name="username"
+                                                value={formData.username}
+                                                onChange={handleChange}
+                                                className="input-field"
+                                                placeholder={formData.workerNumber || "user.name"}
+                                                required={formData.hasSystemAccess}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-slate-700">Redefinir Senha</label>
+                                            <input
+                                                type="text"
+                                                name="password"
+                                                value={formData.password}
+                                                onChange={handleChange}
+                                                className="input-field font-mono"
+                                                placeholder="Manter atual"
+                                            />
+                                            <p className="text-[10px] text-slate-400">Deixe em branco para não alterar.</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            )}
+                        </Card>
+
+
+                        {/* 6. Matriz de Permissões */}
+                        {formData.hasSystemAccess && (
+                            <Card className="border-blue-300 ring-4 ring-blue-50">
+                                <CardHeader>
+                                    <h3 className="font-semibold text-slate-900 border-b pb-2 flex items-center gap-2">
+                                        <Shield className="h-4 w-4 text-blue-600" /> 6. Matriz de Permissões
+                                    </h3>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b">
+                                                    <th className="text-left font-medium py-2 text-slate-500">Módulo</th>
+                                                    <th className="text-center font-medium py-2 text-slate-500">Sem Acesso</th>
+                                                    <th className="text-center font-medium py-2 text-slate-500">Leitura</th>
+                                                    <th className="text-center font-medium py-2 text-slate-500">Escrita</th>
+                                                    <th className="text-center font-medium py-2 text-slate-500">Admin</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y">
+                                                {ALL_MODULES.map(module => (
+                                                    <tr key={module} className="hover:bg-slate-50">
+                                                        <td className="py-2 text-slate-700 font-medium capitalize">{module}</td>
+                                                        {(['none', 'read', 'write', 'admin'] as const).map(level => (
+                                                            <td key={level} className="text-center py-2">
+                                                                <label className="cursor-pointer flex justify-center w-full h-full items-center">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={`perm_${module}`}
+                                                                        checked={formData.permissions[module] === level}
+                                                                        onChange={() => handlePermissionChange(module, level)}
+                                                                        className="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                                                    />
+                                                                </label>
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </>
                 )}
 
                 {/* 7. Desempenho & HST (Radar, Trends & Alerts) */}
@@ -592,21 +633,17 @@ export default function EditStaffPage() {
                 </Card>
 
                 <div className="flex justify-end pb-10 gap-3">
-                    <Button type="button" variant="outline" onClick={() => router.push('/staff')}>
-                        Cancelar
+                    <Button type="button" variant="outline" onClick={() => router.back()}>
+                        {isEditMode ? 'Cancelar' : 'Voltar'}
                     </Button>
-                    <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700 min-w-[200px]" disabled={isLoading}>
-                        <Save className="mr-2 h-5 w-5" />
-                        {isLoading ? 'Salvando...' : 'Salvar Alterações'}
-                    </Button>
+                    {isEditMode && (
+                        <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700 min-w-[200px]" disabled={isLoading}>
+                            <Save className="mr-2 h-5 w-5" />
+                            {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                        </Button>
+                    )}
                 </div>
             </form>
-
-            <style jsx>{`
-                .input-field {
-                    @apply flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-50;
-                }
-            `}</style>
         </div>
     );
 }
