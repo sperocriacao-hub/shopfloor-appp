@@ -54,6 +54,7 @@ export function Sidebar() {
         { name: 'Produtos & Roteiros', href: '/products', icon: Package, module: 'products', section: 'Produção' },
         { name: 'Engenharia', href: '/engineering', icon: Microscope, module: 'engineering', section: 'Produção' },
         { name: 'Materiais', href: '/consumables', icon: BarChart2, module: 'consumables', section: 'Produção' },
+        { name: 'Scrap & Desperdício', href: '/scrap', icon: /* Trash2 handled in imports? No need to check imports first */ Activity, module: 'scrap', section: 'Produção' }, // Using Activity as placeholder or will update imports
 
         // --- Recursos ---
         { name: 'Recursos Humanos', href: '/staff', icon: Users, module: 'staff', section: 'Recursos' },

@@ -44,7 +44,7 @@ export default function NewStaffPage() {
         permissions: {
             dashboard: 'read', orders: 'none', assets: 'none', products: 'none',
             engineering: 'none', consumables: 'none', staff: 'none', quality: 'none',
-            tools: 'none', molds: 'none', supervisor: 'none', mobile: 'none', admin: 'none'
+            tools: 'none', molds: 'none', supervisor: 'none', mobile: 'none', scrap: 'none', admin: 'none'
         } as UserPermissions
     });
 
@@ -72,7 +72,7 @@ export default function NewStaffPage() {
     const ALL_MODULES: AppModule[] = [
         'dashboard', 'orders', 'assets', 'products', 'engineering',
         'consumables', 'staff', 'quality', 'tools', 'molds',
-        'supervisor', 'mobile', 'admin'
+        'supervisor', 'mobile', 'scrap', 'admin'
     ];
 
     const handlePermissionChange = (module: AppModule, level: 'none' | 'read' | 'write' | 'admin') => {

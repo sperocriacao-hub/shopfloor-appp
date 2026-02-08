@@ -14,7 +14,7 @@ import {
     RfidReader, IotEvent,
     MaintenanceOrder, MaintenancePin, MoldGeometry,
     UserSettings, UserPermissions, AuditLog, EmployeeWithPermissions, AppModule,
-    DailyEvaluation, Certification, EmployeeCertification, SafetyIncident, SafetyInspection
+    DailyEvaluation, Certification, EmployeeCertification, SafetyIncident, SafetyInspection, ScrapTransaction
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -180,6 +180,12 @@ interface ShopfloorState {
     sequencingRules: SequencingRule[];
     moldCompatibility: MoldCompatibility[]; // Shopfloor V6
     moldMaintenanceLogs: MoldMaintenanceLog[]; // Shopfloor V6
+
+    // Shopfloor V14 (Scrap & AS400)
+    scrapTransactions: ScrapTransaction[];
+    addScrapTransaction: (tx: ScrapTransaction) => Promise<void>;
+    updateScrapTransaction: (id: string, updates: Partial<ScrapTransaction>) => Promise<void>;
+    importAS400Data: (type: 'products' | 'consumables', data: any[]) => Promise<void>;
 
     addMoldCompatibility: (pair: MoldCompatibility) => Promise<void>;
     removeMoldCompatibility: (id: string) => Promise<void>;
@@ -584,6 +590,23 @@ const mapDbToMaterialRequest = (db: any): MaterialRequest => ({
     processedBy: db.processed_by
 });
 
+const mapDbToScrapTransaction = (db: any): ScrapTransaction => ({
+    id: db.id,
+    date: db.date,
+    partNumber: db.part_number,
+    partDescription: db.part_description,
+    quantity: db.quantity,
+    reasonCode: db.reason_code,
+    costCenter: db.cost_center,
+    unitCost: db.unit_cost,
+    totalCost: db.total_cost,
+    status: db.status,
+    reportedBy: db.reported_by,
+    approvedBy: db.approved_by,
+    exportedAt: db.exported_at,
+    notes: db.notes
+});
+
 const mapDbToLine = (db: any): ProductionLine => ({
     id: db.id,
     description: db.description,
@@ -635,6 +658,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
             qualityCases: [],
             qualityActions: [],
             scrapReports: [],
+            scrapTransactions: [],
 
             // Shopfloor V7 (Tools)
             tools: [],
@@ -1630,7 +1654,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 const [
                     employees, absenteeism, assets, products, orders, events,
                     productOptions, optionTasks, taskExecutions, orderIssues,
-                    qualityCases, qualityActions, scrapReports,
+                    qualityCases, qualityActions, scrapReports, scrapTransactions,
                     moldCompatibility, moldLogs,
                     dailyEvaluations, certifications, employeeCertifications, safetyIncidents, safetyInspections,
                     alerts,
@@ -1653,6 +1677,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     fetchSafe('quality_cases'), // 10
                     fetchSafe('quality_actions'), // 11
                     fetchSafe('scrap_reports'), // 12
+                    fetchSafe('scrap_transactions'), // 13 (New)
                     fetchSafe('mold_compatibility'), // 13
                     fetchSafe('mold_maintenance_logs'), // 14
                     fetchSafe('daily_evaluations'), // 15
@@ -1779,8 +1804,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     }));
                 }
 
-                // --- Alerts, Tools, Consumables ---
                 if (alerts) stateUpdates.alerts = alerts.map(mapDbToAlert);
+                if (scrapTransactions) stateUpdates.scrapTransactions = scrapTransactions.map(mapDbToScrapTransaction);
 
                 if (tools) {
                     stateUpdates.tools = tools.map((t: any) => ({
@@ -1825,6 +1850,34 @@ export const useShopfloorStore = create<ShopfloorState>()(
 
                 const duration = (performance.now() - start).toFixed(2);
                 console.log(`[ShopfloorStore] Sync Complete in ${duration}ms (Parallel)`);
+            },
+
+            // --- V14: Scrap Actions ---
+            addScrapTransaction: async (tx) => {
+                set(s => ({ scrapTransactions: [...s.scrapTransactions, tx] }));
+                const { error } = await supabase.from('scrap_transactions').insert({
+                    id: tx.id, date: tx.date, part_number: tx.partNumber, part_description: tx.partDescription,
+                    quantity: tx.quantity, reason_code: tx.reasonCode, cost_center: tx.costCenter,
+                    unit_cost: tx.unitCost, total_cost: tx.totalCost, status: tx.status,
+                    reported_by: tx.reportedBy, approved_by: tx.approvedBy, notes: tx.notes
+                });
+                if (error) console.error("Error adding scrap:", error);
+            },
+
+            updateScrapTransaction: async (id, updates) => {
+                set(s => ({ scrapTransactions: s.scrapTransactions.map(t => t.id === id ? { ...t, ...updates } : t) }));
+                const dbUpdates: any = {};
+                if (updates.status) dbUpdates.status = updates.status;
+                if (updates.approvedBy) dbUpdates.approved_by = updates.approvedBy;
+                if (updates.exportedAt) dbUpdates.exported_at = updates.exportedAt;
+
+                const { error } = await supabase.from('scrap_transactions').update(dbUpdates).eq('id', id);
+                if (error) console.error("Error updating scrap:", error);
+            },
+
+            importAS400Data: async (type, data) => {
+                console.log(`Importing ${type}`, data);
+                // Placeholder for logic
             },
 
             // --- V8: Mold Maintenance Actions ---

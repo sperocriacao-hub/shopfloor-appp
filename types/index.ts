@@ -523,7 +523,26 @@ export interface UserSettings {
     soundVolume: number; // 0-100
 }
 
+export interface ScrapTransaction {
+    id: string;
+    date: string;
+    partNumber: string;
+    partDescription?: string;
+    quantity: number;
+    reasonCode: 'defect' | 'setup' | 'operator' | 'obsolete' | 'testing';
+    costCenter?: string;
+    unitCost?: number;
+    totalCost?: number;
+    status: 'pending' | 'approved' | 'rejected' | 'exported';
+    reportedBy?: string;
+    approvedBy?: string;
+    exportedAt?: string;
+    notes?: string;
+}
+
 export type PermissionLevel = 'none' | 'read' | 'write' | 'admin';
+
+export type PermissionModule = AppModule | 'admin' | 'scrap';
 
 export type AppModule =
     | 'dashboard'
@@ -539,6 +558,7 @@ export type AppModule =
     | 'supervisor'
     | 'mobile'
     | 'admin'
+    | 'scrap'
     | 'legacy';
 
 export interface UserPermissions {
