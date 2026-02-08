@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2, Smartphone, UserCheck, ClipboardCheck, Shield } from 'lucide-react';
+import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2, Smartphone, UserCheck, ClipboardCheck, Shield, ArrowRightLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -69,6 +69,7 @@ export function Sidebar() {
         // --- Sistema ---
         { name: 'App Mobile', href: '/mobile', icon: Smartphone, module: 'mobile', section: 'Sistema' },
         { name: 'Admin / Suporte', href: '/admin', icon: Wrench, module: 'admin', section: 'Sistema' },
+        { name: 'Sync Center', href: '/admin/sync', icon: ArrowRightLeft, module: 'admin', section: 'Sistema' },
         { name: 'Modo Shopfloor', href: '/shopfloor', icon: Ship, module: 'legacy', section: 'Sistema' },
     ];
 
