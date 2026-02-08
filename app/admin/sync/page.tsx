@@ -5,46 +5,86 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useShopfloorStore } from "@/store/useShopfloorStore";
 import { toast } from "sonner";
-import { Upload, Download, FileSpreadsheet, RefreshCw, Database, ArrowRightLeft } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, Database, ArrowRightLeft } from "lucide-react";
+import Papa from "papaparse";
 
 export default function SyncCenterPage() {
     const store = useShopfloorStore();
     const [isImporting, setIsImporting] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
-    // Placeholder for file handling logic
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'products' | 'consumables') => {
         const file = event.target.files?.[0];
         if (!file) return;
 
         setIsImporting(true);
-        try {
-            // Simulator for now - typically we'd parse CSV here
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            toast.success(`Importação do AS400 (${type}) concluída com sucesso!`);
-            // In real impl: store.importData(parsedData);
-        } catch (error) {
-            toast.error("Erro na importação: " + String(error));
-        } finally {
-            setIsImporting(false);
-        }
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                try {
+                    console.log("Parsed Data:", results.data);
+                    await store.importAS400Data(type, results.data);
+                } catch (error) {
+                    toast.error("Erro ao processar dados.");
+                } finally {
+                    setIsImporting(false);
+                }
+            },
+            error: (error) => {
+                toast.error("Erro ao ler CSV: " + error.message);
+                setIsImporting(false);
+            }
+        });
     };
 
     const handleExport = async (type: 'scrap' | 'requests') => {
         setIsExporting(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            toast.success(`Arquivo de Exportação (${type}) gerado!`);
-            // In real impl: generateCSV(data);
+            // Filter pending items
+            const dataToExport = type === 'scrap'
+                ? store.scrapTransactions.filter(t => t.status === 'approved')
+                : store.materialRequests.filter(r => r.status === 'approved');
+
+            if (dataToExport.length === 0) {
+                toast.info("Nenhum registro pendente para exportação.");
+                return;
+            }
+
+            // Convert to CSV
+            const csv = Papa.unparse(dataToExport);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            // Trigger Download
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", `AS400_EXPORT_${type.toUpperCase()}_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Mark as Exported in DB
+            const now = new Date().toISOString();
+            if (type === 'scrap') {
+                for (const item of dataToExport) {
+                    await store.updateScrapTransaction(item.id, { status: 'exported', exportedAt: now });
+                }
+            }
+
+            toast.success(`Exportação de ${dataToExport.length} registros concluída!`);
         } catch (error) {
+            console.error(error);
             toast.error("Erro na exportação");
         } finally {
             setIsExporting(false);
         }
     };
+
+    const pendingScrap = store.scrapTransactions.filter(t => t.status === 'approved').length;
+    const pendingRequests = store.materialRequests.filter(r => r.status === 'approved').length;
 
     return (
         <div className="p-8 space-y-8 fade-in animate-in">
@@ -59,8 +99,10 @@ export default function SyncCenterPage() {
                     </p>
                 </div>
                 <div className="text-right">
-                    <div className="text-sm font-medium text-slate-500">Última Sincronização</div>
-                    <div className="text-lg font-mono font-bold text-slate-800">Hoje, 10:42</div>
+                    <div className="text-sm font-medium text-slate-500">Registros em Cache</div>
+                    <div className="text-lg font-mono font-bold text-slate-800">
+                        {store.as400Items?.length || 0} Itens
+                    </div>
                 </div>
             </div>
 
@@ -80,11 +122,11 @@ export default function SyncCenterPage() {
                         <div className="space-y-4">
                             <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                                 <Label className="text-base font-semibold">Atualizar Artigos & Custos (BOM)</Label>
-                                <p className="text-xs text-slate-500 mb-3">Requer export CSV 'ITMMST' ou similar.</p>
+                                <p className="text-xs text-slate-500 mb-3">Requer export CSV (Headers: Part Number, Description, Standard Cost)</p>
                                 <div className="flex gap-4">
                                     <Input
                                         type="file"
-                                        accept=".csv,.xlsx"
+                                        accept=".csv"
                                         className="cursor-pointer"
                                         onChange={(e) => handleFileUpload(e, 'products')}
                                         disabled={isImporting}
@@ -98,7 +140,7 @@ export default function SyncCenterPage() {
                                 <div className="flex gap-4">
                                     <Input
                                         type="file"
-                                        accept=".csv,.xlsx"
+                                        accept=".csv"
                                         className="cursor-pointer"
                                         onChange={(e) => handleFileUpload(e, 'consumables')}
                                         disabled={isImporting}
@@ -117,7 +159,7 @@ export default function SyncCenterPage() {
                             Exportar Movimentos (Outbound)
                         </CardTitle>
                         <CardDescription>
-                            Gerar arquivos para contabilidade no AS400.
+                            Gerar arquivos CSV para importação na contabilidade no AS400.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -130,7 +172,7 @@ export default function SyncCenterPage() {
                             >
                                 <Database className="w-8 h-8" />
                                 <span className="font-bold">Exportar SCRAP</span>
-                                <span className="text-xs font-normal">Pendentes: 12 registros</span>
+                                <span className="text-xs font-normal">Aprovados: {pendingScrap} registros</span>
                             </Button>
 
                             <Button
@@ -141,7 +183,7 @@ export default function SyncCenterPage() {
                             >
                                 <FileSpreadsheet className="w-8 h-8" />
                                 <span className="font-bold">Exportar Pedidos</span>
-                                <span className="text-xs font-normal">Pendentes: 5 pedidos</span>
+                                <span className="text-xs font-normal">Aprovados: {pendingRequests} pedidos</span>
                             </Button>
                         </div>
 

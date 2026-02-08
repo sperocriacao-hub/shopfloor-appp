@@ -14,7 +14,7 @@ import {
     RfidReader, IotEvent,
     MaintenanceOrder, MaintenancePin, MoldGeometry,
     UserSettings, UserPermissions, AuditLog, EmployeeWithPermissions, AppModule,
-    DailyEvaluation, Certification, EmployeeCertification, SafetyIncident, SafetyInspection, ScrapTransaction
+    DailyEvaluation, Certification, EmployeeCertification, SafetyIncident, SafetyInspection, ScrapTransaction, AS400Item
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -280,6 +280,10 @@ interface ShopfloorState {
     importConsumablesBatch: (transactions: ConsumableTransaction[]) => Promise<void>;
     addPpeRequest: (req: PpeRequest) => Promise<void>;
     updatePpeRequest: (id: string, updates: Partial<PpeRequest>) => Promise<void>;
+
+    // Shopfloor V14 (AS400)
+    as400Items: AS400Item[];
+    importAS400Data: (type: 'products' | 'consumables', data: any[]) => Promise<void>;
 
     // Material Requests (Requests V2)
     materialRequests: MaterialRequest[];
@@ -659,6 +663,7 @@ export const useShopfloorStore = create<ShopfloorState>()(
             qualityActions: [],
             scrapReports: [],
             scrapTransactions: [],
+            as400Items: [],
 
             // Shopfloor V7 (Tools)
             tools: [],
@@ -1875,9 +1880,44 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (error) console.error("Error updating scrap:", error);
             },
 
-            importAS400Data: async (type, data) => {
-                console.log(`Importing ${type}`, data);
-                // Placeholder for logic
+            importAS400Data: async (type, data: any[]) => {
+                // Determine item type
+                const itemType = type === 'products' ? 'Product' : 'Consumable';
+
+                // Map to AS400Item format
+                const itemsToUpsert = data.map(d => ({
+                    part_number: d.partNumber || d["Item Number"],
+                    description: d.description || d["Description"],
+                    unit_cost: parseFloat(d.unitCost || d["Standard Cost"] || "0"),
+                    item_type: itemType,
+                    updated_at: new Date().toISOString()
+                })).filter(i => i.part_number); // Filter invalid
+
+                if (itemsToUpsert.length === 0) return;
+
+                // Optimistic Update
+                set(s => {
+                    const newItems = itemsToUpsert.map(i => ({
+                        partNumber: i.part_number,
+                        description: i.description,
+                        unitCost: i.unit_cost,
+                        itemType: i.item_type as 'Product' | 'Consumable',
+                        updatedAt: i.updated_at
+                    }));
+                    // Merge with existing logic (replace duplicates)
+                    const existingMap = new Map(s.as400Items.map(i => [i.partNumber, i]));
+                    newItems.forEach(i => existingMap.set(i.partNumber, i));
+                    return { as400Items: Array.from(existingMap.values()) };
+                });
+
+                // Batch Upsert to Supabase
+                const { error } = await supabase.from('as400_items').upsert(itemsToUpsert, { onConflict: 'part_number' });
+                if (error) {
+                    console.error("Error importing AS400 data:", error);
+                    toast.error("Erro ao salvar dados do AS400 no banco.");
+                } else {
+                    toast.success(`${itemsToUpsert.length} itens importados com sucesso!`);
+                }
             },
 
             // --- V8: Mold Maintenance Actions ---
