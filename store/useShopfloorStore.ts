@@ -14,7 +14,8 @@ import {
     RfidReader, IotEvent,
     MaintenanceOrder, MaintenancePin, MoldGeometry,
     UserSettings, UserPermissions, AuditLog, EmployeeWithPermissions, AppModule,
-    DailyEvaluation, Certification, EmployeeCertification, SafetyIncident, SafetyInspection, ScrapTransaction, AS400Item
+    DailyEvaluation, Certification, EmployeeCertification, SafetyIncident, SafetyInspection, ScrapTransaction, AS400Item,
+    LeanAudit, LeanProject, LeanAction
 } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -185,7 +186,6 @@ interface ShopfloorState {
     scrapTransactions: ScrapTransaction[];
     addScrapTransaction: (tx: ScrapTransaction) => Promise<void>;
     updateScrapTransaction: (id: string, updates: Partial<ScrapTransaction>) => Promise<void>;
-    importAS400Data: (type: 'products' | 'consumables', data: any[]) => Promise<void>;
 
     addMoldCompatibility: (pair: MoldCompatibility) => Promise<void>;
     removeMoldCompatibility: (id: string) => Promise<void>;
@@ -299,8 +299,19 @@ interface ShopfloorState {
 
     // Shopfloor V6 IoT Actions
     findAssetByRfid: (tag: string) => Asset | undefined; // Synchronous lookups from loaded state preferred for speed
-    findEmployeeByRfid: (tag: string) => Employee | undefined;
     findStationByFixedId: (fixedId: string) => Asset | undefined;
+    findEmployeeByRfid: (tag: string) => Employee | undefined;
+
+    // Shopfloor V15 (Lean Manufacturing)
+    leanAudits: LeanAudit[];
+    leanProjects: LeanProject[];
+    leanActions: LeanAction[];
+
+    addLeanAudit: (audit: LeanAudit) => Promise<void>;
+    addLeanProject: (project: LeanProject) => Promise<void>;
+    updateLeanProject: (id: string, updates: Partial<LeanProject>) => Promise<void>;
+    addLeanAction: (action: LeanAction) => Promise<void>;
+    updateLeanAction: (id: string, updates: Partial<LeanAction>) => Promise<void>;
 
     // Shopfloor V8 Actions (Mold Maintenance)
     maintenanceOrders: MaintenanceOrder[];
@@ -691,7 +702,84 @@ export const useShopfloorStore = create<ShopfloorState>()(
             maintenanceOrders: [],
             moldGeometries: [],
 
+            // Shopfloor V15 (Lean)
+            leanAudits: [],
+            leanProjects: [],
+            leanActions: [],
+
             // Actions
+            addLeanAudit: async (audit) => {
+                set(s => ({ leanAudits: [...s.leanAudits, audit] }));
+                const { error } = await supabase.from('lean_audits').insert({
+                    id: audit.id,
+                    type: audit.type,
+                    area: audit.area,
+                    score: audit.score,
+                    max_score: audit.maxScore,
+                    checklist_data: audit.checklistData,
+                    images: audit.images,
+                    notes: audit.notes
+                });
+                if (error) console.error("Error adding audit:", error);
+            },
+
+            addLeanProject: async (project) => {
+                set(s => ({ leanProjects: [...s.leanProjects, project] }));
+                const { error } = await supabase.from('lean_projects').insert({
+                    id: project.id,
+                    title: project.title,
+                    type: project.type,
+                    status: project.status,
+                    owner_name: project.ownerName,
+                    background: project.background,
+                    current_state: project.currentState,
+                    target_state: project.targetState,
+                    root_cause_analysis: project.rootCauseAnalysis,
+                    impact_safety: project.impact?.safety,
+                    impact_quality: project.impact?.quality,
+                    impact_delivery: project.impact?.delivery,
+                    impact_cost: project.impact?.cost,
+                    impact_morale: project.impact?.morale,
+                    savings_estimated: project.savingsEstimated,
+                    start_date: project.startDate,
+                    due_date: project.dueDate
+                });
+                if (error) console.error("Error adding project:", error);
+            },
+
+            updateLeanProject: async (id, updates) => {
+                set(s => ({
+                    leanProjects: s.leanProjects.map(p => p.id === id ? { ...p, ...updates } : p)
+                }));
+                // Map updates to DB columns (simplified)
+                const toUpdate: any = {};
+                if (updates.status) toUpdate.status = updates.status;
+                if (updates.rootCauseAnalysis) toUpdate.root_cause_analysis = updates.rootCauseAnalysis;
+                // ... add other mappings as needed
+                await supabase.from('lean_projects').update(toUpdate).eq('id', id);
+            },
+
+            addLeanAction: async (action) => {
+                set(s => ({ leanActions: [...s.leanActions, action] }));
+                await supabase.from('lean_actions').insert({
+                    id: action.id,
+                    project_id: action.projectId,
+                    audit_id: action.auditId,
+                    description: action.description,
+                    responsible_name: action.responsibleName,
+                    deadline: action.deadline,
+                    status: action.status,
+                    priority: action.priority
+                });
+            },
+
+            updateLeanAction: async (id, updates) => {
+                set(s => ({
+                    leanActions: s.leanActions.map(a => a.id === id ? { ...a, ...updates } : a)
+                }));
+                await supabase.from('lean_actions').update(updates).eq('id', id);
+            },
+
             addAsset: async (asset) => {
                 set((state) => ({ assets: [...state.assets, asset] }));
                 const { error } = await supabase.from('assets').insert({

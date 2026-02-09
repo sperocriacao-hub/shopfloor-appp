@@ -544,21 +544,7 @@ export type PermissionLevel = 'none' | 'read' | 'write' | 'admin';
 
 export type PermissionModule = AppModule | 'admin' | 'scrap';
 
-export type AppModule =
-    | 'dashboard'
-    | 'orders'
-    | 'assets'
-    | 'products'
-    | 'engineering'
-    | 'consumables'
-    | 'staff'
-    | 'quality'
-    | 'tools'
-    | 'molds'
-    | 'supervisor'
-    | 'mobile'
-    | 'admin'
-    | 'scrap'
+export type AppModule = 'dashboard' | 'orders' | 'products' | 'engineering' | 'staff' | 'quality' | 'tools' | 'molds' | 'settings' | 'inventory' | 'maintenance' | 'consumables' | 'supervisor' | 'scrap' | 'assets' | 'mobile' | 'admin' | 'lean'
     | 'legacy';
 
 export interface UserPermissions {
@@ -636,7 +622,33 @@ export interface SafetyIncident {
     verification?: string;
     closedAt?: string;
     createdAt?: string;
+    closedAt?: string;
+    createdAt?: string;
     resolvedAt?: string;
+}
+
+export interface AS400Item {
+    partNumber: string;
+    description: string;
+    unitCost: number;
+    updatedAt: string;
+}
+
+export interface ScrapTransaction {
+    id: string;
+    date: string;
+    partNumber: string;
+    partDescription: string;
+    quantity: number;
+    reasonCode: 'damage' | 'obsolete' | 'production' | 'sample';
+    costCenter: string;
+    unitCost: number;
+    totalCost: number;
+    status: 'pending' | 'approved' | 'rejected' | 'exported';
+    reportedBy: string;
+    approvedBy?: string;
+    exportedAt?: string;
+    notes?: string;
 }
 
 export interface SafetyInspection {
@@ -647,4 +659,68 @@ export interface SafetyInspection {
     overallScore?: number;
     checklistData?: Record<string, any>;
     createdAt?: string;
+}
+
+// --- Shopfloor V15: Lean Manufacturing ---
+export type LeanAuditType = '5s' | 'gemba' | 'process' | 'safety';
+export type LeanProjectType = 'kaizen' | 'a3' | 'project';
+export type LeanProjectStatus = 'draft' | 'active' | 'monitoring' | 'closed' | 'cancelled';
+
+export interface LeanAudit {
+    id: string;
+    type: LeanAuditType;
+    area: string;
+    auditorName?: string;
+    score: number;
+    maxScore: number;
+    checklistData: Record<string, any>; // { "q1": { answer: "yes", score: 5, comment: "..." } }
+    images?: string[];
+    notes?: string;
+    createdAt: string;
+    completedAt?: string;
+}
+
+export interface LeanProject {
+    id: string;
+    title: string;
+    type: LeanProjectType;
+    status: LeanProjectStatus;
+    ownerName?: string;
+
+    // A3 Fields
+    background?: string;
+    currentState?: string;
+    targetState?: string;
+    gapAnalysis?: string;
+    rootCauseAnalysis?: {
+        ishikawa?: Record<string, string>;
+        fiveWhys?: string[];
+    };
+
+    // Impact
+    impact?: {
+        safety: boolean;
+        quality: boolean;
+        delivery: boolean;
+        cost: boolean;
+        morale: boolean;
+    };
+    savingsEstimated?: number;
+
+    startDate?: string;
+    dueDate?: string;
+    closedAt?: string;
+    createdAt: string;
+}
+
+export interface LeanAction {
+    id: string;
+    projectId?: string;
+    auditId?: string;
+    description: string;
+    responsibleName?: string;
+    deadline?: string;
+    status: 'pending' | 'in_progress' | 'completed' | 'verified';
+    priority: 'low' | 'medium' | 'high';
+    completedAt?: string;
 }

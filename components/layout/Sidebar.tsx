@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2, Smartphone, UserCheck, ClipboardCheck, Shield, ArrowRightLeft } from 'lucide-react';
+import { Home, Settings, Ship, Boxes, Activity, Users, Menu, ChevronLeft, ChevronRight, Microscope, Wrench, Package, Anchor, Hammer, BarChart2, Smartphone, UserCheck, ClipboardCheck, Shield, ArrowRightLeft, Lightbulb } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,7 @@ export function Sidebar() {
         { name: 'Ferramentaria', href: '/tools', icon: Hammer, module: 'tools', section: 'Qualidade & Manutenção' },
         { name: 'Moldes', href: '/molds', icon: Anchor, module: 'molds', section: 'Qualidade & Manutenção' },
         { name: 'Ativos', href: '/assets', icon: Boxes, module: 'assets', section: 'Qualidade & Manutenção' },
+        { name: 'Lean / Melhoria', href: '/lean', icon: Lightbulb, module: 'lean', section: 'Qualidade & Manutenção' },
 
         // --- Sistema ---
         { name: 'App Mobile', href: '/mobile', icon: Smartphone, module: 'mobile', section: 'Sistema' },
