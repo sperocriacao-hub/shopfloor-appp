@@ -15,9 +15,9 @@ const columns: { id: LeanProjectStatus; title: string; color: string }[] = [
     { id: 'closed', title: 'Concluído', color: 'bg-green-50 border-green-200' }
 ];
 
-export function KaizenBoard() {
+export function KaizenBoard({ type = 'kaizen' }: { type?: 'kaizen' | 'a3' }) {
     const { leanProjects, updateLeanProject } = useShopfloorStore();
-    const kaizens = leanProjects.filter(p => p.type === 'kaizen');
+    const projects = leanProjects.filter(p => p.type === type);
 
     const handleDragStart = (e: React.DragEvent, id: string) => {
         e.dataTransfer.setData('projectId', id);
@@ -46,12 +46,12 @@ export function KaizenBoard() {
                     <div className="flex items-center justify-between mb-3 px-2">
                         <h3 className="font-semibold text-slate-700">{col.title}</h3>
                         <Badge variant="secondary" className="bg-white/50">
-                            {kaizens.filter(k => k.status === col.id).length}
+                            {projects.filter(k => k.status === col.id).length}
                         </Badge>
                     </div>
 
                     <div className="flex-1 overflow-y-auto space-y-3 px-1">
-                        {kaizens.filter(k => k.status === col.id).map(project => (
+                        {projects.filter(k => k.status === col.id).map(project => (
                             <Card
                                 key={project.id}
                                 className="cursor-move hover:shadow-md transition-shadow relative group"

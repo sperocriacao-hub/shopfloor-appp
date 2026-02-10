@@ -96,36 +96,15 @@ export default function LeanDashboard() {
                 </TabsContent>
 
                 <TabsContent value="audits">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Audit Management</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>Audit list and schedule will appear here.</p>
-                        </CardContent>
-                    </Card>
+                    <LeanAuditList />
                 </TabsContent>
 
                 <TabsContent value="kaizen">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Kaizen Projects</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>Kanban board for continuous improvement ideas.</p>
-                        </CardContent>
-                    </Card>
+                    <KaizenBoard type="kaizen" />
                 </TabsContent>
 
                 <TabsContent value="a3">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>A3 Reports</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>Structured problem solving (A3) list.</p>
-                        </CardContent>
-                    </Card>
+                    <KaizenBoard type="a3" />
                 </TabsContent>
             </Tabs>
         </div>
