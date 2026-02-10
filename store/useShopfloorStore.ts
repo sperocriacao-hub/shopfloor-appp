@@ -1755,7 +1755,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     costCenterMappings, ppeRequests, consumableTransactions, materialRequests,
                     productParts, orderParts,
                     lines, rules,
-                    optPivot, assetPivot
+                    optPivot, assetPivot,
+                    leanAudits, leanProjects, leanActions
                 ] = await Promise.all([
                     fetchSafe('employees'), // 0
                     fetchSafe('absenteeism_records'), // 1
@@ -1794,6 +1795,9 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     fetchSafe('sequencing_rules'), // 31
                     fetchSafe('production_order_options'), // 32
                     fetchSafe('production_order_assets'), // 33
+                    fetchSafe('lean_audits'), // 34
+                    fetchSafe('lean_projects'), // 35
+                    fetchSafe('lean_actions'), // 36
                 ]);
 
                 // Construct Update Object
@@ -1937,6 +1941,31 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 // --- Lines ---
                 if (lines) stateUpdates.productionLines = lines.map(mapDbToLine);
                 if (rules) stateUpdates.sequencingRules = rules.map(mapDbToRule);
+
+                // --- Lean V15 ---
+                if (leanAudits) {
+                    stateUpdates.leanAudits = leanAudits.map((a: any) => ({
+                        id: a.id, type: a.type, area: a.area, score: a.score, maxScore: a.max_score,
+                        checklistData: a.checklist_data, auditorName: a.auditor_name, images: a.images,
+                        notes: a.notes, createdAt: a.created_at
+                    }));
+                }
+                if (leanProjects) {
+                    stateUpdates.leanProjects = leanProjects.map((p: any) => ({
+                        id: p.id, title: p.title, type: p.type, status: p.status, ownerName: p.owner_name,
+                        background: p.background, currentState: p.current_state, targetState: p.target_state,
+                        rootCauseAnalysis: p.root_cause_analysis,
+                        impact: { safety: p.impact_safety, quality: p.impact_quality, cost: p.impact_cost, delivery: p.impact_delivery, morale: p.impact_morale },
+                        savingsEstimated: p.savings_estimated, startDate: p.start_date, dueDate: p.due_date,
+                        createdAt: p.created_at, updatedAt: p.updated_at, actions: []
+                    }));
+                }
+                if (leanActions) {
+                    stateUpdates.leanActions = leanActions.map((a: any) => ({
+                        id: a.id, projectId: a.project_id, description: a.description, type: a.type,
+                        assignee: a.assignee, dueDate: a.due_date, status: a.status, completedAt: a.completed_at
+                    }));
+                }
 
                 // Apply Updates
                 set(stateUpdates);

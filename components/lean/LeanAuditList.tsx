@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ClipboardCheck, Eye, Trash2 } from 'lucide-react';
 import { LeanAudit } from '@/types';
+import { AuditWizard } from './AuditWizard';
 
 export function LeanAuditList() {
     const { leanAudits } = useShopfloorStore();
@@ -23,9 +24,9 @@ export function LeanAuditList() {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Histórico de Auditorias</CardTitle>
-                <div className="space-x-2">
+                <div className="space-x-2 flex items-center">
                     <Button size="sm" variant="outline">Exportar</Button>
-                    <Button size="sm"><ClipboardCheck className="mr-2 h-4 w-4" /> Nova Auditoria</Button>
+                    <AuditWizard />
                 </div>
             </CardHeader>
             <CardContent>
@@ -33,17 +34,17 @@ export function LeanAuditList() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Data</TableHead>
-                            <TableHead>Tipo</TableHead>
                             <TableHead>Área</TableHead>
+                            <TableHead>Tipo</TableHead>
                             <TableHead>Auditor</TableHead>
-                            <TableHead className="text-right">Score</TableHead>
-                            <TableHead className="w-[100px]"></TableHead>
+                            <TableHead>Score</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {leanAudits.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center h-24 text-slate-500">
+                                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                                     Nenhuma auditoria realizada ainda.
                                 </TableCell>
                             </TableRow>
@@ -51,20 +52,18 @@ export function LeanAuditList() {
                             leanAudits.map((audit) => (
                                 <TableRow key={audit.id}>
                                     <TableCell>{new Date(audit.createdAt).toLocaleDateString()}</TableCell>
+                                    <TableCell className="font-medium">{audit.area}</TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className="uppercase">{audit.type}</Badge>
                                     </TableCell>
-                                    <TableCell>{audit.area}</TableCell>
-                                    <TableCell>{audit.auditorName || 'Sistema'}</TableCell>
-                                    <TableCell className={`text-right ${getScoreColor(audit.score, audit.maxScore)}`}>
-                                        {audit.score} / {audit.maxScore}
+                                    <TableCell>{audit.auditorName}</TableCell>
+                                    <TableCell className={getScoreColor(audit.score, audit.maxScore)}>
+                                        {audit.score}/{audit.maxScore} ({Math.round((audit.score / audit.maxScore) * 100)}%)
                                     </TableCell>
-                                    <TableCell>
-                                        <div className="flex justify-end gap-2">
-                                            <Button size="icon" variant="ghost">
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon">
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))

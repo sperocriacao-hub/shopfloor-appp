@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Plus, MoreHorizontal, User, CalendarDays } from 'lucide-react';
 import { LeanProject, LeanProjectStatus } from '@/types';
+import { NewKaizenDialog } from './NewKaizenDialog';
 
 const columns: { id: LeanProjectStatus; title: string; color: string }[] = [
     { id: 'draft', title: 'Rascunho / Ideia', color: 'bg-slate-100 border-slate-200' },
@@ -91,9 +92,9 @@ export function KaizenBoard({ type = 'kaizen' }: { type?: 'kaizen' | 'a3' }) {
                         ))}
 
                         {col.id === 'draft' && (
-                            <Button variant="ghost" className="w-full border-2 border-dashed border-slate-300 text-slate-500 hover:border-slate-400 hover:bg-slate-50">
-                                <Plus className="mr-2 h-4 w-4" /> Nova Ideia
-                            </Button>
+                            <div className="pt-2">
+                                <NewKaizenDialog />
+                            </div>
                         )}
                     </div>
                 </div>
