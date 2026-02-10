@@ -8,10 +8,35 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ClipboardCheck, Eye, Trash2 } from 'lucide-react';
 import { LeanAudit } from '@/types';
+import { ViewAuditDialog } from './ViewAuditDialog';
 import { AuditWizard } from './AuditWizard';
 
 export function LeanAuditList() {
     const { leanAudits } = useShopfloorStore();
+
+    const handleExport = () => {
+        const headers = ["ID", "Data", "Area", "Tipo", "Auditor", "Score", "MaxScore"];
+        const rows = leanAudits.map(a => [
+            a.id,
+            new Date(a.createdAt).toLocaleDateString(),
+            a.area,
+            a.type,
+            a.auditorName,
+            a.score,
+            a.maxScore
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "auditorias_lean.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const getScoreColor = (score: number, max: number) => {
         const percentage = (score / max) * 100;
@@ -25,7 +50,7 @@ export function LeanAuditList() {
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Histórico de Auditorias</CardTitle>
                 <div className="space-x-2 flex items-center">
-                    <Button size="sm" variant="outline">Exportar</Button>
+                    <Button size="sm" variant="outline" onClick={handleExport}>Exportar CSV</Button>
                     <AuditWizard />
                 </div>
             </CardHeader>
@@ -61,9 +86,7 @@ export function LeanAuditList() {
                                         {audit.score}/{audit.maxScore} ({Math.round((audit.score / audit.maxScore) * 100)}%)
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon">
-                                            <Eye className="h-4 w-4" />
-                                        </Button>
+                                        <ViewAuditDialog audit={audit} />
                                     </TableCell>
                                 </TableRow>
                             ))
