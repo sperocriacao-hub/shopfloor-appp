@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { ClipboardCheck, Target, Lightbulb, Activity } from 'lucide-react';
 import { KaizenBoard } from '@/components/lean/KaizenBoard';
 import { LeanAuditList } from '@/components/lean/LeanAuditList';
-import { NewAuditDialog } from '@/components/lean/NewAuditDialog';
+import { AuditWizard } from '@/components/lean/AuditWizard';
+import { NewKaizenDialog } from '@/components/lean/NewKaizenDialog';
 
 export default function LeanDashboard() {
     const { leanAudits, leanProjects, leanActions } = useShopfloorStore();
@@ -21,8 +22,8 @@ export default function LeanDashboard() {
                     <p className="text-slate-500">Continuous Improvement Management System (Toyota Production System)</p>
                 </div>
                 <div className="flex gap-2">
-                    <NewAuditDialog />
-                    <Button><Lightbulb className="mr-2 h-4 w-4" /> New Kaizen</Button>
+                    <AuditWizard />
+                    <NewKaizenDialog />
                 </div>
             </div>
 
