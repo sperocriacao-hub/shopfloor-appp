@@ -13,14 +13,14 @@ import { LeanProject } from '@/types';
 import { Lightbulb, Plus } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
-export function NewKaizenDialog() {
+export function NewKaizenDialog({ defaultType = 'kaizen' }: { defaultType?: 'kaizen' | 'a3' }) {
     const { addLeanProject, currentUser } = useShopfloorStore();
     const [open, setOpen] = useState(false);
 
     // Form State
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [type, setType] = useState<'kaizen' | 'a3'>('kaizen');
+    const [type, setType] = useState<'kaizen' | 'a3'>(defaultType);
 
     // Impact State
     const [impact, setImpact] = useState({

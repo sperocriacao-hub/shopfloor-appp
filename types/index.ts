@@ -692,6 +692,18 @@ export interface LeanProject {
     currentState?: string;
     targetState?: string;
     gapAnalysis?: string;
+    gapAnalysis?: string;
+
+    // V16: Advanced Analysis structured data
+    analysisData?: {
+        ishikawa?: Record<string, string[]>; // { "method": ["cause1", "cause2"] }
+        fiveWhys?: string[]; // ["why1", "why2"...]
+        containmentActions?: string;
+        teamMembers?: string[];
+        rootCause?: string;
+    };
+
+    // Deprecated in V16 (Keep for backward compat or migration)
     rootCauseAnalysis?: {
         ishikawa?: Record<string, string>;
         fiveWhys?: string[];

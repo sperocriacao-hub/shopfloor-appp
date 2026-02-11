@@ -734,7 +734,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     background: project.background,
                     current_state: project.currentState,
                     target_state: project.targetState,
-                    root_cause_analysis: project.rootCauseAnalysis,
+                    // root_cause_analysis: project.rootCauseAnalysis, // Keeping for legacy if needed, but preferring analysis_data
+                    analysis_data: project.analysisData, // New V16 field
                     impact_safety: project.impact?.safety,
                     impact_quality: project.impact?.quality,
                     impact_delivery: project.impact?.delivery,
@@ -745,6 +746,17 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     due_date: project.dueDate
                 });
                 if (error) console.error("Error adding project:", error);
+            },
+
+            updateLeanProject: async (id, updates) => {
+                set(s => ({ leanProjects: s.leanProjects.map(p => p.id === id ? { ...p, ...updates } : p) }));
+                const toUpdate: any = {};
+                if (updates.status) toUpdate.status = updates.status;
+                if (updates.rootCauseAnalysis) toUpdate.root_cause_analysis = updates.rootCauseAnalysis; // Legacy
+                if (updates.analysisData) toUpdate.analysis_data = updates.analysisData; // V16
+                if (updates.updatedAt) toUpdate.updated_at = updates.updatedAt;
+
+                await supabase.from('lean_projects').update(toUpdate).eq('id', id);
             },
 
             updateLeanProject: async (id, updates) => {
@@ -1954,7 +1966,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     stateUpdates.leanProjects = leanProjects.map((p: any) => ({
                         id: p.id, title: p.title, type: p.type, status: p.status, ownerName: p.owner_name,
                         background: p.background, currentState: p.current_state, targetState: p.target_state,
-                        rootCauseAnalysis: p.root_cause_analysis,
+                        rootCauseAnalysis: p.root_cause_analysis, // Legacy load
+                        analysisData: p.analysis_data, // V16 load
                         impact: { safety: p.impact_safety, quality: p.impact_quality, cost: p.impact_cost, delivery: p.impact_delivery, morale: p.impact_morale },
                         savingsEstimated: p.savings_estimated, startDate: p.start_date, dueDate: p.due_date,
                         createdAt: p.created_at, updatedAt: p.updated_at, actions: []
