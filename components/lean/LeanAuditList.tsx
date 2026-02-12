@@ -50,7 +50,6 @@ export function LeanAuditList() {
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Histórico de Auditorias</CardTitle>
                 <div className="space-x-2 flex items-center">
-                    <Button size="sm" variant="outline" onClick={handleExport}>Exportar CSV</Button>
                     <AuditWizard />
                 </div>
             </CardHeader>

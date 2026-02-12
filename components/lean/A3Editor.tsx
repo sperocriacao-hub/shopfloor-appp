@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Save, Printer, ArrowLeft } from 'lucide-react';
 import { IshikawaDiagram } from './IshikawaDiagram';
 import { FiveWhysInput } from './FiveWhysInput';
+import { TrendChartEditor } from './TrendChartEditor';
+import { ActionPlanEditor } from './ActionPlanEditor'; // We will create this next
 import { toast } from 'sonner';
 
 interface A3EditorProps {
@@ -137,14 +139,19 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
 
                     {/* 2. Current State */}
                     <section className="space-y-2">
-                        <div className="bg-slate-800 text-white px-2 py-1 text-sm font-bold uppercase w-full">2. Estado Atual</div>
+                        <div className="bg-slate-800 text-white px-2 py-1 text-sm font-bold uppercase w-full">2. Estado Atual & Indicadores</div>
                         <Textarea
                             value={currentState}
                             onChange={e => setCurrentState(e.target.value)}
-                            className="min-h-[100px] resize-none"
-                            placeholder="O que está acontecendo hoje? Dados, fotos, fatos."
+                            className="min-h-[60px] resize-none"
+                            placeholder="O que está acontecendo hoje? Descreva o cenário."
                         />
-                        <div className="bg-red-50 p-2 border border-red-200 rounded">
+                        {/* Trend Chart Integration */}
+                        <div className="mt-2">
+                            <TrendChartEditor project={project} />
+                        </div>
+
+                        <div className="bg-red-50 p-2 border border-red-200 rounded mt-2">
                             <Label className="text-xs font-bold text-red-800">Ação de Contenção (Imediata)</Label>
                             <Input
                                 value={containment}
@@ -201,18 +208,17 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
                     {/* 5. Countermeasures */}
                     <section className="space-y-2 flex-1">
                         <div className="bg-slate-800 text-white px-2 py-1 text-sm font-bold uppercase w-full">5. Contramedidas (Plano de Ação)</div>
-                        <div className="border border-slate-200 rounded-md p-4 min-h-[300px] flex items-center justify-center bg-slate-50">
-                            <p className="text-slate-400 text-sm">
-                                [O Action Tracker será integrado aqui na próxima etapa para permitir adicionar ações diretamente]
-                            </p>
+                        <div className="border border-slate-200 rounded-md p-2 bg-slate-50 min-h-[300px]">
+                            <ActionPlanEditor projectId={project.id} />
                         </div>
                     </section>
 
                     {/* 6. Check / Results */}
                     <section className="space-y-2">
                         <div className="bg-slate-800 text-white px-2 py-1 text-sm font-bold uppercase w-full">6. Resultados (Check)</div>
-                        <div className="border border-slate-200 rounded-md h-[150px] p-2">
-                            <p className="text-xs text-slate-400 text-center pt-8">Gráficos de evolução ou Antes/Depois</p>
+                        <div className="border border-slate-200 rounded-md h-[250px] p-2 bg-white">
+                            {/* Reusing the TrendChart in read-only mode or simplified view */}
+                            <TrendChartEditor project={project} readOnly={true} />
                         </div>
                     </section>
 

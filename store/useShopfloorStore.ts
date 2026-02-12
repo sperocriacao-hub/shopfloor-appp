@@ -307,11 +307,16 @@ interface ShopfloorState {
     leanProjects: LeanProject[];
     leanActions: LeanAction[];
 
+    // Lean V16/V17 Actions
     addLeanAudit: (audit: LeanAudit) => Promise<void>;
     addLeanProject: (project: LeanProject) => Promise<void>;
     updateLeanProject: (id: string, updates: Partial<LeanProject>) => Promise<void>;
     addLeanAction: (action: LeanAction) => Promise<void>;
     updateLeanAction: (id: string, updates: Partial<LeanAction>) => Promise<void>;
+
+    // V17
+    addMetricLog: (log: LeanMetricLog) => Promise<void>;
+    getMetricLogs: (projectId: string) => Promise<LeanMetricLog[]>;
 
     // Shopfloor V8 Actions (Mold Maintenance)
     maintenanceOrders: MaintenanceOrder[];
@@ -743,7 +748,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     impact_morale: project.impact?.morale,
                     savings_estimated: project.savingsEstimated,
                     start_date: project.startDate,
-                    due_date: project.dueDate
+                    due_date: project.dueDate,
+                    // V17
+                    metric_name: project.metricName,
+                    metric_unit: project.metricUnit,
+                    metric_target: project.metricTarget
                 });
                 if (error) console.error("Error adding project:", error);
             },
@@ -754,9 +763,41 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.status) toUpdate.status = updates.status;
                 if (updates.rootCauseAnalysis) toUpdate.root_cause_analysis = updates.rootCauseAnalysis; // Legacy
                 if (updates.analysisData) toUpdate.analysis_data = updates.analysisData; // V16
+
+                // V17
+                if (updates.metricName) toUpdate.metric_name = updates.metricName;
+                if (updates.metricUnit) toUpdate.metric_unit = updates.metricUnit;
+                if (updates.metricTarget !== undefined) toUpdate.metric_target = updates.metricTarget;
+
                 if (updates.updatedAt) toUpdate.updated_at = updates.updatedAt;
 
                 await supabase.from('lean_projects').update(toUpdate).eq('id', id);
+            },
+
+            // V17: Metric Logs
+            addMetricLog: async (log) => {
+                // We don't store logs in global state to avoid bloat, 
+                // but we could attach them to the project... 
+                // For now, let's just insert validation.
+                const { error } = await supabase.from('lean_metric_logs').insert({
+                    id: log.id, project_id: log.projectId, date: log.date, value: log.value, notes: log.notes
+                });
+                if (error) console.error("Error adding metric log:", error);
+            },
+
+            getMetricLogs: async (projectId) => {
+                const { data, error } = await supabase.from('lean_metric_logs')
+                    .select('*')
+                    .eq('project_id', projectId)
+                    .order('date', { ascending: true });
+
+                if (error) {
+                    console.error(error);
+                    return [];
+                }
+                return data.map((l: any) => ({
+                    id: l.id, projectId: l.project_id, date: l.date, value: l.value, notes: l.notes
+                }));
             },
 
             updateLeanProject: async (id, updates) => {
@@ -1968,6 +2009,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                         background: p.background, currentState: p.current_state, targetState: p.target_state,
                         rootCauseAnalysis: p.root_cause_analysis, // Legacy load
                         analysisData: p.analysis_data, // V16 load
+                        // V17 load
+                        metricName: p.metric_name, metricUnit: p.metric_unit, metricTarget: p.metric_target,
                         impact: { safety: p.impact_safety, quality: p.impact_quality, cost: p.impact_cost, delivery: p.impact_delivery, morale: p.impact_morale },
                         savingsEstimated: p.savings_estimated, startDate: p.start_date, dueDate: p.due_date,
                         createdAt: p.created_at, updatedAt: p.updated_at, actions: []

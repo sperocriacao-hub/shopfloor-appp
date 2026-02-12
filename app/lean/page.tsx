@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Badge as UiBadge } from '@/components/ui/badge';
 import { MoreHorizontal } from 'lucide-react';
 import { AuditWizard } from '@/components/lean/AuditWizard';
+import { LeanHeatmap } from '@/components/lean/LeanHeatmap';
+import { TopThreeRanking } from '@/components/lean/TopThreeRanking';
 
 export default function LeanPage() {
     const { leanAudits, leanProjects } = useShopfloorStore();
@@ -26,7 +28,16 @@ export default function LeanPage() {
 
     return (
         <div className="p-6 space-y-6">
-            <h1 className="text-3xl font-bold text-slate-800">Lean Manufacturing & Melhoria Contínua</h1>
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-800">Lean Manufacturing & Melhoria Contínua</h1>
+                    <p className="text-slate-500">Sistema de Gestão (Toyota Production System)</p>
+                </div>
+                <div className="flex gap-2">
+                    <AuditWizard />
+                    <NewKaizenDialog />
+                </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
@@ -83,16 +94,8 @@ export default function LeanPage() {
 
                 <TabsContent value="overview">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Resumo de Atividades</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[300px] flex items-center justify-center bg-slate-50 rounded border border-dashed text-slate-400">
-                                    Gráfico de Tendência (Em breve)
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <LeanHeatmap />
+                        <TopThreeRanking />
                     </div>
                 </TabsContent>
 

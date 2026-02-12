@@ -719,10 +719,26 @@ export interface LeanProject {
     };
     savingsEstimated?: number;
 
+    // V17: Trend Metrics
+    metricName?: string;
+    metricUnit?: string;
+    metricTarget?: number;
+    
+    // V17: Metric Logs (Loaded separately usually, but can be optional here)
+    metricLogs?: LeanMetricLog[];
+
     startDate?: string;
     dueDate?: string;
     closedAt?: string;
     createdAt: string;
+}
+
+export interface LeanMetricLog {
+    id: string;
+    projectId: string;
+    date: string;
+    value: number;
+    notes?: string;
 }
 
 export interface LeanAction {

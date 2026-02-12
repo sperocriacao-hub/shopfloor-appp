@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LeanProject, LeanProjectStatus } from '@/types';
 import { MoreHorizontal, Edit2, CheckCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { ActionPlanEditor } from './ActionPlanEditor';
 
 interface KaizenDetailDialogProps {
     project: LeanProject;
@@ -88,6 +90,18 @@ export function KaizenDetailDialog({ project, trigger }: KaizenDetailDialogProps
                         </Select>
                     </div>
 
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Economia Est. (Ano)</Label>
+                        <div className="col-span-3">
+                            <Input
+                                type="number"
+                                value={savings}
+                                onChange={(e) => setSavings(e.target.value)}
+                                placeholder="Valor em €"
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <Label>Análise / Notas de Progresso</Label>
                         <Textarea
@@ -98,12 +112,17 @@ export function KaizenDetailDialog({ project, trigger }: KaizenDetailDialogProps
                         />
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-                            Salvar Alterações
-                        </Button>
+                    <div className="border-t pt-4">
+                        <Label className="mb-2 block font-semibold text-slate-700">Plano de Ação</Label>
+                        <ActionPlanEditor projectId={project.id} />
                     </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+                        Salvar Alterações
+                    </Button>
                 </div>
             </DialogContent>
         </Dialog>
