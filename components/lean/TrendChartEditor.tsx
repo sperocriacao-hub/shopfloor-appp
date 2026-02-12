@@ -130,7 +130,7 @@ export function TrendChartEditor({ project, readOnly = false }: TrendChartEditor
                             <Tooltip />
                             <Legend />
                             <Line type="monotone" dataKey="value" name={metricName || "Valor"} stroke="#2563eb" strokeWidth={2} />
-                            {metricTarget && (
+                            {metricTarget && !isNaN(parseFloat(metricTarget)) && (
                                 <ReferenceLine y={parseFloat(metricTarget)} label="Meta" stroke="red" strokeDasharray="3 3" />
                             )}
                         </LineChart>
