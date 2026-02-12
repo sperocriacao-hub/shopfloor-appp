@@ -71,7 +71,7 @@ export function KaizenDetailDialog({ project, trigger }: KaizenDetailDialogProps
                         </div>
                         <div className="space-y-1">
                             <Label className="text-xs text-slate-500">Data Criação</Label>
-                            <p className="text-sm font-medium">{new Date(project.createdAt).toLocaleDateString()}</p>
+                            <p className="text-sm font-medium">{project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '-'}</p>
                         </div>
                     </div>
 
