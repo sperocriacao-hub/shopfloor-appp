@@ -15,7 +15,8 @@ import { Save, Printer, ArrowLeft } from 'lucide-react';
 import { IshikawaDiagram } from './IshikawaDiagram';
 import { FiveWhysInput } from './FiveWhysInput';
 import { TrendChartEditor } from './TrendChartEditor';
-import { ActionPlanEditor } from './ActionPlanEditor'; // We will create this next
+import { ActionPlanEditor } from './ActionPlanEditor';
+import { ProjectAuditDialog } from './ProjectAuditDialog';
 import { toast } from 'sonner';
 
 interface A3EditorProps {

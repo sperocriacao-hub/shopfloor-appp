@@ -752,7 +752,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
                     // V17
                     metric_name: project.metricName,
                     metric_unit: project.metricUnit,
-                    metric_target: project.metricTarget
+                    metric_target: project.metricTarget,
+                    // V18
+                    certification_status: project.certificationStatus,
+                    certification_score: project.certificationScore,
+                    certification_data: project.certificationData
                 });
                 if (error) console.error("Error adding project:", error);
             },
@@ -768,6 +772,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.metricName) toUpdate.metric_name = updates.metricName;
                 if (updates.metricUnit) toUpdate.metric_unit = updates.metricUnit;
                 if (updates.metricTarget !== undefined) toUpdate.metric_target = updates.metricTarget;
+
+                // V18
+                if (updates.certificationStatus) toUpdate.certification_status = updates.certificationStatus;
+                if (updates.certificationScore !== undefined) toUpdate.certification_score = updates.certificationScore;
+                if (updates.certificationData) toUpdate.certification_data = updates.certificationData;
 
                 if (updates.updatedAt) toUpdate.updated_at = updates.updatedAt;
 
@@ -2011,6 +2020,8 @@ export const useShopfloorStore = create<ShopfloorState>()(
                         analysisData: p.analysis_data, // V16 load
                         // V17 load
                         metricName: p.metric_name, metricUnit: p.metric_unit, metricTarget: p.metric_target,
+                        // V18
+                        certificationStatus: p.certification_status, certificationScore: p.certification_score, certificationData: p.certification_data,
                         impact: { safety: p.impact_safety, quality: p.impact_quality, cost: p.impact_cost, delivery: p.impact_delivery, morale: p.impact_morale },
                         savingsEstimated: p.savings_estimated, startDate: p.start_date, dueDate: p.due_date,
                         createdAt: p.created_at, updatedAt: p.updated_at, actions: []

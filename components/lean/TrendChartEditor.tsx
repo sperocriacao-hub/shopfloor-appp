@@ -74,7 +74,7 @@ export function TrendChartEditor({ project, readOnly = false }: TrendChartEditor
     const chartData = logs.map(l => ({
         date: new Date(l.date).toLocaleDateString(),
         value: l.value,
-        target: metricTarget ? parseFloat(metricTarget) : null
+        target: (metricTarget && !isNaN(parseFloat(metricTarget))) ? parseFloat(metricTarget) : null
     }));
 
     return (

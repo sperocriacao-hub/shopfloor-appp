@@ -723,9 +723,14 @@ export interface LeanProject {
     metricName?: string;
     metricUnit?: string;
     metricTarget?: number;
-    
+
     // V17: Metric Logs (Loaded separately usually, but can be optional here)
     metricLogs?: LeanMetricLog[];
+
+    // V18: Certification
+    certificationStatus?: 'pending' | 'certified' | 'rejected';
+    certificationScore?: number;
+    certificationData?: any; // JSONB
 
     startDate?: string;
     dueDate?: string;

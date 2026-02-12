@@ -38,8 +38,9 @@ export function ActionTracker() {
     };
 
     const filteredActions = (leanActions || []).filter((action: any) => {
+        if (!action) return false;
         const matchesStatus = filterStatus === 'all' || action.status === filterStatus;
-        const matchesSearch = action.description.toLowerCase().includes(search.toLowerCase())
+        const matchesSearch = (action.description || '').toLowerCase().includes(search.toLowerCase())
             || (action.responsibleName || '').toLowerCase().includes(search.toLowerCase());
         return matchesStatus && matchesSearch;
     });
@@ -107,7 +108,7 @@ export function ActionTracker() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        {action.dueDate ? (
+                                        {action.dueDate && !isNaN(new Date(action.dueDate).getTime()) ? (
                                             <div className={`text-sm ${new Date(action.dueDate) < new Date() && action.status !== 'completed' ? 'text-red-600 font-bold flex items-center gap-1' : ''}`}>
                                                 {new Date(action.dueDate) < new Date() && action.status !== 'completed' && <AlertCircle className="h-3 w-3" />}
                                                 {new Date(action.dueDate).toLocaleDateString()}

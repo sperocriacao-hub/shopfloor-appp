@@ -85,7 +85,7 @@ export function KaizenBoard({ type = 'kaizen' }: { type?: 'kaizen' | 'a3' }) {
                                                         <User className="h-3 w-3" />
                                                         <span className="truncate max-w-[80px]">{project.ownerName || 'Unassigned'}</span>
                                                     </div>
-                                                    {project.dueDate && (
+                                                    {project.dueDate && !isNaN(new Date(project.dueDate).getTime()) && (
                                                         <div className="flex items-center gap-1">
                                                             <CalendarDays className="h-3 w-3" />
                                                             <span>{new Date(project.dueDate).toLocaleDateString()}</span>
