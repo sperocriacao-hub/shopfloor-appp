@@ -63,7 +63,7 @@ export function ProjectAuditDialog({ project }: ProjectAuditDialogProps) {
             <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800">
                     <ShieldCheck className="h-4 w-4" />
-                    {project.certificationStatus === 'certified' ? 'Certificado Black Belt' : 'Auditoria Black Belt'}
+                    {project.certificationStatus === 'certified' ? 'Certificado Black Belt' : 'Auditoria Black Belt (V18)'}
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">

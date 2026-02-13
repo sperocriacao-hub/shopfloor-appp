@@ -21,7 +21,7 @@ export function ActionPlanEditor({ projectId }: ActionPlanEditorProps) {
 
     // We need to filter global actions by projectId
     // In V15 schema: LeanAction has projectId field.
-    const projectActions = leanActions.filter(a => a.projectId === projectId);
+    const projectActions = (leanActions || []).filter(a => a.projectId === projectId);
 
     const [newDesc, setNewDesc] = useState('');
     const [newResponsible, setNewResponsible] = useState('');
