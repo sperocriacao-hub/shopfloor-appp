@@ -108,7 +108,7 @@ export default function AdminPage() {
                     <TabsTrigger value="provisioning">Hardware (IoT)</TabsTrigger>
                     <TabsTrigger value="rfid">Ferramentas RFID</TabsTrigger>
                     <TabsTrigger value="manual">Manual do Sistema</TabsTrigger>
-                    <TabsTrigger value="advanced">Diagnóstico Avançado (DB)</TabsTrigger>
+                    <TabsTrigger value="advanced" onClick={() => window.location.href = '/admin/database'}>Diagnóstico Avançado (DB)</TabsTrigger>
                 </TabsList>
 
                 {/* SYSTEM HEALTH */}
