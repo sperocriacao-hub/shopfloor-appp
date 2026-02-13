@@ -2240,7 +2240,11 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 materialRequests: state.materialRequests,
                 consumableTransactions: state.consumableTransactions,
                 moldMaintenanceLogs: state.moldMaintenanceLogs,
-                maintenanceOrders: state.maintenanceOrders
+                maintenanceOrders: state.maintenanceOrders,
+                // Lean V15+ Persistence
+                leanAudits: state.leanAudits,
+                leanProjects: state.leanProjects,
+                leanActions: state.leanActions,
             }),
         }
     ));
