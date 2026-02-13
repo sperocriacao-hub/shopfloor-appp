@@ -169,7 +169,7 @@ export function Sidebar() {
                         <div className="ml-3 truncate">
                             <p className="text-sm font-medium text-white truncate">{currentUser?.name || 'Visitante'}</p>
                             <p className="text-xs text-blue-200 truncate capitalize">{currentUser?.role || 'Faça Login'}</p>
-                            <p className="text-[10px] text-blue-400 mt-1">v18.0.3 (Black Belt)</p>
+                            <p className="text-[10px] text-blue-400 mt-1">v18.1.0 (Black Belt)</p>
                         </div>
                     )}
                 </Link>

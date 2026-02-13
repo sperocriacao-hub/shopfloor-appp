@@ -764,23 +764,46 @@ export const useShopfloorStore = create<ShopfloorState>()(
             updateLeanProject: async (id, updates) => {
                 set(s => ({ leanProjects: s.leanProjects.map(p => p.id === id ? { ...p, ...updates } : p) }));
                 const toUpdate: any = {};
+
+                // Core Fields
+                if (updates.title) toUpdate.title = updates.title;
                 if (updates.status) toUpdate.status = updates.status;
+                if (updates.background) toUpdate.background = updates.background;
+                if (updates.currentState) toUpdate.current_state = updates.currentState;
+                if (updates.targetState) toUpdate.target_state = updates.targetState;
+                if (updates.gapAnalysis) toUpdate.gap_analysis = updates.gapAnalysis;
+                if (updates.savingsEstimated !== undefined) toUpdate.savings_estimated = updates.savingsEstimated;
+
+                // Analysis Data & Legacy
                 if (updates.rootCauseAnalysis) toUpdate.root_cause_analysis = updates.rootCauseAnalysis; // Legacy
                 if (updates.analysisData) toUpdate.analysis_data = updates.analysisData; // V16
 
-                // V17
+                // Impact Fields (Flattened for DB)
+                if (updates.impact) {
+                    if (updates.impact.safety !== undefined) toUpdate.impact_safety = updates.impact.safety;
+                    if (updates.impact.quality !== undefined) toUpdate.impact_quality = updates.impact.quality;
+                    if (updates.impact.delivery !== undefined) toUpdate.impact_delivery = updates.impact.delivery;
+                    if (updates.impact.cost !== undefined) toUpdate.impact_cost = updates.impact.cost;
+                    if (updates.impact.morale !== undefined) toUpdate.impact_morale = updates.impact.morale;
+                }
+
+                // V17 Headers
                 if (updates.metricName) toUpdate.metric_name = updates.metricName;
                 if (updates.metricUnit) toUpdate.metric_unit = updates.metricUnit;
                 if (updates.metricTarget !== undefined) toUpdate.metric_target = updates.metricTarget;
 
-                // V18
+                // V18 Certification
                 if (updates.certificationStatus) toUpdate.certification_status = updates.certificationStatus;
                 if (updates.certificationScore !== undefined) toUpdate.certification_score = updates.certificationScore;
                 if (updates.certificationData) toUpdate.certification_data = updates.certificationData;
 
                 if (updates.updatedAt) toUpdate.updated_at = updates.updatedAt;
 
-                await supabase.from('lean_projects').update(toUpdate).eq('id', id);
+                const { error } = await supabase.from('lean_projects').update(toUpdate).eq('id', id);
+                if (error) {
+                    console.error("Error updating project in DB:", error);
+                    toast.error("Erro ao salvar no banco de dados.");
+                }
             },
 
             // V17: Metric Logs

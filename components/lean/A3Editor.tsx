@@ -45,12 +45,17 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
     const [gapAnalysis, setGapAnalysis] = useState(project.gapAnalysis || '');
 
     // Analysis Data State (V16)
+    // Analysis Data State (V16)
     const [ishikawa, setIshikawa] = useState(project.analysisData?.ishikawa || {});
     const [fiveWhys, setFiveWhys] = useState(project.analysisData?.fiveWhys || []);
     const [containment, setContainment] = useState(project.analysisData?.containmentActions || '');
     const [rootCause, setRootCause] = useState(project.analysisData?.rootCause || '');
+    const [resultsValidation, setResultsValidation] = useState(project.analysisData?.resultsValidation || '');
+    const [standardization, setStandardization] = useState(project.analysisData?.standardization || '');
 
     const handleSave = async () => {
+        if (!window.confirm("Deseja salvar as alterações no Projeto A3?")) return;
+
         try {
             await updateLeanProject(project.id, {
                 title,
@@ -63,7 +68,9 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
                     ishikawa,
                     fiveWhys,
                     containmentActions: containment,
-                    rootCause: rootCause
+                    rootCause: rootCause,
+                    resultsValidation: resultsValidation,
+                    standardization: standardization
                 },
                 updatedAt: new Date().toISOString()
             });
@@ -227,9 +234,18 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
                     {/* 6. Check / Results */}
                     <section className="space-y-2">
                         <div className="bg-slate-800 text-white px-2 py-1 text-sm font-bold uppercase w-full">6. Resultados (Check)</div>
-                        <div className="border border-slate-200 rounded-md h-[250px] p-2 bg-white">
+                        <div className="border border-slate-200 rounded-md h-[250px] p-2 bg-white mb-2">
                             {/* Reusing the TrendChart in read-only mode or simplified view */}
                             <TrendChartEditor project={project} readOnly={true} />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-500">Análise Qualitativa dos Resultados:</Label>
+                            <Textarea
+                                value={resultsValidation}
+                                onChange={e => setResultsValidation(e.target.value)}
+                                className="min-h-[80px]"
+                                placeholder="Descreva os resultados alcançados (Dados qualitativos)..."
+                            />
                         </div>
                     </section>
 
@@ -237,6 +253,8 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
                     <section className="space-y-2">
                         <div className="bg-slate-800 text-white px-2 py-1 text-sm font-bold uppercase w-full">7. Padronização & Lições (Act)</div>
                         <Textarea
+                            value={standardization}
+                            onChange={e => setStandardization(e.target.value)}
                             className="min-h-[80px] resize-none"
                             placeholder="Quais documentos foram atualizados? O problema foi resolvido definitivamente?"
                         />
@@ -248,6 +266,10 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
             <style jsx global>{`
                 @media print {
                     @page { size: A3 landscape; margin: 5mm; }
+                    body {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
                     body * {
                         visibility: hidden;
                     }
@@ -263,6 +285,9 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
                     .print\\:shadow-none {
                         box-shadow: none !important;
                     }
+                    .print\\:p-0 {
+                        padding: 0 !important;
+                    }
                     .print\\:w-full {
                         width: 100% !important;
                         max-width: none !important;
@@ -271,10 +296,18 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
                     .grid, .grid * {
                         visibility: visible;
                     }
-                    /* Ensure backgrounds print */
-                    * {
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
+                    
+                    /* Prevent page breaks inside critical sections */
+                    section, .col-span-2, .grid {
+                        break-inside: avoid;
+                        page-break-inside: avoid;
+                    }
+                    
+                    /* Ensure inputs and textareas show full validation */
+                    textarea, input {
+                        border: none !important;
+                        resize: none !important;
+                        overflow: visible;
                     }
                 }
             `}</style>
