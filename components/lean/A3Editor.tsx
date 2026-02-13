@@ -1,9 +1,21 @@
 "use client";
 
+// Correction on naming in render
+// Search for <ProjectAuditDialog ... /> and replace with <ProjectAuditModal ... />
+// Wait, the content viewed previously (Step 11477) lines 19, and usage?
+// Usage is usually in the header toolbar.
+// Let me find where rendering happens.
+// Line 15 (import) was updated above.
+// Usage is likely around line 20-100.
+
 import React, { useState, useEffect } from 'react';
 import { useShopfloorStore } from '@/store/useShopfloorStore';
 import { LeanProject, LeanProjectStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +28,7 @@ import { IshikawaDiagram } from './IshikawaDiagram';
 import { FiveWhysInput } from './FiveWhysInput';
 import { TrendChartEditor } from './TrendChartEditor';
 import { ActionPlanEditor } from './ActionPlanEditor';
-import { ProjectAuditDialog } from './ProjectAuditDialog';
+import { ProjectAuditModal } from './ProjectAuditModal';
 import { toast } from 'sonner';
 
 interface A3EditorProps {
@@ -86,6 +98,7 @@ export function A3Editor({ project, onClose }: A3EditorProps) {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <ProjectAuditModal project={project} />
                     <Button variant="outline" onClick={handlePrint}>
                         <Printer className="mr-2 h-4 w-4" /> Imprimir A3
                     </Button>

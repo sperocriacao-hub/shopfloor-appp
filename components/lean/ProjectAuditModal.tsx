@@ -22,7 +22,7 @@ const AUDIT_CRITERIA = [
     { id: 'control', label: '5. Controle (Resultados sustentados e padronizados?)' }
 ];
 
-export function ProjectAuditDialog({ project }: ProjectAuditDialogProps) {
+export function ProjectAuditModal({ project }: ProjectAuditDialogProps) {
     const { updateLeanProject } = useShopfloorStore();
     const [open, setOpen] = useState(false);
 

@@ -19,7 +19,7 @@ const columns: { id: LeanProjectStatus; title: string; color: string }[] = [
 
 export function KaizenBoard({ type = 'kaizen' }: { type?: 'kaizen' | 'a3' }) {
     const { leanProjects, updateLeanProject } = useShopfloorStore();
-    const projects = leanProjects.filter(p => p.type === type);
+    const projects = (leanProjects || []).filter(p => p && p.type === type);
 
     const handleDragStart = (e: React.DragEvent, id: string) => {
         e.dataTransfer.setData('projectId', id);
