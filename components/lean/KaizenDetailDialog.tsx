@@ -24,11 +24,13 @@ export function KaizenDetailDialog({ project, trigger }: KaizenDetailDialogProps
     const [open, setOpen] = useState(false);
     const [status, setStatus] = useState<LeanProjectStatus>(project.status);
     const [notes, setNotes] = useState(project.rootCauseAnalysis || '');
+    const [savings, setSavings] = useState(project.savingsEstimated?.toString() || '');
 
     const handleSave = () => {
         updateLeanProject(project.id, {
             status,
             rootCauseAnalysis: notes,
+            savingsEstimated: savings ? parseFloat(savings) : 0,
             updatedAt: new Date().toISOString()
         });
         setOpen(false);
