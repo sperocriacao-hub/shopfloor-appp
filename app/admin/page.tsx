@@ -12,8 +12,10 @@ import { RFIDSimulator } from "@/components/iot/RFIDSimulator";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Trash, Plus, Monitor, Activity, Server } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function AdminPage() {
+    const router = useRouter();
     const { assets, employees, syncData, rfidReaders, addRfidReader, deleteRfidReader, iotEvents, updateAsset, updateEmployee } = useShopfloorStore();
     const [dbStatus, setDbStatus] = useState<"ok" | "error" | "loading">("loading");
     const [lastSync, setLastSync] = useState<string | null>(null);
@@ -108,7 +110,7 @@ export default function AdminPage() {
                     <TabsTrigger value="provisioning">Hardware (IoT)</TabsTrigger>
                     <TabsTrigger value="rfid">Ferramentas RFID</TabsTrigger>
                     <TabsTrigger value="manual">Manual do Sistema</TabsTrigger>
-                    <TabsTrigger value="advanced" onClick={() => window.location.href = '/admin/database'}>Diagnóstico Avançado (DB)</TabsTrigger>
+                    <TabsTrigger value="advanced" onClick={() => router.push('/admin/database')}>Diagnóstico Avançado (DB)</TabsTrigger>
                 </TabsList>
 
                 {/* SYSTEM HEALTH */}
