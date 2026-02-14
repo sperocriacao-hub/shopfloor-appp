@@ -13,22 +13,48 @@ import Link from "next/link";
 
 // List of critical tables to monitor
 const CRITICAL_TABLES = [
+    // Core
+    "assets",
+    "products",
+    "employees",
+    "production_orders",
+
+    // Lean V15-V18
     "lean_projects",
     "lean_audits",
     "lean_actions",
     "daily_evaluations",
-    "safety_incidents",
-    "safety_inspections",
     "certifications",
     "employee_certifications",
-    "employees",
-    "assets",
-    "products",
-    "material_requests",
+    "safety_incidents",
+    "safety_inspections",
+
+    // Logistics & Materials
     "consumable_transactions",
+    "material_requests",
     "scrap_transactions",
     "tool_transactions",
-    "maintenance_orders"
+    "ppe_requests",
+
+    // Maintenance & Quality
+    "maintenance_orders",
+    "mold_maintenance_logs",
+    "mold_geometries",
+    "quality_cases",
+    "quality_actions",
+    "scrap_reports",
+
+    // Engineering & Config
+    "production_lines",
+    "product_parts",
+    "order_parts",
+    "routings",
+    "product_options",
+    "cost_center_mappings",
+
+    // IoT
+    "rfid_readers",
+    "iot_events"
 ];
 
 type TableHealth = {
@@ -47,6 +73,7 @@ export default function DatabaseDiagnosticsPage() {
     const [selectedTable, setSelectedTable] = useState<string>("lean_projects");
     const [tableData, setTableData] = useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
+    const [dataError, setDataError] = useState<string | null>(null);
 
     // Initial Health Check
     useEffect(() => {
@@ -64,14 +91,14 @@ export default function DatabaseDiagnosticsPage() {
         setIsRunningHealthCheck(true);
         const report: TableHealth[] = [];
 
-        // Run sequential checks to avoid spamming connection pool too hard
+        // Run sequential checks
         for (const table of CRITICAL_TABLES) {
             const start = performance.now();
             const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
             const end = performance.now();
 
             if (error) {
-                console.error(`Health Check Error [${table}]:`, error);
+                console.warn(`Health Check Warning [${table}]:`, error.message);
                 report.push({
                     name: table,
                     status: "error",
@@ -93,39 +120,46 @@ export default function DatabaseDiagnosticsPage() {
 
         const errors = report.filter(r => r.status === 'error').length;
         if (errors > 0) {
-            toast.error(`Diagnóstico concluído com ${errors} erros.`);
+            toast.warning(`Diagnóstico: ${errors} tabelas com acesso restrito ou inexistentes.`);
         } else {
-            toast.success("Diagnóstico concluído. Todos os sistemas operacionais.");
+            toast.success("Diagnóstico concluído. Todas as tabelas acessíveis.");
         }
     };
 
     const fetchTableData = async (table: string) => {
         setIsLoadingData(true);
-        // Order by created_at desc if possible, else just grab first 50
-        // We try-catch because not all tables have created_at, but most do in this schema
+        setDataError(null);
+        setTableData([]);
+
         try {
-            const { data, error } = await supabase
+            // Attempt 1: Try sorting by created_at (common)
+            let { data, error } = await supabase
                 .from(table)
                 .select('*')
-                .limit(20)
-                .order('created_at', { ascending: false }) // Optimistic sort
-                .catch(() => supabase.from(table).select('*').limit(20)); // Fallback if column missing (rare in Supabase JS but good practice)
+                .order('created_at', { ascending: false })
+                .limit(20);
 
-            // Actually Supabase JS won't throw on order error, it returns error object. 
-            // So let's just try simple select if the first one fails or just standard select.
-
-            // Safer separate attempt:
-            const { data: safeData, error: safeError } = await supabase.from(table).select('*').limit(50);
-
-            if (safeError) {
-                toast.error(`Erro ao ler ${table}: ${safeError.message}`);
-                setTableData([]);
-            } else {
-                setTableData(safeData || []);
+            // Attempt 2: If error (likely missing column or RLS), try simple select
+            if (error) {
+                console.warn(`Sort failed for ${table}, trying simple select...`);
+                const retry = await supabase.from(table).select('*').limit(20);
+                data = retry.data;
+                error = retry.error;
             }
-        } catch (e) {
+
+            if (error) {
+                setDataError(error.message);
+                toast.error(`Erro ao ler ${table}: ${error.message}`);
+            } else {
+                setTableData(data || []);
+                if (data && data.length === 0) {
+                    toast.info(`Tabela ${table} está vazia.`);
+                }
+            }
+        } catch (e: any) {
             console.error(e);
-            toast.error("Erro desconhecido ao buscar dados.");
+            setDataError(e.message || "Erro desconhecido");
+            toast.error("Erro fatal ao buscar dados.");
         } finally {
             setIsLoadingData(false);
         }
@@ -224,6 +258,12 @@ export default function DatabaseDiagnosticsPage() {
                         {isLoadingData ? (
                             <div className="flex items-center justify-center h-full text-slate-500">
                                 <RefreshCw className="h-8 w-8 animate-spin mb-2" />
+                            </div>
+                        ) : dataError ? (
+                            <div className="flex flex-col items-center justify-center h-full text-red-400 p-4 text-center">
+                                <AlertTriangle className="h-8 w-8 mb-2" />
+                                <p className="font-bold">Erro ao carregar dados:</p>
+                                <p className="font-mono mt-2 bg-red-900/20 p-2 rounded">{dataError}</p>
                             </div>
                         ) : tableData.length === 0 ? (
                             <div className="flex items-center justify-center h-full text-slate-500">
