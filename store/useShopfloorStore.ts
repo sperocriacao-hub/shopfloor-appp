@@ -842,12 +842,50 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 set(s => ({
                     leanProjects: s.leanProjects.map(p => p.id === id ? { ...p, ...updates } : p)
                 }));
-                // Map updates to DB columns (simplified)
+
+                // Map updates to DB columns
                 const toUpdate: any = {};
-                if (updates.status) toUpdate.status = updates.status;
-                if (updates.rootCauseAnalysis) toUpdate.root_cause_analysis = updates.rootCauseAnalysis;
-                // ... add other mappings as needed
-                await supabase.from('lean_projects').update(toUpdate).eq('id', id);
+
+                // Basic Fields
+                if (updates.title !== undefined) toUpdate.title = updates.title;
+                if (updates.type !== undefined) toUpdate.type = updates.type;
+                if (updates.status !== undefined) toUpdate.status = updates.status;
+                if (updates.ownerId !== undefined) toUpdate.owner_id = updates.ownerId;
+                if (updates.ownerName !== undefined) toUpdate.owner_name = updates.ownerName;
+                if (updates.teamMembers !== undefined) toUpdate.team_members = updates.teamMembers;
+
+                // A3 / DMAIC Content
+                if (updates.background !== undefined) toUpdate.background = updates.background;
+                if (updates.currentState !== undefined) toUpdate.current_state = updates.currentState;
+                if (updates.targetState !== undefined) toUpdate.target_state = updates.targetState;
+                if (updates.gapAnalysis !== undefined) toUpdate.gap_analysis = updates.gapAnalysis;
+                if (updates.rootCauseAnalysis !== undefined) toUpdate.root_cause_analysis = updates.rootCauseAnalysis;
+                if (updates.analysisData !== undefined) toUpdate.analysis_data = updates.analysisData;
+
+                // Metrics
+                if (updates.metricName !== undefined) toUpdate.metric_name = updates.metricName;
+                if (updates.metricUnit !== undefined) toUpdate.metric_unit = updates.metricUnit;
+                if (updates.metricTarget !== undefined) toUpdate.metric_target = updates.metricTarget;
+                if (updates.savingsEstimated !== undefined) toUpdate.savings_estimated = updates.savingsEstimated;
+
+                // Dates
+                if (updates.startDate !== undefined) toUpdate.start_date = updates.startDate;
+                if (updates.dueDate !== undefined) toUpdate.due_date = updates.dueDate;
+
+                // Impact
+                if (updates.impact) {
+                    if (updates.impact.safety !== undefined) toUpdate.impact_safety = updates.impact.safety;
+                    if (updates.impact.quality !== undefined) toUpdate.impact_quality = updates.impact.quality;
+                    if (updates.impact.delivery !== undefined) toUpdate.impact_delivery = updates.impact.delivery;
+                    if (updates.impact.cost !== undefined) toUpdate.impact_cost = updates.impact.cost;
+                    if (updates.impact.morale !== undefined) toUpdate.impact_morale = updates.impact.morale;
+                }
+
+                const { error } = await supabase.from('lean_projects').update(toUpdate).eq('id', id);
+                if (error) {
+                    console.error("Error updating project:", error);
+                    toast.error("Erro ao salvar alterações no projeto.");
+                }
             },
 
             addLeanAction: async (action) => {
@@ -872,7 +910,23 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 set(s => ({
                     leanActions: s.leanActions.map(a => a.id === id ? { ...a, ...updates } : a)
                 }));
-                await supabase.from('lean_actions').update(updates).eq('id', id);
+
+                // Map updates to DB columns
+                const toUpdate: any = {};
+                if (updates.projectId !== undefined) toUpdate.project_id = updates.projectId;
+                if (updates.description !== undefined) toUpdate.description = updates.description;
+                if (updates.responsibleName !== undefined) toUpdate.responsible_name = updates.responsibleName;
+                if (updates.status !== undefined) toUpdate.status = updates.status;
+                if (updates.priority !== undefined) toUpdate.priority = updates.priority;
+                if (updates.deadline !== undefined) toUpdate.deadline = updates.deadline;
+                if (updates.dueDate !== undefined) toUpdate.due_date = updates.dueDate; // Handle both if definition varies
+                if (updates.completedAt !== undefined) toUpdate.completed_at = updates.completedAt;
+
+                const { error } = await supabase.from('lean_actions').update(toUpdate).eq('id', id);
+                if (error) {
+                    console.error("Error updating action:", error);
+                    toast.error("Erro ao salvar ação.");
+                }
             },
 
             addAsset: async (asset) => {
@@ -1152,6 +1206,14 @@ export const useShopfloorStore = create<ShopfloorState>()(
                 if (updates.talentMatrix) toUpdate.talent_matrix = updates.talentMatrix;
                 if (updates.systemAccess) toUpdate.system_access = updates.systemAccess;
                 if (updates.rfidTag) toUpdate.rfid_tag = updates.rfidTag;
+                if (updates.workerNumber) toUpdate.worker_number = updates.workerNumber;
+                if (updates.contractType) toUpdate.contract_type = updates.contractType;
+                if (updates.group) toUpdate.group = updates.group;
+                if (updates.workstation) toUpdate.workstation = updates.workstation;
+                if (updates.admissionDate) toUpdate.admission_date = updates.admissionDate;
+                if (updates.birthday) toUpdate.birthday = updates.birthday;
+                if (updates.hrNotes) toUpdate.hr_notes = updates.hrNotes;
+
                 // IAM V9
                 if (updates.role) toUpdate.role = updates.role;
                 if (updates.permissions) toUpdate.permissions = updates.permissions;
