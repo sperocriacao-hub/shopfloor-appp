@@ -59,7 +59,7 @@ export default function NewOrderPage() {
             // Auto-schedule if Finish Date or Model changes
             if ((name === 'finishDate' || name === 'productModelId') && next.finishDate && next.productModelId) {
                 const suggStart = calculateStartDate(next.finishDate, next.productModelId);
-                console.log("Auto-scheduling:", { finish: next.finishDate, model: next.productModelId, suggStart });
+                // console.log("Auto-scheduling:", { finish: next.finishDate, model: next.productModelId, suggStart });
                 if (suggStart) next.startDate = suggStart;
             }
 

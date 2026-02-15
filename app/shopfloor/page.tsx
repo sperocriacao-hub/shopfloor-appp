@@ -109,7 +109,7 @@ export default function ShopfloorPage() {
     // --- RFID Handler ---
     const handleRfidScan = (tag: string) => {
         setLastScannedTag(tag);
-        console.log("Scanned:", tag);
+        // console.log("Scanned:", tag);
 
         // 1. Check for Station (Login Station)
         // If we are in selection mode, scanning a station tag should select it.

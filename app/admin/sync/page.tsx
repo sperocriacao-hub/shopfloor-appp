@@ -25,7 +25,7 @@ export default function SyncCenterPage() {
             skipEmptyLines: true,
             complete: async (results) => {
                 try {
-                    console.log("Parsed Data:", results.data);
+                    // console.log("Parsed Data:", results.data);
                     await store.importAS400Data(type, results.data);
                 } catch (error) {
                     toast.error("Erro ao processar dados.");

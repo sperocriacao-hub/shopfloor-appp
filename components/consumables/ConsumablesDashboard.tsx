@@ -178,7 +178,7 @@ export function ConsumablesDashboard() {
                         <CardDescription>Tendência de gastos acumulados por categoria.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <BarChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" />
@@ -203,7 +203,7 @@ export function ConsumablesDashboard() {
                         <CardDescription>Distribuição de gastos neste mês.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <PieChart>
                                 <Pie
                                     data={lineData}
@@ -230,7 +230,7 @@ export function ConsumablesDashboard() {
                         <CardDescription>Áreas com maior consumo neste mês.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <BarChart data={assetData} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 11 }} />

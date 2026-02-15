@@ -227,7 +227,7 @@ export default function AbsenteeismPage() {
                                                 </CardHeader>
                                                 <CardContent className="p-4 pt-6">
                                                     <div style={{ height: chartHeight, width: '100%', minHeight: '200px' }}>
-                                                        <ResponsiveContainer width="100%" height="100%">
+                                                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                                             <BarChart
                                                                 layout="vertical"
                                                                 data={chartData}

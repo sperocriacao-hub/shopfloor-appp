@@ -122,7 +122,7 @@ export function TrendChartEditor({ project, readOnly = false }: TrendChartEditor
             {/* Chart */}
             <div className="h-[250px] w-full border rounded-lg bg-white p-2">
                 {chartData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <LineChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="date" fontSize={12} />

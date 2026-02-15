@@ -133,7 +133,7 @@ export function ToolDashboard() {
                         <CardDescription>Distribuição atual das ferramentas.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[250px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <PieChart>
                                 <Pie
                                     data={statusData}
@@ -163,7 +163,7 @@ export function ToolDashboard() {
                     </CardHeader>
                     <CardContent className="h-[250px]">
                         {paretoData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <BarChart data={paretoData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                                     <XAxis type="number" hide />
                                     <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
@@ -191,7 +191,7 @@ export function ToolDashboard() {
                         <CardDescription>Onde as ferramentas estão agora.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[250px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <BarChart data={areaData}>
                                 <XAxis dataKey="name" fontSize={12} />
                                 <YAxis allowDecimals={false} />
@@ -209,7 +209,7 @@ export function ToolDashboard() {
                     </CardHeader>
                     <CardContent className="h-[250px]">
                         {employeeDamageData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <BarChart data={employeeDamageData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                                     <XAxis type="number" hide />
                                     <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
@@ -231,7 +231,7 @@ export function ToolDashboard() {
                     <CardTitle>Condição das Ferramentas</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <BarChart data={conditionData}>
                             <XAxis dataKey="name" />
                             <YAxis />

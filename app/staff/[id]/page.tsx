@@ -599,7 +599,7 @@ export default function EditStaffPage() {
                                         {/* Chart 1: Radar */}
                                         <div className="w-full h-full">
                                             <h4 className="text-sm font-semibold text-center text-slate-500 mb-2">Perfil de Competências</h4>
-                                            <ResponsiveContainer width="100%" height="90%">
+                                            <ResponsiveContainer width="100%" height="90%" minWidth={0}>
                                                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
                                                     <PolarGrid />
                                                     <PolarAngleAxis dataKey="subject" />
@@ -613,7 +613,7 @@ export default function EditStaffPage() {
                                         {/* Chart 2: Trends */}
                                         <div className="w-full h-full">
                                             <h4 className="text-sm font-semibold text-center text-slate-500 mb-2">Evolução (30 Dias)</h4>
-                                            <ResponsiveContainer width="100%" height="90%">
+                                            <ResponsiveContainer width="100%" height="90%" minWidth={0}>
                                                 <LineChart data={trendData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                                                     <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
                                                     <XAxis dataKey="date" tick={{ fontSize: 10 }} />

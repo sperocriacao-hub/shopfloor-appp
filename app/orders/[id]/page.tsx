@@ -139,7 +139,7 @@ export default function OrderDashboardPage() {
                             <CardTitle>Tempo Real vs Média Histórica (por Estação)</CardTitle>
                         </CardHeader>
                         <CardContent className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <BarChart data={stationData} layout="vertical" margin={{ left: 20 }}>
                                     <XAxis type="number" unit="h" />
                                     <YAxis dataKey="name" type="category" width={100} />

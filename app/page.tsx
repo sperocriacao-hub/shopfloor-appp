@@ -147,7 +147,7 @@ export default function Home() {
             <CardDescription>Ordens concluídas e eficiência diária.</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <LineChart data={productionData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
@@ -219,7 +219,7 @@ export default function Home() {
             <div className="flex gap-4">
               <div className="w-1/3 h-[200px]">
                 {/* Chart here */}
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={issuesData} layout="vertical" margin={{ left: 30 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                     <XAxis type="number" hide />
